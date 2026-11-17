@@ -47,6 +47,8 @@ async function upToDate(): Promise<boolean> {
        and exists (select 1 from information_schema.tables where table_schema = current_schema() and table_name = 'print_jobs')
        and exists (select 1 from information_schema.tables where table_schema = current_schema() and table_name = 'auth_throttle')
        and exists (select 1 from information_schema.columns where table_schema = current_schema() and table_name = 'payments' and column_name = 'receipt_number')
+       and exists (select 1 from pg_trigger where tgname = 'payments_receipt_trg')
+       and not exists (select 1 from payments where receipt_number is null)
        and not exists (select 1 from admin_users where role in ('manager','staff'))
        and exists (select 1 from information_schema.columns where table_schema = current_schema() and table_name = 'orders' and column_name = 'needs_push')
        and exists (select 1 from information_schema.tables where table_schema = current_schema() and table_name = 'sync_state')

@@ -447,6 +447,22 @@ begin
 end $$ language plpgsql;
 drop trigger if exists payments_guard_trg on payments;
 create trigger payments_guard_trg before update or delete on payments for each row execute function payments_guard();
+-- qualquer pagamento inserido sem número (outro caminho que não a aplicação, versão antiga) recebe o seguinte da sua série;
+-- a série nunca fica atrás do maior número já usado
+create or replace function payments_receipt_number() returns trigger as $$
+declare seq text; n int; m int;
+begin
+  if new.receipt_number is null then
+    seq := case when new.origin = 'local' then 'payments_local_receipt_seq' else 'payments_receipt_seq' end;
+    n := nextval(seq);
+    select coalesce(max(receipt_number), 0) + 1 into m from payments where origin = new.origin;
+    if m > n then n := m; perform setval(seq, n); end if;
+    new.receipt_number := n;
+  end if;
+  return new;
+end $$ language plpgsql;
+drop trigger if exists payments_receipt_trg on payments;
+create trigger payments_receipt_trg before insert on payments for each row execute function payments_receipt_number();
 -- pagamentos anteriores: numerados por ordem (data, id) — a mesma ordem no central e no servidor local
 with base as (
   select origin, coalesce(max(receipt_number), 0) m from payments group by origin
