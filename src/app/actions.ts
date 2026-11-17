@@ -4,7 +4,7 @@ import { errInfo, log } from "@/lib/log";
 import { headers } from "next/headers";
 import { privateEventSchema, reservationSchema } from "@/lib/validation";
 import { deliver } from "@/lib/delivery";
-import { rateLimit } from "@/lib/rate-limit";
+import { rateLimitShared } from "@/lib/rate-limit";
 import { redirect } from "next/navigation";
 import { randomBytes } from "node:crypto";
 import { dbConfigured } from "@/lib/db";
@@ -45,7 +45,7 @@ async function guard(max = 20): Promise<FormState | null> {
   const h = await headers();
   const ip = h.get("x-forwarded-for")?.split(",")[0]?.trim() || h.get("x-real-ip");
   // Sem IP identificável não se aplica limite partilhado (bloquearia todos os clientes ao mesmo tempo).
-  if (ip && !rateLimit(`${max}:${ip}`, max)) { // por IP: operadores móveis partilham IPs entre muitos clientes
+  if (ip && !(await rateLimitShared(`site-form-${max}:${ip}`, max, 10 * 60_000))) { // por IP: operadores móveis partilham IPs entre muitos clientes
     return { status: "error", message: "Demasiados pedidos em pouco tempo. Tente novamente dentro de alguns minutos ou ligue-nos." };
   }
   return null;

@@ -4,7 +4,8 @@ import { useRouter } from "next/navigation";
 import { voidPaymentAction } from "@/app/admin/actions";
 import type { Payment } from "@/lib/payments";
 import { formatXOF } from "@/lib/format";
-import { PAYMENT_LABEL, formatOrderNumber } from "@/lib/types";
+import Link from "next/link";
+import { PAYMENT_LABEL, formatOrderNumber, formatReceiptNumber } from "@/lib/types";
 
 const when = (iso: string) => new Date(iso).toLocaleString("pt-PT", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit", timeZone: "Africa/Bissau" });
 
@@ -20,13 +21,17 @@ function Row({ p }: { p: Payment }) {
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <p className="font-display text-xl text-white">{formatXOF(p.amount)} · {PAYMENT_LABEL[p.method]}</p>
+          <p className="text-xs text-gold-300" data-testid="payment-receipt-number">{formatReceiptNumber(p.receiptNumber, p.origin)} · {voided ? "Anulado" : "Confirmado"}</p>
           <p className="text-xs text-mist">{when(p.createdAt)} · {p.tableLabel} · recebido por {p.receivedBy}</p>
           <p className="mt-1 text-xs text-mist">Pedidos: {p.orders.length ? p.orders.map((o) => formatOrderNumber(o.number, o.origin)).join(", ") : "—"}</p>
           {p.tendered != null && <p className="text-xs text-mist">Entregue {formatXOF(p.tendered)} · troco {formatXOF(p.change ?? 0)}</p>}
           {p.note && <p className="text-xs text-mist">Nota: {p.note}</p>}
           {voided && <p className="mt-1 text-xs text-[#e48a7d]">ANULADO {p.voidedAt ? when(p.voidedAt) : ""} por {p.voidedBy}: {p.voidReason}</p>}
         </div>
-        {!voided && <button onClick={() => setOpen((v) => !v)} className="rounded-full border border-kau-800 px-3 py-2 text-xs text-mist hover:text-white">Anular…</button>}
+        <div className="flex flex-wrap gap-2">
+          <Link href={`/admin/pagamentos/${p.id}`} data-testid="payment-receipt-link" className="rounded-full border border-gold/60 px-3 py-2 text-xs text-gold-300 hover:bg-gold/10">Recibo</Link>
+          {!voided && <button onClick={() => setOpen((v) => !v)} className="rounded-full border border-kau-800 px-3 py-2 text-xs text-mist hover:text-white">Anular…</button>}
+        </div>
       </div>
       {open && !voided && (
         <div className="mt-3 flex flex-wrap gap-2">

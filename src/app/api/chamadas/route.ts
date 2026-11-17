@@ -2,7 +2,7 @@ import { errInfo, log } from "@/lib/log";
 import { z } from "zod";
 import { CALL_KINDS, callsForTable, createCall, publicView } from "@/lib/calls";
 import { isQrToken } from "@/lib/tokens";
-import { rateLimit } from "@/lib/rate-limit";
+import { rateLimit, rateLimitShared } from "@/lib/rate-limit";
 import { isTransient } from "@/lib/db";
 
 const schema = z.object({
@@ -16,7 +16,7 @@ const ipOf = (req: Request) => req.headers.get("x-forwarded-for")?.split(",")[0]
 export async function POST(req: Request) {
   if (Number(req.headers.get("content-length") ?? 0) > 5_000) return Response.json({ ok: false, message: "Pedido inválido." }, { status: 413 });
   // limite alto: todos os telemóveis do restaurante saem pelo mesmo IP do Wi-Fi; o controlo fino é por mesa
-  if (!rateLimit(`call:${ipOf(req)}`, 600, 10 * 60_000)) return Response.json({ ok: false, message: "Demasiados pedidos. Aguarde um momento." }, { status: 429 });
+  if (!(await rateLimitShared(`call:${ipOf(req)}`, 600, 10 * 60_000))) return Response.json({ ok: false, message: "Demasiados pedidos. Aguarde um momento." }, { status: 429 });
   const parsed = schema.safeParse(await req.json().catch(() => null));
   if (!parsed.success) return Response.json({ ok: false, message: parsed.error.issues[0]?.message ?? "Pedido inválido." }, { status: 400 });
   try {

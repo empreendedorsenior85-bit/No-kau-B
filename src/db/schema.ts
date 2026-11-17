@@ -412,3 +412,49 @@ create index if not exists auth_throttle_until_idx on auth_throttle(window_until
 alter table auth_sessions enable row level security;
 alter table auth_throttle enable row level security;
 `;
+
+/**
+ * Recibos: cada pagamento tem um número sequencial atribuído pelo servidor onde foi registado
+ * (central: REC-000012; servidor local: REC-L000004). O número segue na sincronização e nunca muda.
+ */
+export const MIGRATE_RECEIPTS_SQL = /* sql */ `
+select pg_advisory_xact_lock(727008);
+alter table payments add column if not exists receipt_number int check (receipt_number is null or receipt_number > 0);
+create unique index if not exists payments_receipt_uq on payments(origin, receipt_number) where receipt_number is not null;
+create sequence if not exists payments_receipt_seq;
+create sequence if not exists payments_local_receipt_seq;
+-- guarda: além das regras anteriores, o número do recibo, uma vez atribuído, não muda
+create or replace function payments_guard() returns trigger as $$
+begin
+  if tg_op = 'DELETE' then
+    raise exception 'Pagamentos não podem ser apagados (use anular)' using errcode = 'P0001';
+  end if;
+  if new.id <> old.id or new.table_id <> old.table_id or new.amount <> old.amount or new.method <> old.method
+     or new.tendered is distinct from old.tendered or new.received_by <> old.received_by or new.created_at <> old.created_at
+     or new.idempotency_key <> old.idempotency_key or new.origin <> old.origin or new.note is distinct from old.note
+     or (old.receipt_number is not null and new.receipt_number is distinct from old.receipt_number) then
+    raise exception 'Um pagamento confirmado não pode ser alterado (só anulado, com motivo)' using errcode = 'P0001';
+  end if;
+  if old.status = 'voided' and new.status <> 'voided' then
+    raise exception 'Um pagamento anulado não pode voltar a ser confirmado' using errcode = 'P0001';
+  end if;
+  if new.status = 'voided' and old.status = 'confirmed' and (new.void_reason is null or new.voided_by is null or new.voided_at is null) then
+    raise exception 'Anular exige motivo, autor e data' using errcode = 'P0001';
+  end if;
+  new.updated_at := now();
+  new.rev := nextval('orders_rev_seq');
+  return new;
+end $$ language plpgsql;
+drop trigger if exists payments_guard_trg on payments;
+create trigger payments_guard_trg before update or delete on payments for each row execute function payments_guard();
+-- pagamentos anteriores: numerados por ordem (data, id) — a mesma ordem no central e no servidor local
+with base as (
+  select origin, coalesce(max(receipt_number), 0) m from payments group by origin
+), n as (
+  select p.id, b.m + row_number() over (partition by p.origin order by p.created_at, p.id) rn
+  from payments p join base b on b.origin = p.origin where p.receipt_number is null
+)
+update payments p set receipt_number = n.rn from n where p.id = n.id;
+select setval('payments_receipt_seq', greatest(m, 1), m > 0) from (select coalesce(max(receipt_number), 0) m from payments where origin = 'central') x;
+select setval('payments_local_receipt_seq', greatest(m, 1), m > 0) from (select coalesce(max(receipt_number), 0) m from payments where origin = 'local') x;
+`;

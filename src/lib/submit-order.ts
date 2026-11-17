@@ -2,7 +2,7 @@ import "server-only";
 import { log } from "@/lib/log";
 import { orderSchema } from "./validation";
 import { placeOrder } from "./orders";
-import { rateLimit } from "./rate-limit";
+import { rateLimitShared } from "./rate-limit";
 import { isTransient } from "./db";
 
 export type OrderApiBody =
@@ -23,7 +23,7 @@ export async function submitOrder(input: unknown, ip: string | null, customerId:
 
   // Limite alto: no restaurante TODOS os telemóveis saem pelo mesmo IP do Wi-Fi/rede. O controlo fino
   // é por mesa (20 pedidos/10 min, na base de dados); este só trava abuso em massa.
-  if (ip && !rateLimit(`order:${ip}`, 1000, 10 * 60_000)) {
+  if (ip && !(await rateLimitShared(`order:${ip}`, 1000, 10 * 60_000))) {
     return { status: 429, body: { ok: false, message: "Demasiados pedidos em pouco tempo. Aguarde um momento ou chame um empregado." } };
   }
 

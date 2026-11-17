@@ -18,6 +18,8 @@ type Ctx = {
   reservations: Reservation[];
   upsertReservation: (r: Reservation) => void;
   pendingReservations: number;
+  /** Último pagamento confirmado/anulado recebido em tempo real (rev) — as páginas de pagamentos atualizam-se. */
+  paymentsRev: number;
   loaded: boolean;
   conn: Conn;
   unseen: Set<string>; // pedidos novos ainda não vistos
@@ -71,6 +73,7 @@ export function LiveOrdersProvider({ children, me }: { children: ReactNode; me: 
   const concernsMe = useCallback((c: ServiceCall) =>
     me.role !== "garcom" || (c.kind !== "manager" && (!c.waiterId || c.waiterId === me.id)), [me.id, me.role]);
   const [loaded, setLoaded] = useState(false);
+  const [paymentsRev, setPaymentsRev] = useState(0);
   const [conn, setConn] = useState<Conn>("connecting");
   const [unseen, setUnseen] = useState<Set<string>>(new Set());
   const [alertsOn, setAlertsOn] = useState(false);
@@ -222,6 +225,9 @@ export function LiveOrdersProvider({ children, me }: { children: ReactNode; me: 
       es.addEventListener("reservation", (e) => {
         try { upsertReservation(JSON.parse((e as MessageEvent).data)); } catch {}
       });
+      es.addEventListener("payment", (e) => {
+        try { const p = JSON.parse((e as MessageEvent).data) as { rev: number }; setPaymentsRev((v) => Math.max(v, p.rev)); } catch {}
+      });
       es.onerror = () => {
         setConn(navigator.onLine ? "reconnecting" : "offline");
         resync = true;
@@ -284,7 +290,7 @@ export function LiveOrdersProvider({ children, me }: { children: ReactNode; me: 
   const orders = useMemo(() => [...map.values()].sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt)), [map]);
   const reservations = useMemo(() => [...resMap.values()].sort((a, b) => `${a.date} ${a.time}`.localeCompare(`${b.date} ${b.time}`)), [resMap]);
   const pendingReservations = reservations.filter((r) => r.status === "pending").length;
-  const value: Ctx = { orders, calls, upsertCall, openCalls, me, reservations, upsertReservation, pendingReservations, loaded, conn, unseen, acknowledge, upsert, alertsOn, enableAlerts, refresh: () => bootRef.current() };
+  const value: Ctx = { orders, calls, upsertCall, openCalls, me, reservations, upsertReservation, pendingReservations, paymentsRev, loaded, conn, unseen, acknowledge, upsert, alertsOn, enableAlerts, refresh: () => bootRef.current() };
   return <LiveCtx.Provider value={value}>{children}</LiveCtx.Provider>;
 }
 

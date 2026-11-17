@@ -4,13 +4,13 @@ import { useRouter } from "next/navigation";
 import { useLive } from "./LiveOrders";
 
 /**
- * Mantém os números do servidor em dia: atualiza quando entra ou muda um pedido (em tempo real)
+ * Mantém os números do servidor em dia: atualiza quando entra ou muda um pedido ou um pagamento (em tempo real)
  * e, por segurança, a cada minuto com o separador visível. Não recarrega a página.
  */
 export function AutoRefresh() {
   const router = useRouter();
-  const { orders, loaded } = useLive();
-  const rev = orders.reduce((m, o) => Math.max(m, o.rev), 0);
+  const { orders, loaded, paymentsRev } = useLive();
+  const rev = Math.max(orders.reduce((m, o) => Math.max(m, o.rev), 0), paymentsRev);
   const first = useRef(true);
 
   useEffect(() => {

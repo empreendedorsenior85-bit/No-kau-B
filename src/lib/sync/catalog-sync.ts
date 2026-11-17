@@ -16,10 +16,12 @@ export type WireCatalog = {
   users: { id: string; email: string; passwordHash: string; role: "admin" | "gerente" | "garcom"; active: boolean; name: string | null }[];
   /** Maior número local (L…) que o central conhece: o servidor local nunca volta a usar um número já usado. */
   maxLocalNumber: number;
+  /** Maior número de recibo do servidor local já conhecido no central (opcional: versões antigas não o enviam). */
+  maxLocalReceipt?: number;
 };
 
 export async function exportCatalog(): Promise<WireCatalog> {
-  const [cats, items, tables, users, maxLocal] = await Promise.all([
+  const [cats, items, tables, users, maxLocal, maxReceipt] = await Promise.all([
     query<WireCatalog["categories"][number]>("select id, label, description, position, active from menu_categories order by position, id"),
     query<WireCatalog["items"][number]>(
       `select id, category_id "categoryId", name, description, price, available, active, is_demo "isDemo", position,
@@ -28,8 +30,9 @@ export async function exportCatalog(): Promise<WireCatalog> {
     query<WireCatalog["tables"][number]>(`select id, number, label, qr_token "qrToken", active, waiter_id "waiterId" from dining_tables order by id`),
     query<WireCatalog["users"][number]>(`select id, email, password_hash "passwordHash", role, active, name from admin_users order by created_at`),
     query<{ n: number }>("select coalesce(max(number),0)::int n from orders where origin = 'local'"),
+    query<{ n: number }>("select coalesce(max(receipt_number),0)::int n from payments where origin = 'local'"),
   ]);
-  return { categories: cats.rows, items: items.rows, tables: tables.rows, users: users.rows, maxLocalNumber: maxLocal.rows[0].n };
+  return { categories: cats.rows, items: items.rows, tables: tables.rows, users: users.rows, maxLocalNumber: maxLocal.rows[0].n, maxLocalReceipt: maxReceipt.rows[0].n };
 }
 
 /**
@@ -102,6 +105,10 @@ export async function applyCatalog(cat: WireCatalog): Promise<{ imagesToFetch: {
     await c.query(
       `select setval('orders_local_number_seq', n) from (select greatest($1::int, (select coalesce(max(number),0) from orders where origin = 'local')) n) x where n > 0`,
       [cat.maxLocalNumber]);
+    // recibos do servidor local: idem (uma base local recriada nunca repete números de recibo)
+    await c.query(
+      `select setval('payments_local_receipt_seq', n) from (select greatest($1::int, (select coalesce(max(receipt_number),0) from payments where origin = 'local')) n) x where n > 0`,
+      [cat.maxLocalReceipt ?? 0]);
     return { imagesToFetch };
   });
 }

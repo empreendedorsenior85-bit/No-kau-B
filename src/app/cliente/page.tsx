@@ -5,12 +5,13 @@ import type { Metadata } from "next";
 import { ClientShell } from "@/components/client/ClientShell";
 import { BrandLoader } from "@/components/brand/BrandLoader";
 import { customerOrders, getCustomer } from "@/lib/customers";
+import { customerPayments } from "@/lib/payments";
 import { customerReservations } from "@/lib/reservations";
 import { RememberMany } from "@/components/reservations/RememberReservation";
 import { ReservationNotifier } from "@/components/reservations/ReservationNotifier";
 import { clientLogoutAction } from "./actions";
 import { formatXOF } from "@/lib/format";
-import { PAYMENT_LABEL, RESERVATION_LABEL, STATUS_CLIENT, fmtResDate, formatOrderNumber, type PaymentMethod } from "@/lib/types";
+import { PAYMENT_LABEL, RESERVATION_LABEL, STATUS_CLIENT, fmtResDate, formatOrderNumber, formatReceiptNumber, type PaymentMethod } from "@/lib/types";
 
 export const metadata: Metadata = { title: "Os meus pedidos", robots: { index: false, follow: false } };
 
@@ -21,7 +22,7 @@ export default function Page() {
 async function Content() {
   const c = await getCustomer();
   if (!c) redirect("/cliente/entrar");
-  const [orders, reservations] = await Promise.all([customerOrders(c.id), customerReservations(c.id)]);
+  const [orders, reservations, payments] = await Promise.all([customerOrders(c.id), customerReservations(c.id), customerPayments(c.id)]);
   const unpaid = orders.filter((o) => !o.paid).reduce((n, o) => n + o.total, 0);
   return (
     <ClientShell title={`Olá, ${c.name.split(" ")[0]}`} intro="Os seus pedidos no Nô Kau. O pagamento é feito no restaurante e confirmado pelo gerente.">
@@ -48,6 +49,28 @@ async function Content() {
                     <span className="text-mist">{r.code} · {r.guests} {r.guests === 1 ? "pessoa" : "pessoas"}</span>
                   </span>
                   <span className={`shrink-0 rounded-full px-3 py-1 text-xs uppercase tracking-wider ${r.status === "approved" ? "bg-[#7fc290]/15 text-[#7fc290]" : r.status === "pending" ? "bg-[#e0a64a]/15 text-[#e0a64a]" : r.status === "rejected" ? "bg-[#e48a7d]/15 text-[#e48a7d]" : "bg-white/5 text-mist"}`}>{RESERVATION_LABEL[r.status]}</span>
+                </a>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+      <section className="mt-8" aria-labelledby="meus-pagamentos" data-testid="client-payments">
+        <h2 id="meus-pagamentos" className="font-display text-2xl text-white">Pagamentos e recibos</h2>
+        {payments.length === 0 ? (
+          <p className="mt-3 text-sm text-mist">Ainda não há pagamentos confirmados. Depois de pagar no restaurante, o recibo aparece aqui.</p>
+        ) : (
+          <ul className="mt-3 space-y-2">
+            {payments.map((p) => (
+              <li key={p.id}>
+                <a href={`/cliente/recibos/${p.id}`} className="flex items-center justify-between gap-3 rounded-2xl border border-kau-800 bg-kau-900 p-4 hover:border-gold/60" data-testid="client-payment" data-status={p.status}>
+                  <span className="text-sm">
+                    <span className="block font-display text-lg text-white">{formatXOF(p.amount)} · {PAYMENT_LABEL[p.method]}</span>
+                    <span className="text-mist">{new Date(p.createdAt).toLocaleString("pt-PT", { dateStyle: "medium", timeStyle: "short", timeZone: "Africa/Bissau" })} · {formatReceiptNumber(p.receiptNumber, p.origin)}</span>
+                  </span>
+                  <span className={`shrink-0 rounded-full px-3 py-1 text-xs uppercase tracking-wider ${p.status === "confirmed" ? "bg-[#7fc290]/15 text-[#7fc290]" : "bg-[#e48a7d]/15 text-[#e48a7d]"}`}>
+                    {p.status === "confirmed" ? "Pago · ver recibo" : "Anulado"}
+                  </span>
                 </a>
               </li>
             ))}

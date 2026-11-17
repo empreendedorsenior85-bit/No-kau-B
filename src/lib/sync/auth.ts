@@ -2,7 +2,7 @@ import "server-only";
 import { connection } from "next/server";
 import { createHash, timingSafeEqual } from "node:crypto";
 import { isLocalServer, syncToken } from "@/lib/node-role";
-import { isRateLimited, rateLimit } from "@/lib/rate-limit";
+import { isThrottled, recordFailure } from "@/lib/sessions";
 import { setSyncState } from "./orders-sync";
 
 /**
@@ -14,12 +14,14 @@ export async function authorizeSync(req: Request): Promise<Response | null> {
   const token = syncToken();
   if (!token || isLocalServer()) return new Response("not found", { status: 404 });
   const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "?";
-  if (isRateLimited(`sync-fail:${ip}`, 30, 10 * 60_000)) return new Response("too many", { status: 429 });
+  // tentativas de adivinhar o segredo: limite guardado na base de dados (todas as instâncias)
+  const keys = [{ key: `sync-falha|${ip}`, max: 30 }]; // por IP (sem limite global: não deixa bloquear o restaurante de propósito)
+  if (await isThrottled(keys)) return new Response("too many", { status: 429 });
   const got = (req.headers.get("authorization") ?? "").replace(/^Bearer\s+/i, "");
   const a = createHash("sha256").update(got).digest();
   const b = createHash("sha256").update(token).digest();
   if (!got || !timingSafeEqual(a, b)) {
-    rateLimit(`sync-fail:${ip}`, 30, 10 * 60_000);
+    await recordFailure(keys);
     return Response.json({ error: "unauthorized" }, { status: 401 });
   }
   // último contacto do servidor local (aparece no painel central). No máximo uma escrita a cada 20 s:

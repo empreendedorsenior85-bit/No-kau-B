@@ -4,6 +4,7 @@ import { parseRange } from "@/lib/stats";
 import { listPayments } from "@/lib/payments";
 import { RangeFilter } from "@/components/admin/RangeFilter";
 import { PaymentsList } from "@/components/admin/PaymentsList";
+import { AutoRefresh } from "@/components/admin/AutoRefresh";
 import { formatXOF } from "@/lib/format";
 import { PAYMENT_LABEL } from "@/lib/types";
 
@@ -16,6 +17,7 @@ export default async function Page({ searchParams }: PageProps<"/admin/pagamento
   const { payments, summary } = await listPayments(range.from, range.to);
   return (
     <div className="space-y-6">
+      <AutoRefresh />
       <div>
         <h1 className="font-display text-3xl text-white">Pagamentos</h1>
         <p className="text-sm text-mist">Recebidos em mão no restaurante e confirmados no painel da mesa (Mesas → escolher a mesa → Conta). Um pagamento não se altera nem se apaga: só se anula, com motivo — tudo fica registado.</p>

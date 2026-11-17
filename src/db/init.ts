@@ -1,6 +1,6 @@
 import "server-only";
 import { query, tx } from "@/lib/db";
-import { MIGRATE_MENU_SQL, MIGRATE_ROLES_SQL, MIGRATE_PAYMENTS_SQL, MIGRATE_RESERVATIONS_SQL, MIGRATE_PRINT_SQL, MIGRATE_SECURITY_SQL, MIGRATE_SERVICE_SQL, MIGRATE_SYNC_SQL, SCHEMA_SQL } from "./schema";
+import { MIGRATE_MENU_SQL, MIGRATE_ROLES_SQL, MIGRATE_PAYMENTS_SQL, MIGRATE_RESERVATIONS_SQL, MIGRATE_PRINT_SQL, MIGRATE_RECEIPTS_SQL, MIGRATE_SECURITY_SQL, MIGRATE_SERVICE_SQL, MIGRATE_SYNC_SQL, SCHEMA_SQL } from "./schema";
 import { isLocalServer } from "@/lib/node-role";
 import { newQrToken } from "@/lib/tokens";
 
@@ -46,6 +46,7 @@ async function upToDate(): Promise<boolean> {
        and exists (select 1 from information_schema.tables where table_schema = current_schema() and table_name = 'reservations')
        and exists (select 1 from information_schema.tables where table_schema = current_schema() and table_name = 'print_jobs')
        and exists (select 1 from information_schema.tables where table_schema = current_schema() and table_name = 'auth_throttle')
+       and exists (select 1 from information_schema.columns where table_schema = current_schema() and table_name = 'payments' and column_name = 'receipt_number')
        and not exists (select 1 from admin_users where role in ('manager','staff'))
        and exists (select 1 from information_schema.columns where table_schema = current_schema() and table_name = 'orders' and column_name = 'needs_push')
        and exists (select 1 from information_schema.tables where table_schema = current_schema() and table_name = 'sync_state')
@@ -66,5 +67,5 @@ export function ensureMigrated(): Promise<void> {
 }
 
 async function migrateRoles() {
-  await tx(async (c) => { await c.query(MIGRATE_ROLES_SQL); await c.query(MIGRATE_MENU_SQL); await c.query(MIGRATE_SYNC_SQL); await c.query(MIGRATE_SERVICE_SQL); await c.query(MIGRATE_PAYMENTS_SQL); await c.query(MIGRATE_RESERVATIONS_SQL); await c.query(MIGRATE_PRINT_SQL); await c.query(MIGRATE_SECURITY_SQL); });
+  await tx(async (c) => { await c.query(MIGRATE_ROLES_SQL); await c.query(MIGRATE_MENU_SQL); await c.query(MIGRATE_SYNC_SQL); await c.query(MIGRATE_SERVICE_SQL); await c.query(MIGRATE_PAYMENTS_SQL); await c.query(MIGRATE_RESERVATIONS_SQL); await c.query(MIGRATE_PRINT_SQL); await c.query(MIGRATE_SECURITY_SQL); await c.query(MIGRATE_RECEIPTS_SQL); });
 }

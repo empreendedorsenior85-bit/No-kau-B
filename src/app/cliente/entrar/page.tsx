@@ -17,7 +17,7 @@ async function Content({ searchParams }: { searchParams: PageProps<"/cliente/ent
   const volta = safeVolta((await searchParams).volta);
   if (await getCustomer()) redirect(volta);
   return (
-    <ClientShell title="Entrar" intro="Entre para ver o histórico dos seus pedidos e se já estão pagos." back={volta !== "/cliente" ? { href: volta, label: "Voltar ao menu" } : undefined}>
+    <ClientShell title="Entrar" intro="Entre para ver o histórico dos seus pedidos e se já estão pagos." back={volta.startsWith("/m/") ? { href: volta, label: "Voltar ao menu" } : undefined}>
       <ClientLoginForm volta={volta} />
       <p className="mt-6 text-center text-sm text-mist">Ainda não tem conta? <Link href={`/cliente/registo${volta !== "/cliente" ? `?volta=${encodeURIComponent(volta)}` : ""}`} className="text-gold-300 underline underline-offset-4">Criar conta</Link></p>
     </ClientShell>

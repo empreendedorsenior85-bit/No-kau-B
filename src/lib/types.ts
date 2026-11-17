@@ -37,6 +37,10 @@ export type Order = {
   items: OrderItem[];
 };
 
+/** Número do recibo: REC-000012 (site central) / REC-L000004 (servidor do restaurante). */
+export const formatReceiptNumber = (n: number | null, origin: "central" | "local" = "central") =>
+  n == null ? "REC-(a atribuir)" : `REC-${origin === "local" ? "L" : ""}${String(n).padStart(6, "0")}`;
+
 export const formatOrderNumber = (n: number, origin: "central" | "local" = "central") =>
   `${origin === "local" ? "L" : "#"}${String(n).padStart(4, "0")}`;
 

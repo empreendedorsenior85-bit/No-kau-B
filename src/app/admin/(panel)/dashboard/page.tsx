@@ -7,6 +7,8 @@ import { StatTile, DeltaBadge } from "@/components/charts/StatTile";
 import { RangeFilter } from "@/components/admin/RangeFilter";
 import { LiveNow } from "@/components/admin/LiveNow";
 import { AutoRefresh } from "@/components/admin/AutoRefresh";
+import Link from "next/link";
+import { listPayments } from "@/lib/payments";
 import { CategoriesChart, HoursChart, OrdersChart, ProductsChart, SalesChart, TablesChart } from "@/components/admin/DashboardCharts";
 
 export const metadata: Metadata = { title: "Visão geral" };
@@ -14,7 +16,7 @@ export const metadata: Metadata = { title: "Visão geral" };
 export default async function Page({ searchParams }: PageProps<"/admin/dashboard">) {
   await requireManager();
   const range = parseRange(await searchParams);
-  const d = await getDashboard(range);
+  const [d, pay] = await Promise.all([getDashboard(range), listPayments(range.from, range.to)]);
   const c = d.current, p = d.previous;
   const ordersTrend = d.series.map((x) => x.orders);
 
@@ -39,6 +41,14 @@ export default async function Page({ searchParams }: PageProps<"/admin/dashboard
           <dl className="grid grid-cols-2 gap-x-8 gap-y-1 text-sm sm:text-right">
             <div><dt className="text-mist">Pedidos concluídos</dt><dd className="font-sans text-2xl font-semibold tabular-nums text-white" data-testid="hero-done">{int(c.done)}</dd></div>
             <div><dt className="text-mist">Em curso</dt><dd className="font-sans text-2xl font-semibold tabular-nums text-white" data-testid="hero-inprogress">{int(c.inProgress)}</dd></div>
+            <div className="col-span-2">
+              <dt className="text-mist">Pagamentos recebidos</dt>
+              <dd className="font-sans text-2xl font-semibold tabular-nums text-[#7fc290]">
+                <Link href={`/admin/pagamentos?r=${range.key}`} data-testid="hero-paid" data-raw={pay.summary.total} className="hover:underline">
+                  {formatXOF(pay.summary.total)} <span className="text-sm font-normal text-mist">({int(pay.summary.count)})</span>
+                </Link>
+              </dd>
+            </div>
           </dl>
         </div>
       </section>

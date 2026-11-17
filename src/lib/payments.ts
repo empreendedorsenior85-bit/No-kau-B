@@ -14,24 +14,28 @@ import { PAYMENT_METHODS, type PaymentMethod } from "./types";
  */
 
 export type Payment = {
-  id: string; tableId: number; tableLabel: string; amount: number; method: PaymentMethod; tendered: number | null; change: number | null;
+  id: string; receiptNumber: number | null; origin: "central" | "local"; tableId: number; tableLabel: string; amount: number; method: PaymentMethod; tendered: number | null; change: number | null;
   receivedBy: string; note: string | null; status: "confirmed" | "voided"; voidedAt: string | null; voidedBy: string | null; voidReason: string | null;
   createdAt: string; orders: { id: string; number: number; origin: "central" | "local"; total: number }[];
 };
 
 type Row = {
-  id: string; table_id: number; table_label: string; amount: number; method: PaymentMethod; tendered: number | null; received_by: string;
+  id: string; receipt_number: number | null; origin: "central" | "local"; table_id: number; table_label: string; amount: number; method: PaymentMethod; tendered: number | null; received_by: string;
   note: string | null; status: "confirmed" | "voided"; voided_at: Date | null; voided_by: string | null; void_reason: string | null; created_at: Date;
   orders: Payment["orders"];
 };
 const SELECT = `
-  select p.id, p.table_id, t.label table_label, p.amount, p.method, p.tendered, p.received_by, p.note, p.status, p.voided_at, p.voided_by,
+  select p.id, p.receipt_number, p.origin, p.table_id, t.label table_label, p.amount, p.method, p.tendered, p.received_by, p.note, p.status, p.voided_at, p.voided_by,
          p.void_reason, p.created_at,
          coalesce((select json_agg(json_build_object('id', o.id, 'number', o.number, 'origin', o.origin, 'total', o.total) order by o.created_at)
-                   from orders o where o.payment_id = p.id), '[]'::json) orders
+                   from orders o where o.payment_id = p.id
+                      -- anulado: a ligação foi desfeita; os pedidos vêm do registo da confirmação
+                      or (p.status = 'voided' and o.id in (
+                        select x::uuid from audit_log a, jsonb_array_elements_text(a.detail->'orderIds') x
+                        where a.entity = 'payment' and a.entity_id = p.id::text and a.action in ('payment.confirm','sync.payment')))), '[]'::json) orders
   from payments p join dining_tables t on t.id = p.table_id`;
 const toPayment = (r: Row): Payment => ({
-  id: r.id, tableId: r.table_id, tableLabel: r.table_label, amount: r.amount, method: r.method, tendered: r.tendered,
+  id: r.id, receiptNumber: r.receipt_number, origin: r.origin, tableId: r.table_id, tableLabel: r.table_label, amount: r.amount, method: r.method, tendered: r.tendered,
   change: r.tendered != null ? r.tendered - r.amount : null, receivedBy: r.received_by, note: r.note, status: r.status,
   voidedAt: r.voided_at?.toISOString() ?? null, voidedBy: r.voided_by, voidReason: r.void_reason, createdAt: r.created_at.toISOString(), orders: r.orders,
 });
@@ -69,8 +73,9 @@ export async function confirmPayment(input: ConfirmInput, actor: string): Promis
       }
       const local = isLocalServer();
       const ins = await c.query<{ id: string }>(
-        `insert into payments (table_id, amount, method, tendered, received_by, note, idempotency_key, origin, needs_push)
-         values ($1,$2,$3,$4,$5,$6,$7,$8,$9) returning id`,
+        `insert into payments (table_id, amount, method, tendered, received_by, note, idempotency_key, origin, needs_push, receipt_number)
+         values ($1,$2,$3,$4,$5,$6,$7,$8,$9, nextval(case when $8 = 'local' then 'payments_local_receipt_seq' else 'payments_receipt_seq' end))
+         returning id`,
         [tableId, amount, method, tendered, actor, note, key, local ? "local" : "central", local]);
       const pid = ins.rows[0].id;
       await c.query("update orders set payment_id = $1 where id = any($2)", [pid, orderIds]);
@@ -130,4 +135,61 @@ export async function listPayments(from: Date, to: Date): Promise<{ payments: Pa
       voided: sums.rows.reduce((n, r) => n + Number(r.voided), 0), byMethod,
     },
   };
+}
+
+// ---------- recibos ----------
+export type ReceiptItem = { name: string; quantity: number; unitPrice: number; note: string | null };
+export type ReceiptOrder = { id: string; number: number; origin: "central" | "local"; createdAt: string; total: number; customerId: string | null; items: ReceiptItem[] };
+export type Receipt = { payment: Payment; orders: ReceiptOrder[] };
+
+/**
+ * Recibo de um pagamento: o pagamento e os pedidos que pagou, com os produtos.
+ * Num pagamento anulado a ligação aos pedidos foi desfeita — os pedidos vêm do registo de auditoria da confirmação.
+ */
+export async function getReceipt(id: string): Promise<Receipt | null> {
+  if (!/^[0-9a-f-]{36}$/i.test(id)) return null;
+  await ensureMigrated();
+  const p = await query<Row>(`${SELECT} where p.id = $1`, [id]);
+  if (!p.rows[0]) return null;
+  const payment = toPayment(p.rows[0]);
+  let ids = payment.orders.map((o) => o.id);
+  if (!ids.length) {
+    const a = await query<{ id: string }>(
+      `select distinct x id from audit_log a, jsonb_array_elements_text(a.detail->'orderIds') x
+       where a.entity = 'payment' and a.entity_id = $1 and a.action in ('payment.confirm','sync.payment')`, [id]);
+    ids = a.rows.map((r) => r.id);
+  }
+  const o = ids.length ? await query<{ id: string; number: number; origin: "central" | "local"; created_at: Date; total: number; customer_id: string | null; items: ReceiptItem[] }>(
+    `select o.id, o.number, o.origin, o.created_at, o.total, o.customer_id,
+            coalesce((select json_agg(json_build_object('name', i.name, 'quantity', i.quantity, 'unitPrice', i.unit_price, 'note', i.note) order by i.id)
+                      from order_items i where i.order_id = o.id), '[]'::json) items
+     from orders o where o.id = any($1) order by o.created_at`, [ids]) : { rows: [] };
+  return {
+    payment,
+    orders: o.rows.map((r) => ({ id: r.id, number: r.number, origin: r.origin, createdAt: r.created_at.toISOString(), total: r.total, customerId: r.customer_id, items: r.items })),
+  };
+}
+
+/** Pagamentos dos pedidos de um cliente (para o perfil e os recibos dele). */
+export async function customerPayments(customerId: string, limit = 100): Promise<Payment[]> {
+  await ensureMigrated();
+  const r = await query<Row>(
+    `${SELECT} where p.id in (
+       select o.payment_id from orders o where o.customer_id = $1 and o.payment_id is not null
+       union
+       select a.entity_id::uuid from audit_log a, jsonb_array_elements_text(a.detail->'orderIds') x
+       where a.entity = 'payment' and a.action in ('payment.confirm','sync.payment')
+         and x::uuid in (select id from orders where customer_id = $1))
+     order by p.created_at desc limit $2`, [customerId, limit]);
+  return r.rows.map(toPayment);
+}
+
+/** Pagamentos novos/alterados depois de `cursor` (mesma sequência de rev dos pedidos) — para o painel em tempo real. */
+export async function paymentsChangedSince(cursor: number): Promise<{ id: string; rev: number; status: "confirmed" | "voided"; amount: number }[]> {
+  await ensureMigrated();
+  const r = await query<{ id: string; rev: string; status: "confirmed" | "voided"; amount: number }>(
+    `(select id, rev, status, amount from payments where rev > $1 order by rev asc limit 200)
+     union
+     (select id, rev, status, amount from payments where rev <= $1 and updated_at > now() - interval '20 seconds' limit 100)`, [cursor]);
+  return r.rows.map((x) => ({ id: x.id, rev: Number(x.rev), status: x.status, amount: x.amount }));
 }
