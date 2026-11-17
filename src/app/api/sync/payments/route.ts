@@ -1,3 +1,4 @@
+import { log } from "@/lib/log";
 import { authorizeSync } from "@/lib/sync/auth";
 import { applyPayments, isWirePayment, paymentsChangedAfter } from "@/lib/sync/payments-sync";
 import { ensureMigrated } from "@/db/init";
@@ -28,6 +29,6 @@ export async function POST(req: Request) {
     const id = (p as { id?: unknown })?.id;
     if (typeof id === "string" && id.length <= 64) r.rejected.push({ id, reason: "formato inválido" });
   }
-  if (r.rejected.length) console.error("[sync] pagamentos recusados:", JSON.stringify(r.rejected));
+  if (r.rejected.length) log.warn("sync.payments_rejected", { rejected: r.rejected });
   return Response.json(r, { headers: { "Cache-Control": "no-store" } });
 }

@@ -150,7 +150,7 @@ function MenuCard({ item, index }: { item: MenuItem; index: number }) {
       {item.image && (
         <figure className="relative -mx-6 -mt-6 mb-5">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={item.image} alt={item.name} loading="lazy" decoding="async" className="aspect-[16/9] w-full object-cover" />
+          <img src={item.image} alt={item.name} loading="lazy" decoding="async" fetchPriority="low" className="aspect-[16/9] w-full object-cover" />
           {isIllustrative(item.image) && (
             <figcaption className="absolute bottom-2 left-2 rounded-full bg-kau-950/75 px-2.5 py-1 text-[0.65rem] uppercase tracking-[0.12em] text-white/90 backdrop-blur-sm">Imagem ilustrativa</figcaption>
           )}

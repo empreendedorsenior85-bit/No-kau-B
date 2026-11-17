@@ -1,3 +1,4 @@
+import { errInfo, log } from "@/lib/log";
 import { z } from "zod";
 import { CALL_KINDS, callsForTable, createCall, publicView } from "@/lib/calls";
 import { isQrToken } from "@/lib/tokens";
@@ -23,7 +24,7 @@ export async function POST(req: Request) {
     if (!r.ok) return Response.json({ ok: false, message: r.message }, { status: r.code === "invalid_table" ? 404 : 429 });
     return Response.json({ ok: true, call: publicView(r.call), duplicate: r.duplicate }, { headers: { "Cache-Control": "no-store" } });
   } catch (e) {
-    console.error("[chamada]", (e as Error).message);
+    log.error("call.create_failed", errInfo(e));
     return Response.json({ ok: false, retry: true, message: "Não foi possível chamar agora. Tente de novo ou faça sinal a um empregado." }, { status: isTransient(e) ? 503 : 500 });
   }
 }

@@ -1,4 +1,5 @@
 import "server-only";
+import { log } from "@/lib/log";
 import { orderSchema } from "./validation";
 import { placeOrder } from "./orders";
 import { rateLimit } from "./rate-limit";
@@ -33,7 +34,7 @@ export async function submitOrder(input: unknown, ip: string | null, customerId:
     return { status: 200, body: { ok: true, orderId: r.order.id, number: r.order.number, origin: r.order.origin, duplicate: r.duplicate } };
   } catch (e) {
     const err = e as { code?: string; message?: string };
-    console.error("[pedido] falha ao gravar:", err.code ?? "", err.message ?? e);
+    log.error("order.save_failed", { code: err.code, error: err.message ?? String(e) });
     // com a MESMA chave o cliente pode repetir sem criar pedidos duplicados
     return {
       status: isTransient(e) ? 503 : 500,

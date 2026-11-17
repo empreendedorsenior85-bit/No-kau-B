@@ -1,3 +1,4 @@
+import { errInfo, log } from "@/lib/log";
 import { getManager } from "@/lib/auth";
 import { snapshot, tableHistory } from "@/lib/orders";
 import { callsSnapshot } from "@/lib/calls";
@@ -25,7 +26,7 @@ export async function GET(req: Request) {
     const reservations = isManagerRole(me.role) ? await reservationsSnapshot() : [];
     return Response.json({ ...snap, calls, reservations }, { headers: { "Cache-Control": "no-store" } });
   } catch (e) {
-    console.error("[orders]", e);
+    log.error("admin.orders_failed", errInfo(e));
     return Response.json({ error: "server" }, { status: 500 });
   }
 }

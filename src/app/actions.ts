@@ -1,5 +1,6 @@
 "use server";
 
+import { errInfo, log } from "@/lib/log";
 import { headers } from "next/headers";
 import { privateEventSchema, reservationSchema } from "@/lib/validation";
 import { deliver } from "@/lib/delivery";
@@ -74,7 +75,7 @@ export async function submitReservation(_prev: FormState, fd: FormData): Promise
         { name: r.name, phone: r.phone, email: r.email, date: r.date, time: r.time, guests: r.guests, notes: r.notes ?? null, key: r.key ?? newKey() },
         customer?.id ?? null);
     } catch (e) {
-      console.error("[reserva]", (e as Error).message);
+      log.error("reserva.save_failed", errInfo(e));
       return { status: "error", message: "Não foi possível guardar a reserva agora. Tente de novo dentro de momentos ou ligue-nos.", values: raw };
     }
     if (!created.ok) return { status: "error", message: created.message, fieldErrors: { time: created.message }, values: raw };

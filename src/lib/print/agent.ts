@@ -1,4 +1,5 @@
 import "server-only";
+import { errInfo, log } from "@/lib/log";
 import { query } from "@/lib/db";
 import { ensureMigrated } from "@/db/init";
 import { orderTicket, testTicket, type Codepage } from "./escpos";
@@ -172,7 +173,7 @@ export function startPrintAgent() {
   g.__nokauPrint ??= { started: false };
   if (g.__nokauPrint.started) return;
   g.__nokauPrint.started = true;
-  console.log("[impressão] agente de impressão ativo");
+  log.info("print.agent_started");
   let lastProbe = 0;
   let running = false;
   const tick = async () => {
@@ -185,7 +186,7 @@ export function startPrintAgent() {
       for (let i = 0; i < 20 && (await processNext()); i++) { /* esvazia a fila */ }
       if (Date.now() - lastProbe > 20_000) { lastProbe = Date.now(); await probeAll(); }
     } catch (e) {
-      console.error("[impressão]", (e as Error).message);
+      log.error("print.loop_failed", errInfo(e));
     } finally {
       running = false;
       setTimeout(tick, Number(process.env.NOKAU_PRINT_INTERVAL_MS ?? 1000));

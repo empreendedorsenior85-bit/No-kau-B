@@ -1,11 +1,11 @@
 import type { Metadata, Viewport } from "next";
 import { Inter, Playfair_Display } from "next/font/google";
-import { MotionProvider } from "@/components/motion/MotionProvider";
 import { site } from "@/lib/site";
 import "./globals.css";
 
 const inter = Inter({ variable: "--font-inter", subsets: ["latin"], display: "swap" });
-const playfair = Playfair_Display({ variable: "--font-playfair", subsets: ["latin"], style: ["normal", "italic"], display: "swap" });
+// Playfair (títulos) sem pré-carregamento: em rede lenta não compete com o JavaScript; o texto aparece logo (swap)
+const playfair = Playfair_Display({ variable: "--font-playfair", subsets: ["latin"], style: ["normal", "italic"], display: "swap", preload: false });
 
 export const metadata: Metadata = {
   metadataBase: new URL(site.siteUrl),
@@ -27,7 +27,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <script dangerouslySetInnerHTML={{ __html: "document.documentElement.classList.add('js')" }} />
       </head>
       <body className="min-h-svh">
-        <MotionProvider>{children}</MotionProvider>
+        {children}
       </body>
     </html>
   );

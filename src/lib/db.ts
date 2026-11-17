@@ -1,4 +1,5 @@
 import "server-only";
+import { log } from "@/lib/log";
 import { Pool, type PoolClient, type QueryResultRow } from "pg";
 
 /**
@@ -34,7 +35,7 @@ function pool(): Pool {
       // cifrado e com verificação do certificado. DATABASE_SSL_NO_VERIFY=1 só para fornecedores com certificados não verificáveis.
       ssl: local ? false : { rejectUnauthorized: process.env.DATABASE_SSL_NO_VERIFY !== "1" },
     });
-    g.__nokauPool.on("error", (e) => console.error("[db] erro numa ligação inativa:", e.message));
+    g.__nokauPool.on("error", (e) => log.error("db.idle_client_error", { error: e.message }));
   }
   return g.__nokauPool;
 }
@@ -62,7 +63,7 @@ async function retrying<T>(fn: () => Promise<T>, tries = 3): Promise<T> {
       return await fn();
     } catch (e) {
       if (!isTransient(e) || i >= tries - 1) throw e;
-      console.warn(`[db] erro transitório (${(e as Error).message}); nova tentativa ${i + 2}/${tries}`);
+      log.warn("db.transient_retry", { error: (e as Error).message, attempt: i + 2, tries });
       await sleep(250 * 2 ** i);
     }
   }

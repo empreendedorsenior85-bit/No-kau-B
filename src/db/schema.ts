@@ -385,3 +385,30 @@ create index if not exists print_jobs_order_idx on print_jobs(order_id);
 alter table printers enable row level security;
 alter table print_jobs enable row level security;
 `;
+
+/** Segurança: sessões revogáveis no servidor e limites de tentativas de login partilhados por todas as instâncias. */
+export const MIGRATE_SECURITY_SQL = /* sql */ `
+select pg_advisory_xact_lock(727007);
+-- A sessão só é válida se existir aqui (e não estiver revogada). O cookie guarda um segredo aleatório; aqui fica só o seu hash.
+create table if not exists auth_sessions (
+  id_hash text primary key,
+  kind text not null check (kind in ('staff','client')),
+  subject uuid not null,
+  created_at timestamptz not null default now(),
+  expires_at timestamptz not null,
+  last_seen_at timestamptz not null default now(),
+  revoked_at timestamptz,
+  user_agent text
+);
+create index if not exists auth_sessions_subject_idx on auth_sessions(kind, subject) where revoked_at is null;
+create index if not exists auth_sessions_expires_idx on auth_sessions(expires_at);
+-- Tentativas falhadas (chave = hash de "tipo|conta" ou "tipo|ip|conta"): funciona com várias instâncias da Vercel.
+create table if not exists auth_throttle (
+  key_hash text primary key,
+  fails int not null default 0,
+  window_until timestamptz not null
+);
+create index if not exists auth_throttle_until_idx on auth_throttle(window_until);
+alter table auth_sessions enable row level security;
+alter table auth_throttle enable row level security;
+`;

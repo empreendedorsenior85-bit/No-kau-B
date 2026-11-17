@@ -1,7 +1,8 @@
 import "server-only";
 import { isLocalServer } from "./node-role";
-import { createHmac, randomBytes, scrypt, timingSafeEqual, createHash } from "node:crypto";
-import { cookies } from "next/headers";
+import { randomBytes, scrypt, timingSafeEqual, createHash } from "node:crypto";
+import { cookies, headers } from "next/headers";
+import { createSession, revokeAllSessions, revokeSession, sessionIdHash, touchSession } from "./sessions";
 import { connection } from "next/server";
 import { redirect } from "next/navigation";
 import { query } from "./db";
@@ -10,12 +11,6 @@ import { isManagerRole } from "./auth-types";
 
 const COOKIE = "nk_session";
 const SESSION_HOURS = 12;
-
-function secret(): string {
-  const s = process.env.SESSION_SECRET;
-  if (!s || s.length < 32) throw new Error("SESSION_SECRET em falta (mín. 32 caracteres)");
-  return s;
-}
 
 const scryptAsync = (pw: string, salt: Buffer, len: number) =>
   new Promise<Buffer>((res, rej) => scrypt(pw, salt, len, { N: 16384, r: 8, p: 1 }, (e, k) => (e ? rej(e) : res(k))));
@@ -41,12 +36,11 @@ export function safeEqual(a: string, b: string): boolean {
   return timingSafeEqual(ha, hb);
 }
 
-const sign = (payload: string) => createHmac("sha256", secret()).update(payload).digest("base64url");
-
+/** Inicia uma sessão de equipa (guardada no servidor — pode ser terminada a qualquer momento). */
 export async function startSession(userId: string) {
-  const exp = Date.now() + SESSION_HOURS * 3600_000;
-  const payload = `${userId}.${exp}`;
-  (await cookies()).set(COOKIE, `${payload}.${sign(payload)}`, {
+  const h = await headers();
+  const value = await createSession("staff", userId, SESSION_HOURS * 3600_000, h.get("user-agent"));
+  (await cookies()).set(COOKIE, value, {
     httpOnly: true,
     // servidor local do restaurante: http na rede Wi-Fi (sem certificado) → cookie sem "secure", senão o login falhava
     secure: process.env.NODE_ENV === "production" && !isLocalServer(),
@@ -56,30 +50,37 @@ export async function startSession(userId: string) {
   });
 }
 
+/** Termina ESTA sessão no servidor (o cookie deixa de servir mesmo que tenha sido copiado). */
 export async function endSession() {
-  (await cookies()).delete(COOKIE);
+  const jar = await cookies();
+  await revokeSession("staff", jar.get(COOKIE)?.value);
+  jar.delete(COOKIE);
+}
+
+/** Termina as outras sessões deste utilizador (ex.: depois de mudar a palavra-passe). Sem `keepCurrent`: todas. */
+export async function endOtherSessions(userId: string, keepCurrent = true) {
+  const raw = keepCurrent ? (await cookies()).get(COOKIE)?.value : undefined;
+  await revokeAllSessions("staff", userId, raw);
 }
 
 import type { Role } from "./auth-types";
 export type { Role };
 export type Manager = { id: string; email: string; role: Role; name: string | null };
 
-/** Valida assinatura, validade e se o utilizador continua ativo na base de dados. */
+/** Valida a assinatura do cookie, a sessão no servidor (existe, não revogada, não expirada) e se a conta continua ativa. */
 export async function getManager(): Promise<Manager | null> {
   // cookies() fora do try/catch: o Next usa uma exceção interna para marcar leituras dinâmicas
   const raw = (await cookies()).get(COOKIE)?.value;
   if (!raw) return null;
   await connection(); // a validade usa a hora atual: só em renderização a pedido, nunca em pré-renderização
   try {
-    await ensureMigrated().catch(() => {}); // papéis antigos -> novos (se ainda não migrados)
-    const i = raw.lastIndexOf(".");
-    const payload = raw.slice(0, i);
-    const sig = raw.slice(i + 1);
-    const good = sign(payload);
-    if (sig.length !== good.length || !timingSafeEqual(Buffer.from(sig), Buffer.from(good))) return null;
-    const [uid, exp] = payload.split(".");
-    if (!uid || Number(exp) < Date.now()) return null;
-    const r = await query<Manager>("select id, email, role, name from admin_users where id = $1 and active", [uid]);
+    const idHash = sessionIdHash("staff", raw);
+    if (!idHash) return null;
+    await ensureMigrated();
+    const r = await query<Manager>(
+      `select u.id, u.email, u.role, u.name from auth_sessions s join admin_users u on u.id = s.subject
+       where s.id_hash = $1 and s.kind = 'staff' and s.revoked_at is null and s.expires_at > now() and u.active`, [idHash]);
+    if (r.rows[0]) touchSession(idHash);
     return r.rows[0] ?? null;
   } catch {
     return null;
@@ -105,19 +106,4 @@ export async function requireStaff(): Promise<Manager> {
   const m = await getManager();
   if (!m) redirect("/admin/login");
   return m;
-}
-
-// --- limitação de tentativas de login (por instância) ---
-const fails = new Map<string, { n: number; until: number }>();
-export function loginLocked(key: string): boolean {
-  const f = fails.get(key);
-  return !!f && f.n >= 5 && f.until > Date.now();
-}
-export function loginFailed(key: string) {
-  const f = fails.get(key);
-  const now = Date.now();
-  fails.set(key, !f || f.until < now ? { n: 1, until: now + 15 * 60_000 } : { n: f.n + 1, until: now + 15 * 60_000 });
-}
-export function loginOk(key: string) {
-  fails.delete(key);
 }

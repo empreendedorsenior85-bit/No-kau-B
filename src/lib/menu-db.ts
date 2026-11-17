@@ -1,4 +1,5 @@
 import "server-only";
+import { errInfo, log } from "@/lib/log";
 import { cacheLife, cacheTag } from "next/cache";
 import { dbConfigured, query } from "./db";
 import { ensureMigrated } from "@/db/init";
@@ -79,7 +80,7 @@ export async function getPublicSiteMenu(): Promise<{ categories: { id: string; l
       }))),
     };
   } catch (e) {
-    console.error("[menu público] base de dados indisponível:", (e as Error).message);
+    log.error("menu.db_unavailable", errInfo(e));
     return null;
   }
 }

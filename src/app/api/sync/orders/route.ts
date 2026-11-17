@@ -1,3 +1,4 @@
+import { log } from "@/lib/log";
 import { authorizeSync } from "@/lib/sync/auth";
 import { applyOrders, isWireOrder, ordersChangedAfter } from "@/lib/sync/orders-sync";
 import { ensureMigrated } from "@/db/init";
@@ -32,7 +33,7 @@ export async function POST(req: Request) {
     const id = (o as { id?: unknown })?.id;
     if (typeof id === "string" && id.length <= 64) r.rejected.push({ id, reason: "formato inválido (pedido sem produtos ou dados em falta)" });
   }
-  if (invalid) console.error(`[sync] ${invalid} pedido(s) com formato inválido recusado(s)`);
-  if (r.rejected.length) console.error("[sync] pedidos recusados:", JSON.stringify(r.rejected));
+  if (invalid) log.warn("sync.orders_invalid", { invalid });
+  if (r.rejected.length) log.warn("sync.orders_rejected", { rejected: r.rejected });
   return Response.json({ ...r, invalid }, { headers: { "Cache-Control": "no-store" } });
 }

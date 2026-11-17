@@ -1,3 +1,4 @@
+import { errInfo, log } from "@/lib/log";
 import { getManager } from "@/lib/auth";
 import { changedSince, currentRev } from "@/lib/orders";
 import { callsChangedSince } from "@/lib/calls";
@@ -70,7 +71,7 @@ export async function GET(req: Request) {
           await new Promise((r) => setTimeout(r, POLL_MS));
         }
       } catch (e) {
-        console.error("[stream]", e);
+        log.error("admin.stream_failed", errInfo(e));
       } finally {
         close();
       }

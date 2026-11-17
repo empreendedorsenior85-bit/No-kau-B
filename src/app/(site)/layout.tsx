@@ -5,6 +5,7 @@ import { MobileActionBar } from "@/components/layout/MobileActionBar";
 import { WhatsAppFloat } from "@/components/layout/WhatsAppFloat";
 import { ReservationNotifier } from "@/components/reservations/ReservationNotifier";
 import { site } from "@/lib/site";
+import { MotionProvider } from "@/components/motion/MotionProvider";
 
 /** Dados estruturados apenas com factos confirmados (sem horário, sem avaliações). */
 const jsonLd = {
@@ -28,7 +29,8 @@ export default function SiteLayout({ children }: { children: ReactNode }) {
         Saltar para o conteúdo
       </a>
       <Header />
-      <div id="conteudo">{children}</div>
+      {/* animações só no site público: o menu da mesa (/m), o painel e a conta de cliente não carregam a biblioteca */}
+      <div id="conteudo"><MotionProvider>{children}</MotionProvider></div>
       <Footer />
       <MobileActionBar />
       <WhatsAppFloat />

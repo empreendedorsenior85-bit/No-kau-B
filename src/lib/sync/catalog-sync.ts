@@ -69,6 +69,11 @@ export async function applyCatalog(cat: WireCatalog): Promise<{ imagesToFetch: {
     await c.query("select setval('menu_items_id_seq', greatest((select coalesce(max(id),0) from menu_items), 1))");
 
     for (const u of cat.users) {
+      // palavra-passe mudada/redefinida no central, ou conta desativada: as sessões abertas neste servidor terminam
+      await c.query(
+        `update auth_sessions set revoked_at = now() where kind = 'staff' and subject = $1 and revoked_at is null
+           and exists (select 1 from admin_users where id = $1 and (password_hash <> $2 or (active and not $3)))`,
+        [u.id, u.passwordHash, u.active]);
       // um email reutilizado no central com outra conta: a conta antiga local deixa de o usar
       await c.query("update admin_users set email = email || '#antigo-' || left(id::text, 8), active = false where email = $1 and id <> $2", [u.email, u.id]);
       await c.query(

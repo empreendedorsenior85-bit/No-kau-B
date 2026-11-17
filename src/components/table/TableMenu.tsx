@@ -28,6 +28,14 @@ export function TableMenu({ token, table, categories, customer = null }: { token
   const [gone, setGone] = useState<Set<number>>(new Set()); // produtos que o servidor disse já não estarem disponíveis
   const sending = useRef(false);
   const [active, setActive] = useState(categories[0]?.id);
+  // Fotos só depois de a página ficar interativa: em rede lenta, os botões "Adicionar" funcionam primeiro
+  // (as fotos não competem com o JavaScript). Ficam guardadas para a próxima visita.
+  const [imagesOn, setImagesOn] = useState(false);
+  useEffect(() => {
+    const w = window as Window & { requestIdleCallback?: (cb: () => void, o?: { timeout: number }) => number };
+    if (w.requestIdleCallback) w.requestIdleCallback(() => setImagesOn(true), { timeout: 800 });
+    else setTimeout(() => setImagesOn(true), 50);
+  }, []);
   const net = useOffline(all.map((i) => i.imageUrl).filter((u): u is string => !!u));
   const [records, setRecords] = useState<OutboxRecord[]>([]);
   const [outboxOk, setOutboxOk] = useState<boolean | null>(null);
@@ -231,8 +239,12 @@ export function TableMenu({ token, table, categories, customer = null }: { token
                   <li key={it.id} className={`overflow-hidden rounded-2xl border bg-kau-900 ${q ? "border-gold/60" : "border-kau-800"} ${available ? "" : "opacity-60"}`}>
                     {it.imageUrl && (
                       <figure className="relative">
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img src={it.imageUrl} alt={it.name} loading="lazy" decoding="async" className="aspect-[16/10] w-full object-cover" />
+                        {imagesOn ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={it.imageUrl} alt={it.name} loading="lazy" decoding="async" fetchPriority="low" className="aspect-[16/10] w-full object-cover" />
+                        ) : (
+                          <div aria-hidden className="aspect-[16/10] w-full bg-kau-800/40" />
+                        )}
                         {isIllustrative(it.imageUrl) && (
                           <figcaption data-testid="illustrative" className="absolute bottom-2 left-2 rounded-full bg-kau-950/75 px-2.5 py-1 text-[0.65rem] uppercase tracking-[0.12em] text-white/90 backdrop-blur-sm">Imagem ilustrativa</figcaption>
                         )}

@@ -1,6 +1,6 @@
 import "server-only";
-import { createHmac, timingSafeEqual } from "node:crypto";
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
+import { createSession, revokeSession, sessionIdHash, touchSession } from "./sessions";
 import { connection } from "next/server";
 import { z } from "zod";
 import { query } from "./db";
@@ -10,21 +10,13 @@ import { isLocalServer } from "./node-role";
 
 /**
  * Conta do CLIENTE (separada da equipa): nome, email, telefone e palavra-passe (scrypt).
- * Sessão própria (cookie "nk_client", assinado, 30 dias) — nunca dá acesso ao painel.
+ * Sessão própria (cookie "nk_client", guardada no servidor, 30 dias) — nunca dá acesso ao painel.
  * As contas existem só no site central (o servidor local do restaurante não guarda dados pessoais de clientes).
  */
 const COOKIE = "nk_client";
 const DAYS = 30;
 
 export type Customer = { id: string; name: string; email: string; phone: string };
-
-function secret(): string {
-  const s = process.env.SESSION_SECRET;
-  if (!s || s.length < 32) throw new Error("SESSION_SECRET em falta (mín. 32 caracteres)");
-  return s;
-}
-// prefixo próprio: uma assinatura de cliente nunca é válida como sessão da equipa (e vice-versa)
-const sign = (payload: string) => createHmac("sha256", secret()).update(`cliente:${payload}`).digest("base64url");
 
 /** Telefone guineense: "955 000 000" → "+245955000000"; números internacionais com "+" ficam como estão. */
 export function normalizePhone(raw: string): string {
@@ -78,30 +70,32 @@ export async function authenticateCustomer(identifier: string, password: string)
 }
 
 export async function startCustomerSession(id: string) {
-  const exp = Date.now() + DAYS * 86_400_000;
-  const payload = `${id}.${exp}`;
-  (await cookies()).set(COOKIE, `${payload}.${sign(payload)}`, {
+  const value = await createSession("client", id, DAYS * 86_400_000, (await headers()).get("user-agent"));
+  (await cookies()).set(COOKIE, value, {
     httpOnly: true, secure: process.env.NODE_ENV === "production" && !isLocalServer(), sameSite: "lax", path: "/", maxAge: DAYS * 86_400,
   });
 }
 
+/** Termina ESTA sessão no servidor (um cookie copiado deixa de servir). */
 export async function endCustomerSession() {
-  (await cookies()).delete(COOKIE);
+  const jar = await cookies();
+  await revokeSession("client", jar.get(COOKIE)?.value);
+  jar.delete(COOKIE);
 }
 
-/** Cliente com sessão iniciada (ou null). Valida assinatura, validade e se a conta continua ativa. */
+/** Cliente com sessão iniciada (ou null). Valida a assinatura, a sessão no servidor e se a conta continua ativa. */
 export async function getCustomer(): Promise<Customer | null> {
   const raw = (await cookies()).get(COOKIE)?.value;
   if (!raw) return null;
   await connection();
   try {
-    const i = raw.lastIndexOf(".");
-    const payload = raw.slice(0, i), sig = raw.slice(i + 1), good = sign(payload);
-    if (sig.length !== good.length || !timingSafeEqual(Buffer.from(sig), Buffer.from(good))) return null;
-    const [id, exp] = payload.split(".");
-    if (!id || Number(exp) < Date.now() || !/^[0-9a-f-]{36}$/i.test(id)) return null;
+    const idHash = sessionIdHash("client", raw);
+    if (!idHash) return null;
     await ensureMigrated();
-    const r = await query<Customer>("select id, name, email, phone from customers where id = $1 and active", [id]);
+    const r = await query<Customer>(
+      `select c.id, c.name, c.email, c.phone from auth_sessions s join customers c on c.id = s.subject
+       where s.id_hash = $1 and s.kind = 'client' and s.revoked_at is null and s.expires_at > now() and c.active`, [idHash]);
+    if (r.rows[0]) touchSession(idHash);
     return r.rows[0] ?? null;
   } catch {
     return null;

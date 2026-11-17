@@ -1,3 +1,4 @@
+import { errInfo, log } from "@/lib/log";
 import { getOrderForTable } from "@/lib/orders";
 import { isQrToken } from "@/lib/tokens";
 import { rateLimit } from "@/lib/rate-limit";
@@ -19,7 +20,7 @@ export async function GET(req: Request, ctx: { params: Promise<{ id: string }> }
       { headers: { "Cache-Control": "no-store" } },
     );
   } catch (e) {
-    console.error("[pedido]", e);
+    log.error("order.status_failed", errInfo(e));
     return Response.json({ error: "server" }, { status: 500 });
   }
 }

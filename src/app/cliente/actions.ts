@@ -2,8 +2,8 @@
 
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
-import { authenticateCustomer, endCustomerSession, registerCustomer, startCustomerSession } from "@/lib/customers";
-import { loginFailed, loginLocked, loginOk } from "@/lib/auth";
+import { authenticateCustomer, endCustomerSession, normalizePhone, registerCustomer, startCustomerSession } from "@/lib/customers";
+import { clearFailures, isThrottled, loginKeys, recordFailure } from "@/lib/sessions";
 import { rateLimit } from "@/lib/rate-limit";
 import { query } from "@/lib/db";
 
@@ -34,11 +34,12 @@ export async function registerAction(_: ClientFormState, fd: FormData): Promise<
 
 export async function clientLoginAction(_: ClientFormState, fd: FormData): Promise<ClientFormState> {
   const id = String(fd.get("identifier") ?? "").trim();
-  const key = `cliente|${await ip()}|${id.toLowerCase()}`;
-  if (loginLocked(key)) return { error: "Demasiadas tentativas. Aguarde 15 minutos.", values: { identifier: id } };
+  // a mesma conta escrita de formas diferentes ("955 000 000" / "+245955000000") conta como uma só
+  const keys = loginKeys("cliente", await ip(), id.includes("@") ? id.toLowerCase() : normalizePhone(id));
+  if (await isThrottled(keys)) return { error: "Demasiadas tentativas. Aguarde 15 minutos.", values: { identifier: id } };
   const c = await authenticateCustomer(id, String(fd.get("password") ?? ""));
-  if (!c) { loginFailed(key); return { error: "Email/telefone ou palavra-passe incorretos.", values: { identifier: id } }; }
-  loginOk(key);
+  if (!c) { await recordFailure(keys); return { error: "Email/telefone ou palavra-passe incorretos.", values: { identifier: id } }; }
+  await clearFailures(keys);
   await startCustomerSession(c.id);
   redirect(safeReturn(fd.get("volta")));
 }

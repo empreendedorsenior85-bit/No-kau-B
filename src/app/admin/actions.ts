@@ -1,12 +1,14 @@
 "use server";
 
+import { MENU_IMAGE_MAX_UPLOAD, normalizeMenuImage } from "@/lib/images";
+import { clearFailures, isThrottled, loginKeys, recordFailure, revokeAllSessions } from "@/lib/sessions";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { updateTag } from "next/cache";
 import { z } from "zod";
 import { query, tx } from "@/lib/db";
 import {
-  endSession, getManager, hashPassword, loginFailed, loginLocked, loginOk, safeEqual, startSession, verifyPassword,
+  endOtherSessions, endSession, getManager, hashPassword, safeEqual, startSession, verifyPassword,
 } from "@/lib/auth";
 import { changeStatus } from "@/lib/orders";
 import { setCallStatus, type CallActionResult } from "@/lib/calls";
@@ -66,16 +68,16 @@ const audit = async (actor: string, action: string, entity: string, id: string |
 export async function loginAction(_: AdminFormState, fd: FormData): Promise<AdminFormState> {
   const email = String(fd.get("email") ?? "").trim().toLowerCase();
   const password = String(fd.get("password") ?? "");
-  const key = `${await clientIp()}|${email}`;
-  if (loginLocked(key)) return { error: "Demasiadas tentativas. Aguarde 15 minutos." };
+  const keys = loginKeys("equipa", await clientIp(), email);
+  if (await isThrottled(keys)) return { error: "Demasiadas tentativas. Aguarde 15 minutos." };
   const r = await query<{ id: string; password_hash: string; role: string }>(
     "select id, password_hash, role from admin_users where email = $1 and active", [email]);
   const ok = await verifyPassword(password, r.rows[0]?.password_hash ?? null);
   if (!ok || !r.rows[0]) {
-    loginFailed(key);
+    await recordFailure(keys);
     return { error: "Email ou palavra-passe incorretos." };
   }
-  loginOk(key);
+  await clearFailures(keys);
   await startSession(r.rows[0].id);
   await audit(email, "login", "admin", r.rows[0].id);
   redirect(r.rows[0].role === "garcom" ? "/admin/mesas" : "/admin/dashboard"); // o garçom entra direto no atendimento
@@ -99,10 +101,10 @@ export async function setupAction(_: AdminFormState, fd: FormData): Promise<Admi
   if (!expected) return { error: "SETUP_TOKEN não configurado no servidor." };
   const parsed = setupSchema.safeParse({ token: fd.get("token"), email: fd.get("email"), password: fd.get("password") });
   if (!parsed.success) return { error: parsed.error.issues[0].message };
-  const ip = await clientIp();
-  if (loginLocked(`setup|${ip}`)) return { error: "Demasiadas tentativas. Aguarde 15 minutos." };
+  const keys = loginKeys("setup", await clientIp(), "primeiro-acesso");
+  if (await isThrottled(keys)) return { error: "Demasiadas tentativas. Aguarde 15 minutos." };
   if (!safeEqual(parsed.data.token, expected)) {
-    loginFailed(`setup|${ip}`);
+    await recordFailure(keys);
     return { error: "Código de configuração incorreto." };
   }
   await initDatabase();
@@ -196,8 +198,10 @@ export async function saveItemAction(_: AdminFormState, fd: FormData): Promise<A
   const file = fd.get("image");
   if (file instanceof File && file.size > 0) {
     if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) return { error: "A foto deve ser JPG, PNG ou WebP." };
-    if (file.size > 900_000) return { error: "A foto é demasiado grande (máx. 900 KB)." };
-    img = { buf: Buffer.from(await file.arrayBuffer()), type: file.type };
+    if (file.size > MENU_IMAGE_MAX_UPLOAD) return { error: "A foto é demasiado grande (máx. 900 KB)." };
+    // reduzida, sem metadados (GPS) e confirmada como imagem verdadeira
+    img = await normalizeMenuImage(Buffer.from(await file.arrayBuffer()));
+    if (!img) return { error: "Não foi possível ler a foto. Experimente outra imagem (JPG, PNG ou WebP)." };
   }
 
   if (d.id) {
@@ -294,6 +298,7 @@ export async function setUserActiveAction(id: string, active: boolean): Promise<
   if (!u.rows[0]) return { error: "Utilizador não encontrado." };
   if (!active && u.rows[0].role === "admin" && u.rows[0].active && (await otherActiveAdmins(id)) === 0) return { error: "Tem de existir pelo menos um Admin ativo." };
   await query("update admin_users set active = $2 where id = $1", [id, active]);
+  if (!active) await revokeAllSessions("staff", id); // reativar a conta não ressuscita sessões antigas
   await audit(m.email, active ? "user.activate" : "user.deactivate", "admin_user", id);
   return { ok: active ? "Conta ativada." : "Conta desativada. A sessão deste utilizador deixa de funcionar de imediato." };
 }
@@ -305,6 +310,7 @@ export async function resetUserPasswordAction(id: string, password: string): Pro
   if (!p.success) return { error: p.error.issues[0].message };
   const r = await query("update admin_users set password_hash = $2 where id = $1 returning id", [id, await hashPassword(p.data)]);
   if (!r.rows[0]) return { error: "Utilizador não encontrado." };
+  await revokeAllSessions("staff", id); // quem tinha a palavra-passe antiga deixa de ter acesso
   await audit(m.email, "user.password_reset", "admin_user", id);
   return { ok: "Palavra-passe redefinida." };
 }
@@ -319,8 +325,9 @@ export async function changeOwnPasswordAction(_: AdminFormState, fd: FormData): 
   const r = await query<{ password_hash: string }>("select password_hash from admin_users where id = $1", [m.id]);
   if (!(await verifyPassword(current, r.rows[0]?.password_hash ?? null))) return { error: "A palavra-passe atual está incorreta." };
   await query("update admin_users set password_hash = $2 where id = $1", [m.id, await hashPassword(next.data)]);
+  await endOtherSessions(m.id); // as outras sessões (outros aparelhos) terminam; esta continua
   await audit(m.email, "user.password_change", "admin_user", m.id);
-  return { ok: "Palavra-passe alterada." };
+  return { ok: "Palavra-passe alterada. As sessões noutros aparelhos foram terminadas." };
 }
 
 // ---------- categorias do menu (Admin e Gerente) ----------
@@ -471,7 +478,10 @@ export async function setWaiterActiveAction(id: string, active: boolean): Promis
   if (!(await waiterById(id))) return { error: "Garçom não encontrado." };
   await query("update admin_users set active = $2 where id = $1 and role = 'garcom'", [id, active]);
   // garçom desativado deixa de estar atribuído às mesas (as chamadas voltam a avisar toda a equipa)
-  if (!active) await query("update dining_tables set waiter_id = null where waiter_id = $1", [id]);
+  if (!active) {
+    await query("update dining_tables set waiter_id = null where waiter_id = $1", [id]);
+    await revokeAllSessions("staff", id);
+  }
   await audit(m.email, active ? "waiter.activate" : "waiter.deactivate", "admin", id);
   return { ok: active ? "Garçom ativado." : "Garçom desativado e retirado das mesas." };
 }
@@ -494,6 +504,7 @@ export async function resetWaiterPasswordAction(id: string, password: string): P
   if (!p.success) return { error: p.error.issues[0].message };
   if (!(await waiterById(id))) return { error: "Garçom não encontrado." };
   await query("update admin_users set password_hash = $2 where id = $1 and role = 'garcom'", [id, await hashPassword(p.data)]);
+  await revokeAllSessions("staff", id);
   await audit(m.email, "waiter.reset_password", "admin", id);
   return { ok: "Palavra-passe redefinida." };
 }

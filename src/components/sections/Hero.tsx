@@ -10,7 +10,7 @@ import { site } from "@/lib/site";
 const d = (s: number) => ({ animationDelay: `${s}s` });
 
 /**
- * Hero: a fotografia real do salão é revelada por um foco de luz (como os spots sobre as máscaras).
+ * Hero: a fotografia real do salão, sempre com as cores originais (sem sobreposições).
  * Entradas em CSS (visíveis mesmo sem JS); Motion apenas para a profundidade ao fazer scroll.
  */
 export function Hero() {
@@ -22,30 +22,23 @@ export function Hero() {
 
   return (
     <section ref={ref} className="relative isolate grid min-h-[100svh] overflow-hidden bg-kau-950 lg:grid-cols-[1.05fr_1fr]">
-      <div className="absolute inset-0 lg:relative lg:order-2 lg:m-6 lg:ml-0 lg:mt-24 lg:overflow-hidden lg:rounded-[2rem]">
+      {/* Fotografia com as cores reais: nunca fica por baixo de texto, logótipo, gradientes ou máscaras.
+          Telemóvel: em cima, inteira; computador: à direita. */}
+      <div className="nk-fade-up relative mt-20 aspect-[4/5] w-[min(calc(100%-2rem),calc(58svh*0.8))] justify-self-center overflow-hidden rounded-[1.75rem] lg:order-2 lg:m-6 lg:ml-0 lg:mt-24 lg:aspect-auto lg:w-auto lg:justify-self-stretch lg:rounded-[2rem]" style={d(0.1)}>
         <m.div className="absolute inset-0" style={{ y, scale }}>
-          <div
-            className="nk-spot absolute inset-0"
-            style={{
-              WebkitMaskImage: "radial-gradient(circle at 55% 30%, #000 var(--r), transparent calc(var(--r) * 1.6))",
-              maskImage: "radial-gradient(circle at 55% 30%, #000 var(--r), transparent calc(var(--r) * 1.6))",
-            }}
-          >
-            <Image
-              src="/photos/mesa-mascaras.jpg"
-              alt="Salão do Nô Kau: parede em madeira com máscaras africanas e mesa posta"
-              fill
-              priority
-              sizes="(min-width: 1024px) 48vw, 100vw"
-              className="object-cover object-[60%_30%]"
-            />
-          </div>
+          <Image
+            src="/photos/mesa-mascaras.jpg"
+            alt="Salão do Nô Kau: parede em madeira com máscaras africanas e mesa posta"
+            fill
+            priority
+            sizes="(min-width: 1024px) 48vw, 100vw"
+            className="object-cover object-[60%_30%]"
+          />
         </m.div>
-        <div className="absolute inset-0 bg-gradient-to-t from-kau-950 from-35% via-kau-950/80 to-kau-950/20 lg:bg-gradient-to-r lg:from-kau-950/40 lg:via-transparent lg:to-transparent" />
       </div>
 
-      <div className="relative z-10 flex flex-col justify-end px-6 pb-24 pt-28 sm:px-10 lg:order-1 lg:justify-center lg:px-16 lg:pb-0 xl:px-24">
-        <div className="nk-logo mb-8 w-fit rounded-full shadow-[0_0_60px_-10px_rgba(169,134,44,0.6)]" style={d(0.3)}>
+      <div className="relative z-10 flex flex-col justify-start px-6 pb-24 pt-10 sm:px-10 lg:order-1 lg:justify-center lg:px-16 lg:pb-0 xl:px-24">
+        <div className="nk-logo mb-8 w-fit" style={d(0.3)}>
           <Logo size={112} priority className="h-[84px] w-[84px] sm:h-[112px] sm:w-[112px]" />
         </div>
 
