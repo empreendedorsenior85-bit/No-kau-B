@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import { PageHero } from "@/components/layout/PageHero";
 import { Reveal } from "@/components/motion/Reveal";
-import { DuotoneImage } from "@/components/ui/DuotoneImage";
 import { Provisional } from "@/components/ui/Provisional";
 import { ButtonLink } from "@/components/ui/Button";
 import { chapters, sources } from "@/content/culture";
@@ -24,20 +23,25 @@ export default function CulturaPage() {
       </PageHero>
 
       <section className="bg-gold text-kau-950">
-        <div className="mx-auto grid max-w-7xl items-end gap-10 px-6 py-20 sm:px-8 lg:grid-cols-2 lg:py-28">
+        <div className="mx-auto grid max-w-7xl items-center gap-12 px-6 py-20 sm:px-8 lg:grid-cols-2 lg:gap-16 lg:py-28">
           <Reveal>
-            <DuotoneImage
-              src="/photos/vaca-bruto-par.jpg"
-              alt="Duas máscaras de boi com chifres, uma preta e branca e outra vermelha e branca, ambas com triângulo branco na testa"
-              width={540}
-              height={290}
-              sizes="(min-width: 1024px) 50vw, 100vw"
-              className="aspect-[540/290] w-full rounded-[1.75rem] [&_img]:h-full [&_img]:w-full"
-            />
-            <div className="mt-3 flex flex-wrap items-center justify-between gap-3 text-sm">
-              <p className="font-display italic text-kau-950/80">Máscaras da sala, inspiradas na vaca bruto (tipo dugn&apos;be).</p>
-              <Provisional className="!border-kau-950/60 !text-kau-950">Imagem provisória</Provisional>
-            </div>
+            {/* Fotografia com as cores reais (sem filtro do tema); moldura concêntrica, legenda no eixo da imagem */}
+            <figure className="mx-auto w-full max-w-[40rem]" data-testid="vaca-bruto-figure">
+              <div className="rounded-[2rem] border border-kau-950/30 p-2.5">
+                <div className="relative aspect-[1169/628] overflow-hidden rounded-[1.5rem] bg-kau-950/10">
+                  <Image
+                    src="/photos/vaca-bruto-par.jpg"
+                    alt="Duas máscaras de boi com chifres, uma preta e branca e outra vermelha e branca, ambas com triângulo branco na testa"
+                    fill
+                    sizes="(min-width: 1024px) 640px, 100vw"
+                    className="object-cover"
+                  />
+                </div>
+              </div>
+              <figcaption className="mt-4 text-center font-display text-base italic text-kau-950/85">
+                Máscaras da sala, inspiradas na vaca bruto (tipo dugn&apos;be).
+              </figcaption>
+            </figure>
           </Reveal>
           <Reveal delay={0.1}>
             <p className="font-display text-[2.2rem] leading-[1.1] sm:text-5xl">
