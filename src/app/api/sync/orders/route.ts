@@ -25,6 +25,13 @@ export async function POST(req: Request) {
   const valid = body.orders.filter(isWireOrder);
   const invalid = body.orders.length - valid.length;
   const r = await applyOrders(valid, "servidor-local");
+  // os inválidos voltam como RECUSADOS (com o id): o servidor local deixa de os reenviar.
+  // Sem isto, um pedido inválido ficava na fila para sempre e podia bloquear os seguintes.
+  for (const o of body.orders) {
+    if (isWireOrder(o)) continue;
+    const id = (o as { id?: unknown })?.id;
+    if (typeof id === "string" && id.length <= 64) r.rejected.push({ id, reason: "formato inválido (pedido sem produtos ou dados em falta)" });
+  }
   if (invalid) console.error(`[sync] ${invalid} pedido(s) com formato inválido recusado(s)`);
   if (r.rejected.length) console.error("[sync] pedidos recusados:", JSON.stringify(r.rejected));
   return Response.json({ ...r, invalid }, { headers: { "Cache-Control": "no-store" } });
