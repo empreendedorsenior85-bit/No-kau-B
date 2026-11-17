@@ -18,6 +18,8 @@ const GROUPS: { title: string; items: Item[] }[] = [
     { href: "/admin/pedidos", label: "Pedidos", who: "staff", icon: ic("M6 2h12l2 5v13a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V7l2-5zM4 7h16M9 11h6") },
     { href: "/admin/mesas", label: "Mesas", who: "staff", icon: ic("M4 9h16M6 9v10M18 9v10M3 9l1-4h16l1 4") },
     { href: "/admin/atendimento", label: "Atendimento", who: "manager", icon: ic("M12 8v4l3 2M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20z") },
+    { href: "/admin/pagamentos", label: "Pagamentos", who: "manager", icon: ic("M2 7h20v12H2zM2 11h20M6 15h4") },
+    { href: "/admin/clientes", label: "Clientes", who: "manager", icon: ic("M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8z") },
   ] },
   { title: "Gestão", items: [
     { href: "/admin/menu", label: "Menu", who: "manager", icon: ic("M4 4h16v4H4zM4 12h16M4 16h16M4 20h10") },

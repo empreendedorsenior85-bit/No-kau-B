@@ -29,6 +29,8 @@ export type Order = {
   status: OrderStatus;
   total: number;
   isTest: boolean;
+  /** Pago (pagamento confirmado pelo gerente). */
+  paid: boolean;
   createdAt: string;
   updatedAt: string;
   rev: number;
@@ -62,4 +64,11 @@ export type ServiceCall = {
   doneAt: string | null;
   doneBy: string | null;
   rev: number;
+};
+
+/** Pagamentos (Etapa 4): feitos EM MÃO no restaurante e confirmados pelo gerente. */
+export type PaymentMethod = "cash" | "orange_money" | "mtn_momo" | "card" | "transfer";
+export const PAYMENT_METHODS: PaymentMethod[] = ["cash", "orange_money", "mtn_momo", "card", "transfer"];
+export const PAYMENT_LABEL: Record<PaymentMethod, string> = {
+  cash: "Numerário", orange_money: "Orange Money", mtn_momo: "MTN MoMo", card: "Cartão (TPA)", transfer: "Transferência",
 };

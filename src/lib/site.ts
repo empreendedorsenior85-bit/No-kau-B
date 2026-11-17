@@ -15,7 +15,9 @@ export const site = {
   instagram: "https://www.instagram.com/nokau.gb/",
   instagramHandle: "@nokau.gb",
   email: null as string | null, // a confirmar
-  whatsappE164: null as string | null, // a confirmar se o número tem WhatsApp
+  // Botão flutuante e contacto por WhatsApp. ⚠ CONFIRMAR com o restaurante que este número tem WhatsApp
+  // (se não tiver, o WhatsApp mostra "este número não está no WhatsApp"). Para esconder o botão: null.
+  whatsappE164: "+245957616701" as string | null,
   hours: null as null | { days: string; time: string }[], // a confirmar
   siteUrl: process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000",
 } as const;

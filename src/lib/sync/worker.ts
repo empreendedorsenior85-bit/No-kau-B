@@ -5,6 +5,7 @@ import { centralUrl, isLocalServer, syncToken } from "@/lib/node-role";
 import { applyCatalog, saveFetchedImage, type WireCatalog } from "./catalog-sync";
 import { applyOrders, getSyncState, pendingPush, setSyncState, type WireOrder } from "./orders-sync";
 import { applyCalls, pendingCallsPush, type WireCall } from "./calls-sync";
+import { applyPayments, pendingPaymentsPush, type WirePayment } from "./payments-sync";
 
 /**
  * Sincronização do SERVIDOR LOCAL do restaurante com o servidor central. Corre em ciclo, sozinha:
@@ -137,6 +138,40 @@ async function pullCalls() {
   }
 }
 
+/** Pagamentos: enviados DEPOIS dos pedidos (o central tem de ter os pedidos); "adiado" fica para o ciclo seguinte. */
+async function pushPayments() {
+  for (let round = 0; round < 10; round++) {
+    const batch = await pendingPaymentsPush(100);
+    if (!batch.length) return;
+    const r = await central<{ applied: string[]; rejected: { id: string; reason: string }[]; deferred: string[] }>("/api/sync/payments", {
+      method: "POST", body: JSON.stringify({ payments: batch.map((b) => b.payment) }),
+    });
+    const revById = new Map(batch.map((b) => [b.payment.id, b.rev]));
+    for (const id of r.applied) await query("update payments set needs_push = false, synced_at = now() where id = $1 and rev = $2", [id, revById.get(id)]);
+    for (const x of r.rejected) {
+      await query("update payments set needs_push = false where id = $1 and rev = $2", [x.id, revById.get(x.id)]);
+      await query(`insert into audit_log (actor, action, entity, entity_id, detail) values ('sincronização','sync.rejected','payment',$1,$2)`,
+        [x.id, JSON.stringify({ reason: x.reason })]);
+      state().rejected = [{ ...x, at: new Date().toISOString() }, ...state().rejected].slice(0, 20);
+    }
+    if (r.deferred.length || batch.length < 100) return;
+  }
+}
+
+async function pullPayments() {
+  let cursor = (await getSyncState<{ cursor: number }>("local:pull-payments"))?.cursor ?? 0;
+  for (let round = 0; round < 50; round++) {
+    const r = await central<{ payments: WirePayment[]; cursor: number; more: boolean }>(`/api/sync/payments?after=${cursor}`);
+    if (r.payments.length) {
+      const a = await applyPayments(r.payments, "servidor-central");
+      if (a.deferred.length) return; // volta a pedir a partir do mesmo cursor no ciclo seguinte
+    }
+    cursor = r.cursor;
+    await setSyncState("local:pull-payments", { cursor });
+    if (!r.more) return;
+  }
+}
+
 let ready: Promise<void> | null = null;
 let lastCatalog = 0;
 
@@ -150,8 +185,10 @@ export async function syncOnce(): Promise<LocalSyncStatus> {
     if (Date.now() - lastCatalog > CATALOG_EVERY_MS) { await syncCatalog(); lastCatalog = Date.now(); }
     await pushOrders();
     await pushCalls();
+    await pushPayments();
     await pullOrders();
     await pullCalls();
+    await pullPayments();
     s.online = true;
     s.lastOkAt = new Date().toISOString();
     s.lastError = null;
@@ -161,7 +198,7 @@ export async function syncOnce(): Promise<LocalSyncStatus> {
     s.lastError = describe(e);
   }
   try {
-    const n = await query<{ n: string }>("select (select count(*) from orders where needs_push) + (select count(*) from service_calls where needs_push) n");
+    const n = await query<{ n: string }>("select (select count(*) from orders where needs_push) + (select count(*) from service_calls where needs_push) + (select count(*) from payments where needs_push) n");
     s.pending = Number(n.rows[0].n);
   } catch {}
   return s;

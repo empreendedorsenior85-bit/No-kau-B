@@ -214,3 +214,79 @@ create trigger service_calls_touch_trg before update on service_calls
   for each row execute function orders_touch();
 alter table service_calls enable row level security;
 `;
+
+/**
+ * Etapa 4 — clientes e pagamentos (idempotente, com bloqueio):
+ *  - customers: conta única do cliente (nome, email, telefone, palavra-passe com scrypt);
+ *  - orders.customer_id: pedidos feitos com sessão iniciada (só no site central);
+ *  - payments: pagamento EM MÃO no restaurante, confirmado pelo gerente. IMUTÁVEL: a base de dados recusa
+ *    alterar valor, método, mesa, data ou quem recebeu, e recusa apagar. Só se pode ANULAR (com motivo, registado).
+ *  - orders.payment_id: o pedido fica pago por esse pagamento (um pedido nunca é pago duas vezes).
+ */
+export const MIGRATE_PAYMENTS_SQL = /* sql */ `
+select pg_advisory_xact_lock(727004);
+create table if not exists customers (
+  id uuid primary key default gen_random_uuid(),
+  name text not null check (length(name) between 2 and 80),
+  email text not null unique check (length(email) between 5 and 160),
+  phone text not null unique check (phone ~ '^\\+?[0-9]{7,15}$'),
+  password_hash text not null,
+  active boolean not null default true,
+  created_at timestamptz not null default now()
+);
+alter table customers enable row level security;
+alter table orders add column if not exists customer_id uuid references customers(id) on delete set null;
+create index if not exists orders_customer_idx on orders(customer_id, created_at desc) where customer_id is not null;
+
+create table if not exists payments (
+  id uuid primary key default gen_random_uuid(),
+  table_id int not null references dining_tables(id),
+  amount int not null check (amount > 0 and amount <= 100000000),
+  method text not null check (method in ('cash','orange_money','mtn_momo','card','transfer')),
+  tendered int check (tendered is null or tendered >= amount),
+  received_by text not null check (length(received_by) between 1 and 160),
+  note text check (note is null or length(note) <= 200),
+  status text not null default 'confirmed' check (status in ('confirmed','voided')),
+  voided_at timestamptz,
+  voided_by text,
+  void_reason text check (void_reason is null or length(void_reason) between 3 and 200),
+  idempotency_key text not null unique check (length(idempotency_key) between 16 and 64),
+  origin text not null default 'central' check (origin in ('central','local')),
+  created_at timestamptz not null default now(),
+  status_changed_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  rev bigint not null default nextval('orders_rev_seq'),
+  needs_push boolean not null default false,
+  synced_at timestamptz
+);
+create index if not exists payments_created_idx on payments(created_at desc);
+create index if not exists payments_rev_idx on payments(rev);
+create index if not exists payments_push_idx on payments(needs_push) where needs_push;
+alter table payments enable row level security;
+alter table orders add column if not exists payment_id uuid references payments(id);
+create index if not exists orders_payment_idx on orders(payment_id) where payment_id is not null;
+
+-- proteção contra alterações não autorizadas (vale para qualquer acesso à base, não só pela aplicação)
+create or replace function payments_guard() returns trigger as $$
+begin
+  if tg_op = 'DELETE' then
+    raise exception 'Pagamentos não podem ser apagados (use anular)' using errcode = 'P0001';
+  end if;
+  if new.id <> old.id or new.table_id <> old.table_id or new.amount <> old.amount or new.method <> old.method
+     or new.tendered is distinct from old.tendered or new.received_by <> old.received_by or new.created_at <> old.created_at
+     or new.idempotency_key <> old.idempotency_key or new.origin <> old.origin or new.note is distinct from old.note then
+    raise exception 'Um pagamento confirmado não pode ser alterado (só anulado, com motivo)' using errcode = 'P0001';
+  end if;
+  if old.status = 'voided' and new.status <> 'voided' then
+    raise exception 'Um pagamento anulado não pode voltar a ser confirmado' using errcode = 'P0001';
+  end if;
+  if new.status = 'voided' and old.status = 'confirmed' and (new.void_reason is null or new.voided_by is null or new.voided_at is null) then
+    raise exception 'Anular exige motivo, autor e data' using errcode = 'P0001';
+  end if;
+  new.updated_at := now();
+  new.rev := nextval('orders_rev_seq');
+  return new;
+end $$ language plpgsql;
+drop trigger if exists payments_guard_trg on payments;
+create trigger payments_guard_trg before update or delete on payments for each row execute function payments_guard();
+`;

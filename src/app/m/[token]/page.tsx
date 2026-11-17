@@ -7,6 +7,7 @@ import { DiamondMark } from "@/components/brand/DiamondPattern";
 import { dbConfigured } from "@/lib/db";
 import { getPublicMenu, getTableByToken } from "@/lib/menu-db";
 import { isQrToken } from "@/lib/tokens";
+import { getCustomer } from "@/lib/customers";
 
 export const metadata: Metadata = { title: "Faça o seu pedido", robots: { index: false, follow: false } };
 
@@ -36,5 +37,6 @@ async function Content({ params }: { params: PageProps<"/m/[token]">["params"] }
       </main>
     );
   }
-  return <TableMenu token={token} table={{ number: table.number, label: table.label }} categories={categories} />;
+  const customer = await getCustomer().catch(() => null);
+  return <TableMenu token={token} table={{ number: table.number, label: table.label }} categories={categories} customer={customer ? { name: customer.name } : null} />;
 }

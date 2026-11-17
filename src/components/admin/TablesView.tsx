@@ -4,6 +4,7 @@ import type { Order } from "@/lib/types";
 import { useLive } from "./LiveOrders";
 import { OrderCard, STATUS_STYLE } from "./OrderCard";
 import { CallCard, elapsed } from "./CallCard";
+import { TableBill } from "./TableBill";
 import { CALL_SHORT } from "@/lib/types";
 import { useNow } from "@/lib/use-client-value";
 
@@ -147,6 +148,7 @@ export function TablesView({ tables }: { tables: TableInfo[] }) {
           <div>
             <h2 className="font-display text-2xl text-white">{selTable.label}</h2>
             <p className="mb-3 text-sm text-mist">{selTable.waiterName ? `Garçom: ${selTable.waiterName}` : "Sem garçom atribuído"}</p>
+            <TableBill tableId={selTable.id} tableLabel={selTable.label} orders={orders.filter((o) => o.tableId === selTable.id)} />
             {calls.some((c) => c.tableId === selTable.id) && (
               <div className="mb-4 space-y-2">
                 {calls.filter((c) => c.tableId === selTable.id).slice(0, 6).map((c) => <CallCard key={c.id} call={c} />)}

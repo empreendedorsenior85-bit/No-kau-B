@@ -16,7 +16,7 @@ const RATE_CODES = { invalid_table: 404, unavailable: 409, rate_limited: 429, ke
  * e pela ação de servidor (páginas já abertas de uma versão anterior). Preços, mesa e
  * disponibilidade são decididos aqui; o cliente só envia ids e quantidades.
  */
-export async function submitOrder(input: unknown, ip: string | null): Promise<OrderApiResult> {
+export async function submitOrder(input: unknown, ip: string | null, customerId: string | null = null): Promise<OrderApiResult> {
   const parsed = orderSchema.safeParse(input);
   if (!parsed.success) return { status: 400, body: { ok: false, message: parsed.error.issues[0]?.message ?? "Pedido inválido." } };
 
@@ -28,7 +28,7 @@ export async function submitOrder(input: unknown, ip: string | null): Promise<Or
 
   const { token, key, lines } = parsed.data;
   try {
-    const r = await placeOrder(token, lines, key);
+    const r = await placeOrder(token, lines, key, customerId);
     if (!r.ok) return { status: RATE_CODES[r.code], body: { ok: false, message: r.message, itemIds: r.itemIds } };
     return { status: 200, body: { ok: true, orderId: r.order.id, number: r.order.number, origin: r.order.origin, duplicate: r.duplicate } };
   } catch (e) {

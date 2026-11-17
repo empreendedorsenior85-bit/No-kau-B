@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
 import { MobileActionBar } from "@/components/layout/MobileActionBar";
+import { WhatsAppFloat } from "@/components/layout/WhatsAppFloat";
 import { site } from "@/lib/site";
 
 /** Dados estruturados apenas com factos confirmados (sem horário, sem avaliações). */
@@ -29,6 +30,7 @@ export default function SiteLayout({ children }: { children: ReactNode }) {
       <div id="conteudo">{children}</div>
       <Footer />
       <MobileActionBar />
+      <WhatsAppFloat />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, "\\u003c") }} />
     </>
   );

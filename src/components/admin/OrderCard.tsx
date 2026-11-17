@@ -66,6 +66,7 @@ export function OrderCard({ order, compact }: { order: Order; compact?: boolean 
             <p className="mt-1 text-xs text-mist">{fmtTime(order.createdAt)}</p>
           </div>
         </div>
+        {order.paid && <p data-testid="order-paid" className="mt-2 mr-2 inline-block rounded-full bg-ok/15 px-2 py-0.5 text-[0.65rem] uppercase tracking-wider text-[#7fc290]">Pago</p>}
         {order.isTest && <p className="mt-2 inline-block rounded-full border border-dashed border-gold-300/70 px-2 py-0.5 text-[0.65rem] uppercase tracking-wider text-gold-300">Teste (demonstração)</p>}
 
         <ul className="mt-3 space-y-1.5 border-t border-kau-800 pt-3">

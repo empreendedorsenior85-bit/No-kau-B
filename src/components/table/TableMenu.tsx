@@ -18,7 +18,7 @@ export type MenuItemView = {
 };
 export type MenuCategoryView = { id: string; label: string; description: string; items: MenuItemView[] };
 
-export function TableMenu({ token, table, categories }: { token: string; table: { number: number; label: string }; categories: MenuCategoryView[] }) {
+export function TableMenu({ token, table, categories, customer = null }: { token: string; table: { number: number; label: string }; categories: MenuCategoryView[]; customer?: { name: string } | null }) {
   const all = categories.flatMap((c) => c.items);
   const cart = useCart(token, all);
   const [open, setOpen] = useState(false);
@@ -176,6 +176,14 @@ export function TableMenu({ token, table, categories }: { token: string; table: 
         ) : net.saved ? (
           <p data-testid="offline-ready" className="mt-3 text-xs text-mist">✓ Menu guardado neste telemóvel — funciona mesmo que a internet falhe.</p>
         ) : null}
+
+        <p className="mt-4 text-sm text-mist" data-testid="client-link">
+          {customer ? (
+            <>Olá, <strong className="text-white">{customer.name.split(" ")[0]}</strong> — os pedidos ficam na sua conta. <a href="/cliente" className="text-gold-300 underline underline-offset-4">Os meus pedidos</a></>
+          ) : (
+            <><a href={`/cliente/entrar?volta=${encodeURIComponent(`/m/${token}`)}`} className="text-gold-300 underline underline-offset-4">Entrar</a> ou <a href={`/cliente/registo?volta=${encodeURIComponent(`/m/${token}`)}`} className="text-gold-300 underline underline-offset-4">criar conta</a> para guardar o histórico dos seus pedidos (opcional).</>
+          )}
+        </p>
 
         <TableHelp token={token} online={net.online} />
 

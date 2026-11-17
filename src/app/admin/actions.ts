@@ -10,6 +10,7 @@ import {
 } from "@/lib/auth";
 import { changeStatus } from "@/lib/orders";
 import { setCallStatus, type CallActionResult } from "@/lib/calls";
+import { confirmPayment, voidPayment, type ConfirmInput, type ConfirmResult } from "@/lib/payments";
 import { newQrToken } from "@/lib/tokens";
 import { isLocalServer } from "@/lib/node-role";
 import { isManagerRole } from "@/lib/auth-types";
@@ -507,4 +508,16 @@ export async function assignTableAction(tableId: number, waiterId: string | null
   if (!r.rows[0]) return { error: "Mesa não encontrada." };
   await audit(m.email, "table.assign", "table", tableId, { waiterId });
   return { ok: "Atribuição guardada." };
+}
+
+// ---------- pagamentos (em mão, no restaurante) — só Admin e Gerente ----------
+export async function confirmPaymentAction(input: ConfirmInput): Promise<ConfirmResult> {
+  const m = await manager();
+  return confirmPayment(input, m.name ?? m.email);
+}
+
+export async function voidPaymentAction(id: string, reason: string): Promise<{ ok: boolean; message?: string }> {
+  const m = await manager();
+  const r = await voidPayment(id, reason, m.name ?? m.email);
+  return r.ok ? { ok: true } : { ok: false, message: r.message };
 }

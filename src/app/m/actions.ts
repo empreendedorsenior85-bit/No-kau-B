@@ -2,6 +2,7 @@
 
 import { headers } from "next/headers";
 import { submitOrder, type OrderApiBody } from "@/lib/submit-order";
+import { getCustomer } from "@/lib/customers";
 
 export type PlaceOrderResponse = OrderApiBody;
 
@@ -9,5 +10,6 @@ export type PlaceOrderResponse = OrderApiBody;
 export async function placeOrderAction(input: unknown): Promise<PlaceOrderResponse> {
   const h = await headers();
   const ip = h.get("x-forwarded-for")?.split(",")[0]?.trim() || h.get("x-real-ip");
-  return (await submitOrder(input, ip)).body;
+  const customer = await getCustomer().catch(() => null);
+  return (await submitOrder(input, ip, customer?.id ?? null)).body;
 }

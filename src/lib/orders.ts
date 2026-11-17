@@ -8,11 +8,11 @@ import { ensureMigrated } from "@/db/init";
 
 type Row = {
   id: string; number: number; origin: "central" | "local"; table_id: number; table_label: string; status: OrderStatus; total: number;
-  is_test: boolean; created_at: Date; updated_at: Date; rev: string; items: Order["items"];
+  is_test: boolean; paid: boolean; created_at: Date; updated_at: Date; rev: string; items: Order["items"];
 };
 
 const SELECT = `
-  select o.id, o.number, o.origin, o.table_id, t.label as table_label, o.status, o.total, o.is_test,
+  select o.id, o.number, o.origin, o.table_id, t.label as table_label, o.status, o.total, o.is_test, (o.payment_id is not null) as paid,
          o.created_at, o.updated_at, o.rev,
          coalesce((select json_agg(json_build_object('name', i.name, 'quantity', i.quantity,
                    'unitPrice', i.unit_price, 'note', i.note) order by i.id)
@@ -21,7 +21,7 @@ const SELECT = `
 
 const toOrder = (r: Row): Order => ({
   id: r.id, number: r.number, origin: r.origin, tableId: r.table_id, tableLabel: r.table_label, status: r.status, total: r.total,
-  isTest: r.is_test, createdAt: r.created_at.toISOString(), updatedAt: r.updated_at.toISOString(),
+  isTest: r.is_test, paid: r.paid, createdAt: r.created_at.toISOString(), updatedAt: r.updated_at.toISOString(),
   rev: Number(r.rev), items: r.items,
 });
 
@@ -41,7 +41,7 @@ const orderByIdPool = (id: string) => orderById({ query: (t: string, p?: unknown
  * Cria um pedido. Tudo o que importa é decidido aqui, no servidor:
  * mesa (pelo token), preços, disponibilidade, total e duplicados.
  */
-export async function placeOrder(token: string, lines: OrderLineInput[], idemKey: string): Promise<PlaceResult> {
+export async function placeOrder(token: string, lines: OrderLineInput[], idemKey: string, customerId: string | null = null): Promise<PlaceResult> {
   await ensureMigrated(); // colunas novas (origem, sincronização) existem antes do primeiro pedido após uma atualização
   try {
     return await tx(async (c): Promise<PlaceResult> => {
@@ -90,10 +90,10 @@ export async function placeOrder(token: string, lines: OrderLineInput[], idemKey
       // no servidor local: numeração própria (L0001…) e marcado para enviar ao central quando houver internet
       const local = isLocalServer();
       const ins = await c.query<{ id: string }>(
-        `insert into orders (table_id, total, is_test, idempotency_key, origin, number, needs_push)
-         values ($1,$2,$3,$4,$5, nextval(case when $5 = 'local' then 'orders_local_number_seq' else 'orders_number_seq' end), $6)
+        `insert into orders (table_id, total, is_test, idempotency_key, origin, number, needs_push, customer_id)
+         values ($1,$2,$3,$4,$5, nextval(case when $5 = 'local' then 'orders_local_number_seq' else 'orders_number_seq' end), $6, $7)
          returning id`,
-        [tableId, total, isTest, idemKey, local ? "local" : "central", local]);
+        [tableId, total, isTest, idemKey, local ? "local" : "central", local, local ? null : customerId]);
       const orderId = ins.rows[0].id;
       for (const [id, w] of wanted) {
         const m = byId.get(id)!;
