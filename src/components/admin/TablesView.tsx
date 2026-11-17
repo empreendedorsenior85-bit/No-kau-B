@@ -119,7 +119,7 @@ export function TablesView({ tables }: { tables: TableInfo[] }) {
                 >
                   <span className={`absolute inset-x-0 top-0 h-1 ${calling ? "animate-pulse bg-[#e48a7d]" : k === "none" ? "bg-kau-800" : STATUS_STYLE[k].bar} ${k === "pending" ? "animate-pulse" : ""}`} />
                   <p className="font-display text-xl text-white">{t.label}{mine && <span className="ml-2 align-middle text-[0.6rem] uppercase tracking-wider text-gold-300">sua</span>}</p>
-                  <p className="mt-0.5 truncate text-xs text-mist" data-testid="table-waiter">{t.waiterName ? `Garçom: ${t.waiterName}` : "Sem garçom"}</p>
+                  <p className="mt-0.5 truncate text-xs text-mist" data-testid="waiter-name">{t.waiterName ? `Garçom: ${t.waiterName}` : "Sem garçom"}</p>
                   {calling ? (
                     <p className="mt-1 text-xs font-semibold uppercase tracking-wider text-[#f0b2a8]">{CALL_SHORT[calling.kind]} · há {elapsed(calling.createdAt, now)}</p>
                   ) : coming ? (
