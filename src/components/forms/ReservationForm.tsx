@@ -1,5 +1,6 @@
 "use client";
-import { startTransition, useActionState, useState, type FormEvent } from "react";
+import { startTransition, useActionState, useRef, useState, type FormEvent } from "react";
+import { newKey } from "@/lib/cart";
 import { submitReservation, type FormState } from "@/app/actions";
 import { Honeypot, Input, Textarea } from "./Field";
 import { FormResult } from "./FormResult";
@@ -16,6 +17,8 @@ export function ReservationForm() {
 function Inner({ onReset }: { onReset: () => void }) {
   const [state, action, pending] = useActionState(submitReservation, initial);
   const today = useClientValue(todayISO) ?? undefined;
+  // chave do pedido (criada no primeiro envio e reutilizada): dois toques ou reenvio não criam duas reservas
+  const keyRef = useRef<string | null>(null);
 
   if (state.status === "delivered" || state.status === "manual") {
     return <FormResult state={state} onReset={onReset} kind="reserva" />;
@@ -28,6 +31,8 @@ function Inner({ onReset }: { onReset: () => void }) {
   const onSubmit = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const fd = new FormData(e.currentTarget);
+    keyRef.current ??= newKey();
+    fd.set("key", keyRef.current);
     startTransition(() => action(fd));
   };
   const err = state.status === "error" ? state.fieldErrors ?? {} : {};
@@ -45,7 +50,7 @@ function Inner({ onReset }: { onReset: () => void }) {
         <Input label="Nome completo" name="name" autoComplete="name" required defaultValue={v.name} error={err.name} />
       </div>
       <Input label="Telefone" name="phone" type="tel" inputMode="tel" autoComplete="tel" placeholder="+245 …" required defaultValue={v.phone} error={err.phone} />
-      <Input label="Email" name="email" type="email" autoComplete="email" optional defaultValue={v.email} error={err.email} />
+      <Input label="Email" name="email" type="email" autoComplete="email" required defaultValue={v.email} error={err.email} />
       <Input label="Data" name="date" type="date" min={today} required defaultValue={v.date} error={err.date} />
       <Input label="Hora" name="time" type="time" step={900} required defaultValue={v.time} error={err.time} hint="Horário de funcionamento a confirmar pelo restaurante." />
       <Input label="Número de pessoas" name="guests" type="number" inputMode="numeric" min={1} max={30} required defaultValue={v.guests ?? "2"} error={err.guests} />
@@ -53,7 +58,7 @@ function Inner({ onReset }: { onReset: () => void }) {
         <Textarea label="Observações especiais" name="notes" optional maxLength={600} placeholder="Aniversário, alergias, cadeira de bebé…" defaultValue={v.notes} error={err.notes} />
       </div>
       <div className="flex flex-col gap-3 sm:col-span-2 sm:flex-row sm:items-center sm:justify-between">
-        <p className="text-xs text-mist">A reserva só fica confirmada depois da resposta do restaurante.</p>
+        <p className="text-xs text-mist">A reserva fica <strong className="text-white">pendente</strong> até o restaurante a aprovar — será avisado aqui no site.</p>
         <Button type="submit" size="lg" disabled={pending} aria-busy={pending}>
           {pending ? "A validar…" : "Pedir reserva"}
         </Button>

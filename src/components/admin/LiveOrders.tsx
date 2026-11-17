@@ -1,7 +1,7 @@
 "use client";
 import { useRouter } from "next/navigation";
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import type { Order, ServiceCall } from "@/lib/types";
+import type { Order, Reservation, ServiceCall } from "@/lib/types";
 import { formatOrderNumber } from "@/lib/types";
 
 export type Conn = "connecting" | "live" | "reconnecting" | "offline";
@@ -14,6 +14,10 @@ type Ctx = {
   /** Chamadas ativas (à espera ou a caminho) que dizem respeito a quem está ligado. */
   openCalls: ServiceCall[];
   me: { id: string; role: string };
+  /** Reservas (só Admin/Gerente): pendentes, futuras e decididas recentemente. */
+  reservations: Reservation[];
+  upsertReservation: (r: Reservation) => void;
+  pendingReservations: number;
   loaded: boolean;
   conn: Conn;
   unseen: Set<string>; // pedidos novos ainda não vistos
@@ -61,6 +65,8 @@ export function LiveOrdersProvider({ children, me }: { children: ReactNode; me: 
   const [map, setMap] = useState<Map<string, Order>>(new Map());
   const [callMap, setCallMap] = useState<Map<string, ServiceCall>>(new Map());
   const knownCalls = useRef<Set<string>>(new Set());
+  const [resMap, setResMap] = useState<Map<string, Reservation>>(new Map());
+  const knownRes = useRef<Set<string>>(new Set());
   /** Garçom: só é alertado pelas chamadas das suas mesas (ou de mesas sem garçom); "chamar gerente" é para a gestão. */
   const concernsMe = useCallback((c: ServiceCall) =>
     me.role !== "garcom" || (c.kind !== "manager" && (!c.waiterId || c.waiterId === me.id)), [me.id, me.role]);
@@ -117,6 +123,21 @@ export function LiveOrdersProvider({ children, me }: { children: ReactNode; me: 
     }
   }, [concernsMe, notifyCall]);
 
+  /** Reserva recebida: nova e pendente → alerta (som + vibração), como um pedido novo. */
+  const upsertReservation = useCallback((r: Reservation) => {
+    setResMap((m) => {
+      const cur = m.get(r.id);
+      if (cur && cur.rev >= r.rev) return m;
+      const n = new Map(m);
+      n.set(r.id, r);
+      return n;
+    });
+    if (!knownRes.current.has(r.id)) {
+      knownRes.current.add(r.id);
+      if (!firstLoad.current && r.status === "pending") notifyCall();
+    }
+  }, [notifyCall]);
+
   const acknowledge = useCallback((id: string) => setUnseen((s) => { if (!s.has(id)) return s; const n = new Set(s); n.delete(id); return n; }), []);
 
   useEffect(() => {
@@ -129,13 +150,25 @@ export function LiveOrdersProvider({ children, me }: { children: ReactNode; me: 
       const r = await fetch("/api/admin/orders", { cache: "no-store" });
       if (r.status === 401) { router.replace("/admin/login"); throw new Error("auth"); }
       if (!r.ok) throw new Error(`http ${r.status}`);
-      const data: { orders: Order[]; rev: number; calls?: ServiceCall[] } = await r.json();
+      const data: { orders: Order[]; rev: number; calls?: ServiceCall[]; reservations?: Reservation[] } = await r.json();
       setCallMap((m) => {
         const n = new Map<string, ServiceCall>();
         for (const c of data.calls ?? []) n.set(c.id, c);
         for (const [id, c] of m) { const s = n.get(id); if (s && c.rev > s.rev) n.set(id, c); }
         return n;
       });
+      setResMap((m) => {
+        const n = new Map<string, Reservation>();
+        for (const r of data.reservations ?? []) n.set(r.id, r);
+        for (const [id, r] of m) { const s = n.get(id); if (s && r.rev > s.rev) n.set(id, r); }
+        return n;
+      });
+      for (const r of data.reservations ?? []) {
+        if (!knownRes.current.has(r.id)) {
+          knownRes.current.add(r.id);
+          if (!firstLoad.current && r.status === "pending") notifyCall();
+        }
+      }
       for (const c of data.calls ?? []) {
         if (!knownCalls.current.has(c.id)) {
           knownCalls.current.add(c.id);
@@ -186,6 +219,9 @@ export function LiveOrdersProvider({ children, me }: { children: ReactNode; me: 
       es.addEventListener("call", (e) => {
         try { upsertCall(JSON.parse((e as MessageEvent).data)); } catch {}
       });
+      es.addEventListener("reservation", (e) => {
+        try { upsertReservation(JSON.parse((e as MessageEvent).data)); } catch {}
+      });
       es.onerror = () => {
         setConn(navigator.onLine ? "reconnecting" : "offline");
         resync = true;
@@ -210,7 +246,7 @@ export function LiveOrdersProvider({ children, me }: { children: ReactNode; me: 
       window.removeEventListener("online", goOnline);
       document.removeEventListener("visibilitychange", onVisible);
     };
-  }, [upsert, upsertCall, notifyNew, notifyCall, concernsMe, router]);
+  }, [upsert, upsertCall, upsertReservation, notifyNew, notifyCall, concernsMe, router]);
 
   // Plano B: enquanto o canal em tempo real não está ligado (rede móvel instável, proxies que retêm
   // a ligação), consulta o servidor de 5 em 5 segundos — os pedidos nunca ficam retidos.
@@ -246,7 +282,9 @@ export function LiveOrdersProvider({ children, me }: { children: ReactNode; me: 
   }, [unseen, waiting]);
 
   const orders = useMemo(() => [...map.values()].sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt)), [map]);
-  const value: Ctx = { orders, calls, upsertCall, openCalls, me, loaded, conn, unseen, acknowledge, upsert, alertsOn, enableAlerts, refresh: () => bootRef.current() };
+  const reservations = useMemo(() => [...resMap.values()].sort((a, b) => `${a.date} ${a.time}`.localeCompare(`${b.date} ${b.time}`)), [resMap]);
+  const pendingReservations = reservations.filter((r) => r.status === "pending").length;
+  const value: Ctx = { orders, calls, upsertCall, openCalls, me, reservations, upsertReservation, pendingReservations, loaded, conn, unseen, acknowledge, upsert, alertsOn, enableAlerts, refresh: () => bootRef.current() };
   return <LiveCtx.Provider value={value}>{children}</LiveCtx.Provider>;
 }
 

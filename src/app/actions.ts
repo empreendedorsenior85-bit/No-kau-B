@@ -4,6 +4,20 @@ import { headers } from "next/headers";
 import { privateEventSchema, reservationSchema } from "@/lib/validation";
 import { deliver } from "@/lib/delivery";
 import { rateLimit } from "@/lib/rate-limit";
+import { redirect } from "next/navigation";
+import { randomBytes } from "node:crypto";
+import { dbConfigured } from "@/lib/db";
+import { getCustomer } from "@/lib/customers";
+import { cancelReservation, createReservation } from "@/lib/reservations";
+
+const newKey = () => randomBytes(16).toString("hex");
+
+/** O cliente cancela a própria reserva (link secreto), enquanto está pendente. */
+export async function cancelReservationAction(fd: FormData) {
+  const token = String(fd.get("token") ?? "");
+  await cancelReservation(token);
+  redirect(`/reserva/${encodeURIComponent(token)}`);
+}
 
 export type FormState =
   | { status: "idle" }
@@ -26,11 +40,11 @@ function flatten(issues: { path: PropertyKey[]; message: string }[]) {
   return out;
 }
 
-async function guard(): Promise<FormState | null> {
+async function guard(max = 20): Promise<FormState | null> {
   const h = await headers();
   const ip = h.get("x-forwarded-for")?.split(",")[0]?.trim() || h.get("x-real-ip");
   // Sem IP identificável não se aplica limite partilhado (bloquearia todos os clientes ao mesmo tempo).
-  if (ip && !rateLimit(ip, 20)) { // 20/10 min por IP: operadores móveis partilham IPs entre muitos clientes
+  if (ip && !rateLimit(`${max}:${ip}`, max)) { // por IP: operadores móveis partilham IPs entre muitos clientes
     return { status: "error", message: "Demasiados pedidos em pouco tempo. Tente novamente dentro de alguns minutos ou ligue-nos." };
   }
   return null;
@@ -44,11 +58,28 @@ export async function submitReservation(_prev: FormState, fd: FormData): Promise
   if (!parsed.success) {
     return { status: "error", message: "Verifique os campos assinalados.", fieldErrors: flatten(parsed.error.issues), values: raw };
   }
-  // limite só para pedidos válidos: enganos de preenchimento não bloqueiam o cliente
-  const blocked = await guard();
+  // limite só para pedidos válidos: enganos de preenchimento não bloqueiam o cliente. Reservas: limite por IP alto
+  // (IPs partilhados pelos operadores móveis); o controlo fino é por contacto (máx. 5 pendentes por email/telefone)
+  const blocked = await guard(dbConfigured() ? 60 : 20);
   if (blocked) return { ...blocked, values: raw } as FormState;
   const r = parsed.data;
   if (r.website) return { status: "manual", summary: "" }; // honeypot: resposta neutra
+
+  // com base de dados: a reserva fica guardada, aparece no painel (Pendente) e o cliente acompanha-a pelo link
+  if (dbConfigured()) {
+    const customer = await getCustomer().catch(() => null);
+    let created;
+    try {
+      created = await createReservation(
+        { name: r.name, phone: r.phone, email: r.email, date: r.date, time: r.time, guests: r.guests, notes: r.notes ?? null, key: r.key ?? newKey() },
+        customer?.id ?? null);
+    } catch (e) {
+      console.error("[reserva]", (e as Error).message);
+      return { status: "error", message: "Não foi possível guardar a reserva agora. Tente de novo dentro de momentos ou ligue-nos.", values: raw };
+    }
+    if (!created.ok) return { status: "error", message: created.message, fieldErrors: { time: created.message }, values: raw };
+    redirect(`/reserva/${created.token}?nova=1`);
+  }
 
   const result = await deliver("reservation", r);
   if (result.status === "delivered") return { status: "delivered", reference: result.reference };

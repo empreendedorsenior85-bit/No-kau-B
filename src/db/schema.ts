@@ -290,3 +290,46 @@ end $$ language plpgsql;
 drop trigger if exists payments_guard_trg on payments;
 create trigger payments_guard_trg before update or delete on payments for each row execute function payments_guard();
 `;
+
+/**
+ * Reservas (idempotente, com bloqueio). Feitas no site; analisadas pelo Admin/Gerente (Pendente → Aprovada/Rejeitada;
+ * o cliente pode cancelar enquanto está pendente). `access_token`: link secreto do cliente para acompanhar a reserva.
+ * `rev` na mesma sequência dos pedidos: o painel recebe-as pelo mesmo canal em tempo real.
+ */
+export const MIGRATE_RESERVATIONS_SQL = /* sql */ `
+select pg_advisory_xact_lock(727005);
+create table if not exists reservations (
+  id uuid primary key default gen_random_uuid(),
+  code text not null unique check (code ~ '^R-[A-Z0-9]{6}$'),
+  access_token text not null unique check (length(access_token) between 20 and 64),
+  customer_id uuid references customers(id) on delete set null,
+  name text not null check (length(name) between 2 and 80),
+  phone text not null check (length(phone) between 7 and 20),
+  email text not null check (length(email) between 5 and 160),
+  date date not null,
+  time time not null,
+  guests int not null check (guests between 1 and 30),
+  notes text check (notes is null or length(notes) <= 600),
+  status text not null default 'pending' check (status in ('pending','approved','rejected','cancelled')),
+  decided_by text,
+  decided_at timestamptz,
+  decision_note text check (decision_note is null or length(decision_note) <= 300),
+  idempotency_key text not null unique check (length(idempotency_key) between 16 and 64),
+  origin text not null default 'central' check (origin in ('central','local')),
+  created_at timestamptz not null default now(),
+  status_changed_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  rev bigint not null default nextval('orders_rev_seq'),
+  needs_push boolean not null default false,
+  synced_at timestamptz
+);
+create index if not exists reservations_date_idx on reservations(date, time);
+create index if not exists reservations_status_idx on reservations(status, date);
+create index if not exists reservations_rev_idx on reservations(rev);
+create index if not exists reservations_updated_idx on reservations(updated_at);
+create index if not exists reservations_customer_idx on reservations(customer_id) where customer_id is not null;
+create index if not exists reservations_push_idx on reservations(needs_push) where needs_push;
+drop trigger if exists reservations_touch_trg on reservations;
+create trigger reservations_touch_trg before update on reservations for each row execute function orders_touch();
+alter table reservations enable row level security;
+`;

@@ -131,7 +131,7 @@ export async function snapshot(): Promise<{ orders: Order[]; rev: number }> {
   await ensureMigrated();
   // ler o rev ANTES dos pedidos: qualquer pedido posterior chega pelo stream
   // rev partilhado por pedidos e chamadas (mesma sequência): um só cursor para o tempo real
-  const rev = await query<{ r: string }>("select greatest((select coalesce(max(rev),0) from orders), (select coalesce(max(rev),0) from service_calls)) r");
+  const rev = await query<{ r: string }>("select greatest((select coalesce(max(rev),0) from orders), (select coalesce(max(rev),0) from service_calls), (select coalesce(max(rev),0) from reservations)) r");
   const r = await query<Row>(
     `${SELECT} where o.status <> 'done' or o.updated_at > now() - interval '24 hours' order by o.created_at desc`);
   return { orders: r.rows.map(toOrder), rev: Number(rev.rows[0].r) };
@@ -161,7 +161,7 @@ export async function changedSince(cursor: number): Promise<Order[]> {
 
 export async function currentRev(): Promise<number> {
   await ensureMigrated();
-  const r = await query<{ r: string }>("select greatest((select coalesce(max(rev),0) from orders), (select coalesce(max(rev),0) from service_calls)) r");
+  const r = await query<{ r: string }>("select greatest((select coalesce(max(rev),0) from orders), (select coalesce(max(rev),0) from service_calls), (select coalesce(max(rev),0) from reservations)) r");
   return Number(r.rows[0].r);
 }
 

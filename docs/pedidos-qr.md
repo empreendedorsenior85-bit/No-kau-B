@@ -101,3 +101,13 @@ O menu da mesa funciona sem internet depois da primeira visita, e os pedidos fei
 ## WhatsApp
 
 Botão flutuante no site público (abre o WhatsApp do restaurante com uma mensagem pronta). O número está em `src/lib/site.ts` (`whatsappE164`). **Confirmar que o número tem WhatsApp**; para esconder o botão, pôr `null`.
+
+## Reservas
+
+- **Cliente** (`/reservas`): nome, telefone, email, data, hora, número de pessoas e observações. O pedido é **guardado** e fica **Pendente**; o cliente é levado para a página da reserva (`/reserva/<link secreto>`), que fica guardada no telemóvel. Pode cancelar enquanto estiver pendente.
+- **Painel** (`/admin/reservas`, Admin e Gerente): as reservas novas aparecem **sozinhas e com alerta** (som, contador no menu, campainha) em todos os painéis abertos. **Aprovar** ou **Rejeitar**, com mensagem opcional ao cliente. Se duas pessoas decidirem ao mesmo tempo, vale só a primeira (a outra vê quem decidiu).
+- **Aviso ao cliente**: quando a reserva é aprovada ou rejeitada, o cliente vê um aviso **em qualquer página do site** (com data, hora, pessoas, código e a mensagem do restaurante); a página da reserva aberta atualiza-se sozinha. Clientes com conta veem também em “As minhas reservas”.
+- **Histórico** no fundo da página de reservas: filtros por datas, estado e pesquisa (nome, telefone, email, código). Cada passo fica na Atividade.
+- **Proteção**: o link do cliente não mostra telefone/email nem dados internos; o Garçom não vê reservas (dados pessoais); máximo de 5 pedidos pendentes por email/telefone.
+- **Servidor local**: as reservas feitas no site chegam ao restaurante; decisões tomadas no restaurante (mesmo sem internet) chegam ao site quando a ligação volta.
+- O cliente é avisado **no site** (não por SMS/email: falta um serviço de envio).

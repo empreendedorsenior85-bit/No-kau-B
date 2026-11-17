@@ -13,7 +13,7 @@ const readAtSnapshot = () => { try { return localStorage.getItem(KEY) ?? "0"; } 
 
 /** Centro de notificações: pedidos novos desde a última vez que abriu + pedidos à espera há demasiado tempo. */
 export function NotificationBell() {
-  const { orders, loaded, openCalls } = useLive();
+  const { orders, loaded, openCalls, pendingReservations } = useLive();
   const readAt = Number(useSyncExternalStore(subscribe, readAtSnapshot, () => "0"));
   const now = useNow(30_000);
   const [open, setOpen] = useState(false);
@@ -22,7 +22,7 @@ export function NotificationBell() {
   const fresh = orders.filter((o) => +new Date(o.createdAt) > readAt);
   const late = orders.filter((o) => o.status === "pending" && now && now - +new Date(o.createdAt) > 10 * 60_000);
   const waitingCalls = openCalls.filter((c) => c.status === "open");
-  const count = loaded ? new Set([...fresh.map((o) => o.id), ...late.map((o) => o.id), ...waitingCalls.map((c) => c.id)]).size : 0;
+  const count = loaded ? new Set([...fresh.map((o) => o.id), ...late.map((o) => o.id), ...waitingCalls.map((c) => c.id)]).size + pendingReservations : 0;
 
   useEffect(() => {
     if (!open) return;
@@ -50,6 +50,10 @@ export function NotificationBell() {
       {open && (
         <div role="dialog" aria-label="Notificações" className="absolute right-0 z-50 mt-2 w-[min(22rem,calc(100vw-2rem))] rounded-2xl border border-kau-800 bg-kau-950 p-3 shadow-2xl" data-testid="bell-panel">
           <p className="px-2 pb-2 font-display text-lg text-white">Notificações</p>
+          {pendingReservations > 0 && (
+            <Link href="/admin/reservas" onClick={() => setOpen(false)} data-testid="bell-reservations"
+              className="mb-2 block rounded-xl bg-gold/10 px-2 py-2 text-sm text-gold-300">📅 {pendingReservations} reserva(s) à espera de decisão</Link>
+          )}
           {openCalls.length > 0 && (
             <ul className="mb-2 space-y-1" data-testid="bell-calls">
               {openCalls.map((c) => (

@@ -1,6 +1,8 @@
 import { getManager } from "@/lib/auth";
 import { changedSince, currentRev } from "@/lib/orders";
 import { callsChangedSince } from "@/lib/calls";
+import { reservationsChangedSince } from "@/lib/reservations";
+import { isManagerRole } from "@/lib/auth-types";
 
 export const maxDuration = 300;
 
@@ -12,7 +14,9 @@ const MAX_MS = 270_000; // reabre antes do limite da plataforma; o navegador rec
  * (sem WebSocket) e recupera sozinho: o navegador reenvia o último `id` recebido.
  */
 export async function GET(req: Request) {
-  if (!(await getManager())) return new Response("unauthorized", { status: 401 });
+  const me = await getManager();
+  if (!me) return new Response("unauthorized", { status: 401 });
+  const seesReservations = isManagerRole(me.role); // dados pessoais: só Admin e Gerente
 
   const url = new URL(req.url);
   const header = req.headers.get("last-event-id");
@@ -40,6 +44,7 @@ export async function GET(req: Request) {
         while (!closed && Date.now() - started < MAX_MS) {
           const rows = await changedSince(cursor);
           const calls = await callsChangedSince(cursor); // mesma sequência de rev: o mesmo cursor serve os dois
+          const reservations = seesReservations ? await reservationsChangedSince(cursor) : [];
           let next = cursor;
           for (const o of rows) {
             if (sent.get(o.id) === o.rev) continue;
@@ -52,6 +57,12 @@ export async function GET(req: Request) {
             sent.set(c.id, c.rev);
             next = Math.max(next, c.rev);
             send(`id: ${c.rev}\nevent: call\ndata: ${JSON.stringify(c)}\n\n`);
+          }
+          for (const r of reservations) {
+            if (sent.get(r.id) === r.rev) continue;
+            sent.set(r.id, r.rev);
+            next = Math.max(next, r.rev);
+            send(`id: ${r.rev}\nevent: reservation\ndata: ${JSON.stringify(r)}\n\n`);
           }
           cursor = next;
           if (sent.size > 500) sent.clear();

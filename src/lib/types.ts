@@ -72,3 +72,15 @@ export const PAYMENT_METHODS: PaymentMethod[] = ["cash", "orange_money", "mtn_mo
 export const PAYMENT_LABEL: Record<PaymentMethod, string> = {
   cash: "Numerário", orange_money: "Orange Money", mtn_momo: "MTN MoMo", card: "Cartão (TPA)", transfer: "Transferência",
 };
+
+/** Reservas. */
+export type ReservationStatus = "pending" | "approved" | "rejected" | "cancelled";
+export const RESERVATION_LABEL: Record<ReservationStatus, string> = { pending: "Pendente", approved: "Aprovada", rejected: "Rejeitada", cancelled: "Cancelada" };
+export type Reservation = {
+  id: string; code: string; name: string; phone: string; email: string; date: string; time: string; guests: number; notes: string | null;
+  status: ReservationStatus; decidedBy: string | null; decidedAt: string | null; decisionNote: string | null; createdAt: string; rev: number;
+  hasAccount: boolean;
+};
+/** O que o cliente vê (sem dados internos). */
+export type PublicReservation = Pick<Reservation, "code" | "name" | "date" | "time" | "guests" | "notes" | "status" | "decidedAt" | "decisionNote" | "createdAt">;
+export const fmtResDate = (d: string) => new Date(`${d}T12:00:00Z`).toLocaleDateString("pt-PT", { weekday: "long", day: "numeric", month: "long", year: "numeric", timeZone: "UTC" });

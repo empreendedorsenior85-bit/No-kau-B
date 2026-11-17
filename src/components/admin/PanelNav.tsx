@@ -17,6 +17,7 @@ const GROUPS: { title: string; items: Item[] }[] = [
     { href: "/admin/dashboard", label: "Visão geral", who: "manager", icon: ic("M3 12l9-8 9 8M5 10v10h5v-6h4v6h5V10") },
     { href: "/admin/pedidos", label: "Pedidos", who: "staff", icon: ic("M6 2h12l2 5v13a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V7l2-5zM4 7h16M9 11h6") },
     { href: "/admin/mesas", label: "Mesas", who: "staff", icon: ic("M4 9h16M6 9v10M18 9v10M3 9l1-4h16l1 4") },
+    { href: "/admin/reservas", label: "Reservas", who: "manager", icon: ic("M3 5h18v16H3zM3 9h18M8 3v4M16 3v4M8 14h3") },
     { href: "/admin/atendimento", label: "Atendimento", who: "manager", icon: ic("M12 8v4l3 2M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20z") },
     { href: "/admin/pagamentos", label: "Pagamentos", who: "manager", icon: ic("M2 7h20v12H2zM2 11h20M6 15h4") },
     { href: "/admin/clientes", label: "Clientes", who: "manager", icon: ic("M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8z") },
@@ -44,14 +45,15 @@ const CONN: Record<Conn, { label: string; dot: string }> = {
 /** Estrutura do painel: menu lateral (computador), separadores deslizantes (telemóvel), barra superior e conteúdo. */
 export function PanelFrame({ email, role, children }: { email: string; role: Role; children: ReactNode }) {
   const path = usePathname();
-  const { conn, unseen, alertsOn, enableAlerts } = useLive();
+  const { conn, unseen, alertsOn, enableAlerts, pendingReservations } = useLive();
   const c = CONN[conn];
   const sees = (i: Item) => i.who === "staff" || (i.who === "manager" && role !== "garcom") || role === "admin";
   const groups = GROUPS.map((g) => ({ ...g, items: g.items.filter(sees) })).filter((g) => g.items.length);
   const flat = groups.flatMap((g) => g.items);
   const active = (h: string) => path === h || path.startsWith(h + "/");
-  const badge = (href: string) => href === "/admin/pedidos" && unseen.size > 0 && (
-    <span className="ml-auto inline-grid h-5 min-w-5 place-items-center rounded-full bg-[#e0a64a] px-1.5 text-xs font-bold text-kau-950">{unseen.size}</span>
+  const badgeCount = (href: string) => (href === "/admin/pedidos" ? unseen.size : href === "/admin/reservas" ? pendingReservations : 0);
+  const badge = (href: string) => badgeCount(href) > 0 && (
+    <span data-testid={`badge-${href.split("/").pop()}`} className="ml-auto inline-grid h-5 min-w-5 place-items-center rounded-full bg-[#e0a64a] px-1.5 text-xs font-bold text-kau-950">{badgeCount(href)}</span>
   );
 
   return (
@@ -110,7 +112,7 @@ export function PanelFrame({ email, role, children }: { email: string; role: Rol
           {flat.map((i) => (
             <Link key={i.href} href={i.href} aria-current={active(i.href) ? "page" : undefined}
               className={`flex shrink-0 items-center gap-2 whitespace-nowrap rounded-full px-4 py-2 text-sm ${active(i.href) ? "bg-gold text-kau-950" : "text-mist hover:text-white"}`}>
-              {i.label}{badge(i.href) && <span className="inline-grid h-5 min-w-5 place-items-center rounded-full bg-[#e0a64a] px-1.5 text-xs font-bold text-kau-950">{unseen.size}</span>}
+              {i.label}{badgeCount(i.href) > 0 && <span className="inline-grid h-5 min-w-5 place-items-center rounded-full bg-[#e0a64a] px-1.5 text-xs font-bold text-kau-950">{badgeCount(i.href)}</span>}
             </Link>
           ))}
         </nav>

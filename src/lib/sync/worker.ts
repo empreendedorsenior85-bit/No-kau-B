@@ -6,6 +6,7 @@ import { applyCatalog, saveFetchedImage, type WireCatalog } from "./catalog-sync
 import { applyOrders, getSyncState, pendingPush, setSyncState, type WireOrder } from "./orders-sync";
 import { applyCalls, pendingCallsPush, type WireCall } from "./calls-sync";
 import { applyPayments, pendingPaymentsPush, type WirePayment } from "./payments-sync";
+import { applyReservations, pendingReservationsPush, type WireReservation } from "./reservations-sync";
 
 /**
  * Sincronização do SERVIDOR LOCAL do restaurante com o servidor central. Corre em ciclo, sozinha:
@@ -172,6 +173,36 @@ async function pullPayments() {
   }
 }
 
+/** Reservas: feitas no site (central); decididas no central ou no restaurante. */
+async function pushReservations() {
+  for (let round = 0; round < 10; round++) {
+    const batch = await pendingReservationsPush(100);
+    if (!batch.length) return;
+    const r = await central<{ applied: string[]; rejected: { id: string; reason: string }[] }>("/api/sync/reservations", {
+      method: "POST", body: JSON.stringify({ reservations: batch.map((b) => b.reservation) }),
+    });
+    const revById = new Map(batch.map((b) => [b.reservation.id, b.rev]));
+    for (const id of r.applied) await query("update reservations set needs_push = false, synced_at = now() where id = $1 and rev = $2", [id, revById.get(id)]);
+    for (const x of r.rejected) {
+      await query("update reservations set needs_push = false where id = $1 and rev = $2", [x.id, revById.get(x.id)]);
+      await query(`insert into audit_log (actor, action, entity, entity_id, detail) values ('sincronização','sync.rejected','reservation',$1,$2)`, [x.id, JSON.stringify({ reason: x.reason })]);
+      state().rejected = [{ ...x, at: new Date().toISOString() }, ...state().rejected].slice(0, 20);
+    }
+    if (batch.length < 100) return;
+  }
+}
+
+async function pullReservations() {
+  let cursor = (await getSyncState<{ cursor: number }>("local:pull-reservations"))?.cursor ?? 0;
+  for (let round = 0; round < 50; round++) {
+    const r = await central<{ reservations: WireReservation[]; cursor: number; more: boolean }>(`/api/sync/reservations?after=${cursor}`);
+    if (r.reservations.length) await applyReservations(r.reservations, "servidor-central");
+    cursor = r.cursor;
+    await setSyncState("local:pull-reservations", { cursor });
+    if (!r.more) return;
+  }
+}
+
 let ready: Promise<void> | null = null;
 let lastCatalog = 0;
 
@@ -186,9 +217,11 @@ export async function syncOnce(): Promise<LocalSyncStatus> {
     await pushOrders();
     await pushCalls();
     await pushPayments();
+    await pushReservations();
     await pullOrders();
     await pullCalls();
     await pullPayments();
+    await pullReservations();
     s.online = true;
     s.lastOkAt = new Date().toISOString();
     s.lastError = null;
@@ -198,7 +231,7 @@ export async function syncOnce(): Promise<LocalSyncStatus> {
     s.lastError = describe(e);
   }
   try {
-    const n = await query<{ n: string }>("select (select count(*) from orders where needs_push) + (select count(*) from service_calls where needs_push) + (select count(*) from payments where needs_push) n");
+    const n = await query<{ n: string }>("select (select count(*) from orders where needs_push) + (select count(*) from service_calls where needs_push) + (select count(*) from payments where needs_push) + (select count(*) from reservations where needs_push) n");
     s.pending = Number(n.rows[0].n);
   } catch {}
   return s;

@@ -1,11 +1,14 @@
 import { getManager } from "@/lib/auth";
 import { snapshot, tableHistory } from "@/lib/orders";
 import { callsSnapshot } from "@/lib/calls";
+import { reservationsSnapshot } from "@/lib/reservations";
+import { isManagerRole } from "@/lib/auth-types";
 
 
 /** Instantâneo dos pedidos (ou histórico de uma mesa). Só para o gerente autenticado. */
 export async function GET(req: Request) {
-  if (!(await getManager())) return Response.json({ error: "unauthorized" }, { status: 401 });
+  const me = await getManager();
+  if (!me) return Response.json({ error: "unauthorized" }, { status: 401 });
   const url = new URL(req.url);
   const table = url.searchParams.get("table");
   try {
@@ -18,7 +21,9 @@ export async function GET(req: Request) {
     }
     const snap = await snapshot(); // lê o cursor ANTES: o que chegar depois vem pelo stream
     const calls = await callsSnapshot();
-    return Response.json({ ...snap, calls }, { headers: { "Cache-Control": "no-store" } });
+    // reservas têm dados pessoais (telefone, email): só para Admin e Gerente
+    const reservations = isManagerRole(me.role) ? await reservationsSnapshot() : [];
+    return Response.json({ ...snap, calls, reservations }, { headers: { "Cache-Control": "no-store" } });
   } catch (e) {
     console.error("[orders]", e);
     return Response.json({ error: "server" }, { status: 500 });

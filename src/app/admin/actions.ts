@@ -10,6 +10,7 @@ import {
 } from "@/lib/auth";
 import { changeStatus } from "@/lib/orders";
 import { setCallStatus, type CallActionResult } from "@/lib/calls";
+import { decideReservation, type DecideResult } from "@/lib/reservations";
 import { confirmPayment, voidPayment, type ConfirmInput, type ConfirmResult } from "@/lib/payments";
 import { newQrToken } from "@/lib/tokens";
 import { isLocalServer } from "@/lib/node-role";
@@ -520,4 +521,11 @@ export async function voidPaymentAction(id: string, reason: string): Promise<{ o
   const m = await manager();
   const r = await voidPayment(id, reason, m.name ?? m.email);
   return r.ok ? { ok: true } : { ok: false, message: r.message };
+}
+
+// ---------- reservas (Admin e Gerente) ----------
+export async function decideReservationAction(id: string, to: "approved" | "rejected", note: string | null): Promise<DecideResult> {
+  const m = await manager();
+  if (to !== "approved" && to !== "rejected") return { ok: false, message: "Decisão inválida." };
+  return decideReservation(id, to, note, m.name ?? m.email);
 }
