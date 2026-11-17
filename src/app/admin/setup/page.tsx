@@ -1,5 +1,6 @@
 import { Suspense } from "react";
 import { redirect } from "next/navigation";
+import { connection } from "next/server";
 import type { Metadata } from "next";
 import { AuthShell, NotConfigured } from "@/components/admin/AuthShell";
 import { SetupForm } from "@/components/admin/AuthForms";
@@ -19,6 +20,7 @@ export default function Page() {
 }
 
 async function Gate() {
+  await connection(); // DATABASE_URL lida em execução (uma build sem a variável não fica presa no aviso)
   if (!dbConfigured()) return <NotConfigured />;
   if (isLocalServer() && !(await hasAdmin())) {
     return (

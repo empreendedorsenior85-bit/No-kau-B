@@ -1,5 +1,6 @@
 import { Suspense, type ReactNode } from "react";
 import { redirect } from "next/navigation";
+import { connection } from "next/server";
 import type { Metadata } from "next";
 import { LiveOrdersProvider } from "@/components/admin/LiveOrders";
 import { PanelFrame } from "@/components/admin/PanelNav";
@@ -18,6 +19,7 @@ export default function PanelLayout({ children }: { children: ReactNode }) {
 }
 
 async function Shell({ children }: { children: ReactNode }) {
+  await connection(); // decidir em execução: uma build sem DATABASE_URL não pode gravar o redirect na página estática
   if (!dbConfigured()) redirect("/admin/login");
   const m = await requireStaff(); // verificação no servidor em cada pedido
   return (

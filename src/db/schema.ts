@@ -333,3 +333,55 @@ drop trigger if exists reservations_touch_trg on reservations;
 create trigger reservations_touch_trg before update on reservations for each row execute function orders_touch();
 alter table reservations enable row level security;
 `;
+
+/**
+ * Etapa 5 — impressão (idempotente, com bloqueio). Usado pelo agente de impressão do SERVIDOR LOCAL do restaurante
+ * (é quem chega às impressoras da rede/USB). Na base do site central as tabelas existem mas ficam vazias.
+ *  - printers: cozinha / balcão; rede (IP:9100) ou USB (/dev/usb/lp0); papel 58/80 mm; tabela de caracteres; categorias.
+ *  - print_jobs: fila + histórico. `dedupe_key` único: um pedido aceite gera UM talão por impressora, nunca dois.
+ */
+export const MIGRATE_PRINT_SQL = /* sql */ `
+select pg_advisory_xact_lock(727006);
+create table if not exists printers (
+  id serial primary key,
+  name text not null check (length(name) between 1 and 40),
+  station text not null check (station in ('kitchen','counter')),
+  connection text not null check (connection in ('network','usb')),
+  host text check (host is null or length(host) <= 100),
+  port int not null default 9100 check (port between 1 and 65535),
+  device_path text check (device_path is null or device_path ~ '^/dev/(usb/lp[0-9]+|lp[0-9]+)$' or device_path ~ '^/tmp/'),
+  paper_width int not null default 80 check (paper_width in (58, 80)),
+  codepage text not null default 'cp860' check (codepage in ('cp860','cp850','ascii')),
+  categories text[],
+  auto_print boolean not null default true,
+  copies int not null default 1 check (copies between 1 and 3),
+  active boolean not null default true,
+  enabled_at timestamptz not null default now(),
+  last_status text,
+  last_status_at timestamptz,
+  last_error text,
+  created_at timestamptz not null default now(),
+  check ((connection = 'network' and host is not null) or (connection = 'usb' and device_path is not null))
+);
+create table if not exists print_jobs (
+  id uuid primary key default gen_random_uuid(),
+  printer_id int not null references printers(id) on delete cascade,
+  order_id uuid references orders(id) on delete set null,
+  kind text not null check (kind in ('order','reprint','test')),
+  status text not null default 'queued' check (status in ('queued','printing','printed','failed','uncertain','cancelled')),
+  dedupe_key text unique,
+  attempts int not null default 0,
+  next_attempt_at timestamptz not null default now(),
+  last_error text,
+  requested_by text,
+  created_at timestamptz not null default now(),
+  started_at timestamptz,
+  printed_at timestamptz,
+  bytes int
+);
+create index if not exists print_jobs_queue_idx on print_jobs(status, next_attempt_at) where status in ('queued','printing');
+create index if not exists print_jobs_created_idx on print_jobs(created_at desc);
+create index if not exists print_jobs_order_idx on print_jobs(order_id);
+alter table printers enable row level security;
+alter table print_jobs enable row level security;
+`;

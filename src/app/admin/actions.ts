@@ -11,6 +11,8 @@ import {
 import { changeStatus } from "@/lib/orders";
 import { setCallStatus, type CallActionResult } from "@/lib/calls";
 import { decideReservation, type DecideResult } from "@/lib/reservations";
+import { cancelJob, connOf, enqueueReprint, enqueueTest, isPrintAgent, retryJob, type PrinterRow } from "@/lib/print/agent";
+import { probe } from "@/lib/print/transport";
 import { confirmPayment, voidPayment, type ConfirmInput, type ConfirmResult } from "@/lib/payments";
 import { newQrToken } from "@/lib/tokens";
 import { isLocalServer } from "@/lib/node-role";
@@ -528,4 +530,110 @@ export async function decideReservationAction(id: string, to: "approved" | "reje
   const m = await manager();
   if (to !== "approved" && to !== "rejected") return { ok: false, message: "Decisão inválida." };
   return decideReservation(id, to, note, m.name ?? m.email);
+}
+
+// ---------- impressão (Admin e Gerente, no servidor do restaurante) ----------
+function assertPrintAgent() {
+  if (!isPrintAgent()) throw new Error("As impressoras configuram-se no servidor do restaurante (rede local), não no site na internet.");
+}
+const ipOrHost = /^(?:(?:25[0-5]|2[0-4]\d|1?\d?\d)\.){3}(?:25[0-5]|2[0-4]\d|1?\d?\d)$|^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?(\.[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?)*$/i;
+const printerSchema = z.object({
+  id: z.coerce.number().int().positive().optional(),
+  name: z.string().trim().min(1, "Dê um nome à impressora (ex.: Cozinha).").max(40),
+  station: z.enum(["kitchen", "counter"], { message: "Escolha cozinha ou balcão." }),
+  connection: z.enum(["network", "usb"], { message: "Escolha o tipo de ligação." }),
+  host: z.string().trim().max(100).optional(),
+  port: z.coerce.number().int().min(1).max(65535).default(9100),
+  devicePath: z.string().trim().max(120).optional(),
+  paperWidth: z.coerce.number().refine((v) => v === 58 || v === 80, "Papel de 58 ou 80 mm."),
+  codepage: z.enum(["cp860", "cp850", "ascii"]),
+  copies: z.coerce.number().int().min(1).max(3).default(1),
+  autoPrint: z.boolean(),
+  categories: z.array(z.string().max(60)).max(60),
+});
+
+export async function savePrinterAction(_: AdminFormState, fd: FormData): Promise<AdminFormState> {
+  assertPrintAgent();
+  const m = await manager();
+  const p = printerSchema.safeParse({
+    id: fd.get("id") || undefined, name: fd.get("name"), station: fd.get("station"), connection: fd.get("connection"),
+    host: fd.get("host") ?? undefined, port: fd.get("port") || 9100, devicePath: fd.get("devicePath") ?? undefined,
+    paperWidth: fd.get("paperWidth"), codepage: fd.get("codepage") ?? "cp860", copies: fd.get("copies") || 1,
+    autoPrint: fd.get("autoPrint") === "on", categories: fd.getAll("categories").map(String),
+  });
+  if (!p.success) return { error: p.error.issues[0].message };
+  const d = p.data;
+  if (d.connection === "network" && (!d.host || !ipOrHost.test(d.host))) return { error: "Indique o endereço IP da impressora (ex.: 192.168.1.50)." };
+  const allowTmp = process.env.NOKAU_PRINT_ALLOW_TMP === "1";
+  if (d.connection === "usb" && !(d.devicePath && (/^\/dev\/(usb\/lp\d+|lp\d+)$/.test(d.devicePath) || (allowTmp && /^\/tmp\/[\w./-]+$/.test(d.devicePath) && !d.devicePath.includes("..")))))
+    return { error: "Indique o dispositivo USB (ex.: /dev/usb/lp0)." };
+  const known = new Set((await query<{ id: string }>("select id from menu_categories")).rows.map((r) => r.id));
+  const cats = d.categories.filter((c) => known.has(c));
+  const values = [d.name, d.station, d.connection, d.connection === "network" ? d.host : null, d.port, d.connection === "usb" ? d.devicePath : null,
+    d.paperWidth, d.codepage, cats.length ? cats : null, d.autoPrint, d.copies];
+  if (d.id) {
+    await query(`update printers set name=$2, station=$3, connection=$4, host=$5, port=$6, device_path=$7, paper_width=$8, codepage=$9, categories=$10,
+                   auto_print=$11, copies=$12 where id=$1`, [d.id, ...values]);
+    await audit(m.email, "printer.update", "printer", d.id, { name: d.name });
+    return { ok: "Impressora guardada." };
+  }
+  const r = await query<{ id: number }>(
+    `insert into printers (name, station, connection, host, port, device_path, paper_width, codepage, categories, auto_print, copies)
+     values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) returning id`, values);
+  await audit(m.email, "printer.create", "printer", r.rows[0].id, { name: d.name });
+  return { ok: `Impressora “${d.name}” adicionada. Faça um teste de impressão.` };
+}
+
+export async function setPrinterActiveAction(id: number, active: boolean): Promise<AdminFormState> {
+  assertPrintAgent();
+  const m = await manager();
+  // ao reativar: só pedidos aceites a partir de agora (não imprime de uma vez tudo o que ficou para trás)
+  await query("update printers set active = $2, enabled_at = case when $2 then now() else enabled_at end where id = $1", [id, active]);
+  await audit(m.email, active ? "printer.activate" : "printer.deactivate", "printer", id);
+  return { ok: active ? "Impressora ativada." : "Impressora desativada (não recebe talões)." };
+}
+
+export async function testPrinterConnectionAction(id: number): Promise<{ ok: boolean; message: string }> {
+  assertPrintAgent();
+  await manager();
+  const p = (await query<PrinterRow>("select * from printers where id = $1", [id])).rows[0];
+  if (!p) return { ok: false, message: "Impressora não encontrada." };
+  const st = await probe(connOf(p));
+  const label = st.reachable ? (st.paperOut ? "paper_out" : st.coverOpen ? "cover_open" : st.paperNearEnd ? "paper_low" : "online") : "offline";
+  await query("update printers set last_status = $2, last_status_at = now(), last_error = $3 where id = $1", [id, label, st.error]);
+  if (!st.reachable) return { ok: false, message: st.error ?? "Sem ligação." };
+  const extra = st.paperOut ? " Atenção: SEM PAPEL." : st.coverOpen ? " Atenção: TAMPA ABERTA." : st.paperNearEnd ? " Papel a acabar." : st.paperOut === null ? " (A impressora não informa o estado do papel.)" : " Papel OK.";
+  return { ok: !st.paperOut && !st.coverOpen, message: `Ligação OK.${extra}` };
+}
+
+export async function testPrintAction(id: number): Promise<AdminFormState> {
+  assertPrintAgent();
+  const m = await manager();
+  await enqueueTest(id, m.name ?? m.email);
+  return { ok: "Teste enviado para a fila — deve sair dentro de segundos." };
+}
+
+export async function reprintAction(orderId: string, printerId: number, key: string): Promise<AdminFormState> {
+  assertPrintAgent();
+  const m = await staff(); // o garçom também pode pedir reimpressão (ex.: talão perdido)
+  if (!/^[0-9a-f-]{36}$/i.test(orderId) || !Number.isInteger(printerId) || !/^[A-Za-z0-9_-]{16,64}$/.test(key)) return { error: "Pedido inválido." };
+  const added = await enqueueReprint(orderId, printerId, m.name ?? m.email, key);
+  if (added) await audit(m.email, "print.reprint", "order", orderId, { printerId });
+  return { ok: added ? "Reimpressão enviada para a fila." : "Esta reimpressão já foi pedida." };
+}
+
+export async function retryPrintJobAction(id: string): Promise<AdminFormState> {
+  assertPrintAgent();
+  const m = await manager();
+  await retryJob(id);
+  await audit(m.email, "print.retry", "print_job", id);
+  return { ok: "Volta a tentar imprimir." };
+}
+
+export async function cancelPrintJobAction(id: string): Promise<AdminFormState> {
+  assertPrintAgent();
+  const m = await manager();
+  await cancelJob(id);
+  await audit(m.email, "print.cancel", "print_job", id);
+  return { ok: "Trabalho cancelado." };
 }
