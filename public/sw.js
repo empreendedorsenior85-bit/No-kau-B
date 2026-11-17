@@ -9,7 +9,7 @@
  *    houver ligação — pela página, pela sincronização em segundo plano (Background Sync) ou aqui.
  *    Cada pedido tem uma chave única: reenviar nunca cria um pedido repetido.
  */
-const VERSION = "nokau-v2";
+const VERSION = "nokau-v3";
 const STATIC = `${VERSION}-static`;
 const PAGES = `${VERSION}-pages`;
 const IMG = `${VERSION}-img`;
@@ -29,7 +29,7 @@ self.addEventListener("activate", (event) => {
 
 const isPage = (url) => url.pathname === "/menu" || /^\/m\/[^/]+(\/pedido\/[^/]+)?\/?$/.test(url.pathname);
 const isImage = (url, req) =>
-  req.destination === "image" || /^\/(menu\/ilustrativas|api\/menu-image|brand|icons|photos)\//.test(url.pathname);
+  req.destination === "image" || /^\/(menu\/ilustrativas|api\/menu-image|brand|icons|photos)\//.test(url.pathname) || url.pathname === "/_next/image";
 const isOrderStatus = (url) => /^\/api\/pedidos\/[0-9a-f-]{36}$/i.test(url.pathname);
 
 function classify(url, req) {
