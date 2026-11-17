@@ -1,6 +1,6 @@
 import "server-only";
 import { query, tx } from "@/lib/db";
-import { MIGRATE_MENU_SQL, MIGRATE_ROLES_SQL, MIGRATE_SYNC_SQL, SCHEMA_SQL } from "./schema";
+import { MIGRATE_MENU_SQL, MIGRATE_ROLES_SQL, MIGRATE_SERVICE_SQL, MIGRATE_SYNC_SQL, SCHEMA_SQL } from "./schema";
 import { isLocalServer } from "@/lib/node-role";
 import { newQrToken } from "@/lib/tokens";
 
@@ -37,7 +37,9 @@ async function upToDate(): Promise<boolean> {
   const r = await query<{ ok: boolean }>(
     `select (
        (select count(*) from information_schema.columns where table_schema = current_schema() and table_name = 'menu_items' and column_name in ('image_path','review_note')) = 2
-       and coalesce((select pg_get_constraintdef(oid) like '%gerente%' from pg_constraint where conname = 'admin_users_role_check'), false)
+       and coalesce((select pg_get_constraintdef(oid) like '%garcom%' from pg_constraint where conname = 'admin_users_role_check'), false)
+       and exists (select 1 from information_schema.tables where table_schema = current_schema() and table_name = 'service_calls')
+       and exists (select 1 from information_schema.columns where table_schema = current_schema() and table_name = 'dining_tables' and column_name = 'waiter_id')
        and not exists (select 1 from admin_users where role in ('manager','staff'))
        and exists (select 1 from information_schema.columns where table_schema = current_schema() and table_name = 'orders' and column_name = 'needs_push')
        and exists (select 1 from information_schema.tables where table_schema = current_schema() and table_name = 'sync_state')
@@ -58,5 +60,5 @@ export function ensureMigrated(): Promise<void> {
 }
 
 async function migrateRoles() {
-  await tx(async (c) => { await c.query(MIGRATE_ROLES_SQL); await c.query(MIGRATE_MENU_SQL); await c.query(MIGRATE_SYNC_SQL); });
+  await tx(async (c) => { await c.query(MIGRATE_ROLES_SQL); await c.query(MIGRATE_MENU_SQL); await c.query(MIGRATE_SYNC_SQL); await c.query(MIGRATE_SERVICE_SQL); });
 }

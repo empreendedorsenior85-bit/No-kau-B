@@ -7,6 +7,7 @@ import { isIllustrative } from "@/lib/illustrative";
 import { formatOrderNumber } from "@/lib/types";
 import { deleteRecord, flushOutbox, outboxAvailable, putRecord, recordsFor, requestBackgroundSync, type OutboxRecord } from "@/lib/outbox";
 import { useOffline } from "@/components/pwa/useOffline";
+import { TableHelp } from "./TableHelp";
 import { Logo } from "@/components/brand/Logo";
 import { DiamondMark } from "@/components/brand/DiamondPattern";
 import { Button } from "@/components/ui/Button";
@@ -175,6 +176,8 @@ export function TableMenu({ token, table, categories }: { token: string; table: 
         ) : net.saved ? (
           <p data-testid="offline-ready" className="mt-3 text-xs text-mist">✓ Menu guardado neste telemóvel — funciona mesmo que a internet falhe.</p>
         ) : null}
+
+        <TableHelp token={token} online={net.online} />
 
         {records.length > 0 && (
           <section aria-labelledby="meus-pedidos" data-testid="outbox" className="mt-5 rounded-2xl border border-kau-800 bg-kau-900 p-4">

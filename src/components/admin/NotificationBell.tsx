@@ -3,7 +3,7 @@ import Link from "next/link";
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { useLive } from "./LiveOrders";
 import { StatusBadge } from "./OrderCard";
-import { formatOrderNumber } from "@/lib/types";
+import { CALL_SHORT, CALL_STATUS_LABEL, formatOrderNumber } from "@/lib/types";
 import { formatXOF } from "@/lib/format";
 import { useNow } from "@/lib/use-client-value";
 
@@ -13,7 +13,7 @@ const readAtSnapshot = () => { try { return localStorage.getItem(KEY) ?? "0"; } 
 
 /** Centro de notificações: pedidos novos desde a última vez que abriu + pedidos à espera há demasiado tempo. */
 export function NotificationBell() {
-  const { orders, loaded } = useLive();
+  const { orders, loaded, openCalls } = useLive();
   const readAt = Number(useSyncExternalStore(subscribe, readAtSnapshot, () => "0"));
   const now = useNow(30_000);
   const [open, setOpen] = useState(false);
@@ -21,7 +21,8 @@ export function NotificationBell() {
 
   const fresh = orders.filter((o) => +new Date(o.createdAt) > readAt);
   const late = orders.filter((o) => o.status === "pending" && now && now - +new Date(o.createdAt) > 10 * 60_000);
-  const count = loaded ? new Set([...fresh.map((o) => o.id), ...late.map((o) => o.id)]).size : 0;
+  const waitingCalls = openCalls.filter((c) => c.status === "open");
+  const count = loaded ? new Set([...fresh.map((o) => o.id), ...late.map((o) => o.id), ...waitingCalls.map((c) => c.id)]).size : 0;
 
   useEffect(() => {
     if (!open) return;
@@ -49,6 +50,17 @@ export function NotificationBell() {
       {open && (
         <div role="dialog" aria-label="Notificações" className="absolute right-0 z-50 mt-2 w-[min(22rem,calc(100vw-2rem))] rounded-2xl border border-kau-800 bg-kau-950 p-3 shadow-2xl" data-testid="bell-panel">
           <p className="px-2 pb-2 font-display text-lg text-white">Notificações</p>
+          {openCalls.length > 0 && (
+            <ul className="mb-2 space-y-1" data-testid="bell-calls">
+              {openCalls.map((c) => (
+                <li key={c.id}>
+                  <Link href="/admin/mesas" onClick={() => setOpen(false)} className={`block rounded-xl px-2 py-2 text-sm ${c.status === "open" ? "bg-[#e48a7d]/15 text-[#f0b2a8]" : "bg-[#e0a64a]/10 text-[#f3d29b]"}`}>
+                    {c.status === "open" ? "🔔 " : "↪ "}{c.tableLabel} · {CALL_SHORT[c.kind]} · {CALL_STATUS_LABEL[c.status]}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          )}
           {items.length === 0 ? <p className="px-2 py-6 text-center text-sm text-mist">Sem pedidos recentes.</p> : (
             <ul className="max-h-80 divide-y divide-kau-800 overflow-y-auto">
               {items.map((o) => (

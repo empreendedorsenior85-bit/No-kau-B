@@ -1,5 +1,6 @@
 import { getManager } from "@/lib/auth";
 import { changedSince, currentRev } from "@/lib/orders";
+import { callsChangedSince } from "@/lib/calls";
 
 export const maxDuration = 300;
 
@@ -38,12 +39,21 @@ export async function GET(req: Request) {
 
         while (!closed && Date.now() - started < MAX_MS) {
           const rows = await changedSince(cursor);
+          const calls = await callsChangedSince(cursor); // mesma sequência de rev: o mesmo cursor serve os dois
+          let next = cursor;
           for (const o of rows) {
             if (sent.get(o.id) === o.rev) continue;
             sent.set(o.id, o.rev);
-            cursor = Math.max(cursor, o.rev);
+            next = Math.max(next, o.rev);
             send(`id: ${o.rev}\nevent: order\ndata: ${JSON.stringify(o)}\n\n`);
           }
+          for (const c of calls) {
+            if (sent.get(c.id) === c.rev) continue;
+            sent.set(c.id, c.rev);
+            next = Math.max(next, c.rev);
+            send(`id: ${c.rev}\nevent: call\ndata: ${JSON.stringify(c)}\n\n`);
+          }
+          cursor = next;
           if (sent.size > 500) sent.clear();
           if (Date.now() - lastBeat > 10_000) { send(`: ping\n\n`); lastBeat = Date.now(); }
           await new Promise((r) => setTimeout(r, POLL_MS));

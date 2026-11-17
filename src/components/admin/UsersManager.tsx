@@ -20,7 +20,8 @@ function CreateUser() {
       <label className="text-sm text-mist">Email<input name="email" type="email" required autoComplete="off" className={field} /></label>
       <label className="text-sm text-mist">Perfil
         <select name="role" required defaultValue="gerente" className={field}>
-          <option value="gerente">Gerente — pedidos, mesas e menu</option>
+          <option value="garcom">Garçom — atendimento: mesas, chamadas e pedidos</option>
+          <option value="gerente">Gerente — pedidos, mesas, menu e garçons</option>
           <option value="admin">Admin — tudo, incluindo QR Codes e utilizadores</option>
         </select>
       </label>
@@ -55,6 +56,7 @@ function Row({ u, me }: { u: UserRow; me: boolean }) {
         <label className="sr-only" htmlFor={`role-${u.id}`}>Perfil de {u.email}</label>
         <select id={`role-${u.id}`} value={u.role} disabled={p || me} onChange={(e) => run(() => setUserRoleAction(u.id, e.target.value as Role))}
           className="h-10 rounded-xl border border-kau-800 bg-kau-950 px-3 text-sm text-white disabled:opacity-50">
+          <option value="garcom">Garçom</option>
           <option value="gerente">Gerente</option>
           <option value="admin">Admin</option>
         </select>

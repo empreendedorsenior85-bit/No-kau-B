@@ -1,13 +1,19 @@
 "use client";
 import { useRouter } from "next/navigation";
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import type { Order } from "@/lib/types";
+import type { Order, ServiceCall } from "@/lib/types";
 import { formatOrderNumber } from "@/lib/types";
 
 export type Conn = "connecting" | "live" | "reconnecting" | "offline";
 
 type Ctx = {
   orders: Order[];
+  /** Chamadas dos clientes (ativas + resolvidas nas últimas horas). */
+  calls: ServiceCall[];
+  upsertCall: (c: ServiceCall) => void;
+  /** Chamadas ativas (à espera ou a caminho) que dizem respeito a quem está ligado. */
+  openCalls: ServiceCall[];
+  me: { id: string; role: string };
   loaded: boolean;
   conn: Conn;
   unseen: Set<string>; // pedidos novos ainda não vistos
@@ -23,6 +29,15 @@ export const useLive = () => {
   if (!c) throw new Error("useLive fora do painel");
   return c;
 };
+
+/** Vibrar só depois de a pessoa ter tocado na página (o navegador bloqueia e regista erro antes disso). */
+function vibrate(pattern: number[]) {
+  try {
+    const ua = (navigator as Navigator & { userActivation?: { hasBeenActive: boolean } }).userActivation;
+    if (ua && !ua.hasBeenActive) return;
+    navigator.vibrate?.(pattern);
+  } catch {}
+}
 
 /** Dois toques curtos e agudos — difícil de ignorar numa cozinha. */
 function beep(ctx: AudioContext) {
@@ -42,8 +57,13 @@ function beep(ctx: AudioContext) {
   play(0.35, 1175);
 }
 
-export function LiveOrdersProvider({ children }: { children: ReactNode }) {
+export function LiveOrdersProvider({ children, me }: { children: ReactNode; me: { id: string; role: string } }) {
   const [map, setMap] = useState<Map<string, Order>>(new Map());
+  const [callMap, setCallMap] = useState<Map<string, ServiceCall>>(new Map());
+  const knownCalls = useRef<Set<string>>(new Set());
+  /** Garçom: só é alertado pelas chamadas das suas mesas (ou de mesas sem garçom); "chamar gerente" é para a gestão. */
+  const concernsMe = useCallback((c: ServiceCall) =>
+    me.role !== "garcom" || (c.kind !== "manager" && (!c.waiterId || c.waiterId === me.id)), [me.id, me.role]);
   const [loaded, setLoaded] = useState(false);
   const [conn, setConn] = useState<Conn>("connecting");
   const [unseen, setUnseen] = useState<Set<string>>(new Set());
@@ -59,7 +79,7 @@ export function LiveOrdersProvider({ children }: { children: ReactNode }) {
   const notifyNew = useCallback((o: Order) => {
     setUnseen((s) => new Set(s).add(o.id));
     if (alertsRef.current && audio.current) beep(audio.current);
-    if (typeof navigator !== "undefined" && "vibrate" in navigator) navigator.vibrate?.([200, 100, 200]);
+    vibrate([200, 100, 200]);
   }, []);
 
   /** Aplica um pedido recebido: ignora versões mais antigas (eventos repetidos/fora de ordem). */
@@ -77,6 +97,26 @@ export function LiveOrdersProvider({ children }: { children: ReactNode }) {
     }
   }, [notifyNew]);
 
+  const notifyCall = useCallback(() => {
+    if (alertsRef.current && audio.current) { beep(audio.current); setTimeout(() => audio.current && beep(audio.current), 700); }
+    vibrate([300, 100, 300, 100, 300]);
+  }, []);
+
+  /** Chamada recebida: ignora versões antigas; alerta só chamadas NOVAS e à espera. */
+  const upsertCall = useCallback((c: ServiceCall) => {
+    setCallMap((m) => {
+      const cur = m.get(c.id);
+      if (cur && cur.rev >= c.rev) return m;
+      const n = new Map(m);
+      n.set(c.id, c);
+      return n;
+    });
+    if (!knownCalls.current.has(c.id)) {
+      knownCalls.current.add(c.id);
+      if (!firstLoad.current && c.status === "open" && concernsMe(c)) notifyCall();
+    }
+  }, [concernsMe, notifyCall]);
+
   const acknowledge = useCallback((id: string) => setUnseen((s) => { if (!s.has(id)) return s; const n = new Set(s); n.delete(id); return n; }), []);
 
   useEffect(() => {
@@ -89,7 +129,19 @@ export function LiveOrdersProvider({ children }: { children: ReactNode }) {
       const r = await fetch("/api/admin/orders", { cache: "no-store" });
       if (r.status === 401) { router.replace("/admin/login"); throw new Error("auth"); }
       if (!r.ok) throw new Error(`http ${r.status}`);
-      const data: { orders: Order[]; rev: number } = await r.json();
+      const data: { orders: Order[]; rev: number; calls?: ServiceCall[] } = await r.json();
+      setCallMap((m) => {
+        const n = new Map<string, ServiceCall>();
+        for (const c of data.calls ?? []) n.set(c.id, c);
+        for (const [id, c] of m) { const s = n.get(id); if (s && c.rev > s.rev) n.set(id, c); }
+        return n;
+      });
+      for (const c of data.calls ?? []) {
+        if (!knownCalls.current.has(c.id)) {
+          knownCalls.current.add(c.id);
+          if (!firstLoad.current && c.status === "open" && concernsMe(c)) notifyCall();
+        }
+      }
       // recuperação: o servidor é a fonte da verdade — junta (sem perder versões mais novas)
       setMap((m) => {
         const n = new Map<string, Order>();
@@ -131,6 +183,9 @@ export function LiveOrdersProvider({ children }: { children: ReactNode }) {
       es.addEventListener("order", (e) => {
         try { upsert(JSON.parse((e as MessageEvent).data)); } catch {}
       });
+      es.addEventListener("call", (e) => {
+        try { upsertCall(JSON.parse((e as MessageEvent).data)); } catch {}
+      });
       es.onerror = () => {
         setConn(navigator.onLine ? "reconnecting" : "offline");
         resync = true;
@@ -155,7 +210,7 @@ export function LiveOrdersProvider({ children }: { children: ReactNode }) {
       window.removeEventListener("online", goOnline);
       document.removeEventListener("visibilitychange", onVisible);
     };
-  }, [upsert, notifyNew, router]);
+  }, [upsert, upsertCall, notifyNew, notifyCall, concernsMe, router]);
 
   // Plano B: enquanto o canal em tempo real não está ligado (rede móvel instável, proxies que retêm
   // a ligação), consulta o servidor de 5 em 5 segundos — os pedidos nunca ficam retidos.
@@ -176,17 +231,22 @@ export function LiveOrdersProvider({ children }: { children: ReactNode }) {
     } catch {}
   }, []);
 
-  // enquanto houver pedidos por ver: repete o som e pisca o título do separador
+  const calls = useMemo(() => [...callMap.values()].sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt)), [callMap]);
+  const openCalls = useMemo(() => calls.filter((c) => (c.status === "open" || c.status === "ack") && concernsMe(c)), [calls, concernsMe]);
+  const waiting = openCalls.filter((c) => c.status === "open").length;
+
+  // enquanto houver pedidos por ver ou clientes à espera: repete o som e pisca o título do separador
   useEffect(() => {
-    if (unseen.size === 0) { document.title = "Pedidos · Nô Kau"; return; }
+    if (unseen.size === 0 && waiting === 0) { document.title = "Pedidos · Nô Kau"; return; }
     let on = false;
-    const t = setInterval(() => { on = !on; document.title = on ? `(${unseen.size}) NOVO PEDIDO!` : "Pedidos · Nô Kau"; }, 900);
-    const r = setInterval(() => { if (alertsRef.current && audio.current) beep(audio.current); }, 20_000);
+    const msg = waiting ? `(${waiting}) CLIENTE A CHAMAR!` : `(${unseen.size}) NOVO PEDIDO!`;
+    const t = setInterval(() => { on = !on; document.title = on ? msg : "Pedidos · Nô Kau"; }, 900);
+    const r = setInterval(() => { if (alertsRef.current && audio.current) beep(audio.current); }, waiting ? 15_000 : 20_000);
     return () => { clearInterval(t); clearInterval(r); };
-  }, [unseen]);
+  }, [unseen, waiting]);
 
   const orders = useMemo(() => [...map.values()].sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt)), [map]);
-  const value: Ctx = { orders, loaded, conn, unseen, acknowledge, upsert, alertsOn, enableAlerts, refresh: () => bootRef.current() };
+  const value: Ctx = { orders, calls, upsertCall, openCalls, me, loaded, conn, unseen, acknowledge, upsert, alertsOn, enableAlerts, refresh: () => bootRef.current() };
   return <LiveCtx.Provider value={value}>{children}</LiveCtx.Provider>;
 }
 

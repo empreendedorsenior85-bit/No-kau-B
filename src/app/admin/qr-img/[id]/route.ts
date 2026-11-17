@@ -1,12 +1,15 @@
 import QRCode from "qrcode";
 import { getManager } from "@/lib/auth";
+import { isManagerRole } from "@/lib/auth-types";
 import { query } from "@/lib/db";
 import { originFrom } from "@/lib/origin";
 
 
 /** QR Code de uma mesa em PNG ou SVG (descarregável). Só para o gerente. */
 export async function GET(req: Request, ctx: { params: Promise<{ id: string }> }) {
-  if (!(await getManager())) return new Response("unauthorized", { status: 401 });
+  const m = await getManager();
+  if (!m) return new Response("unauthorized", { status: 401 });
+  if (!isManagerRole(m.role)) return new Response("forbidden", { status: 403 }); // Garçom: sem acesso
   const id = Number((await ctx.params).id);
   const url = new URL(req.url);
   const r = await query<{ number: number; label: string; qr_token: string }>(

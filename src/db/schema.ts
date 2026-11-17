@@ -130,7 +130,7 @@ select pg_advisory_xact_lock(727001);
 alter table admin_users drop constraint if exists admin_users_role_check;
 update admin_users set role = 'admin' where role = 'manager';
 update admin_users set role = 'gerente' where role = 'staff';
-alter table admin_users add constraint admin_users_role_check check (role in ('admin','gerente'));
+alter table admin_users add constraint admin_users_role_check check (role in ('admin','gerente','garcom'));
 alter table admin_users alter column role set default 'gerente';
 `;
 
@@ -170,4 +170,47 @@ create table if not exists sync_state (
   updated_at timestamptz not null default now()
 );
 alter table sync_state enable row level security;
+`;
+
+/**
+ * Etapa 3 — atendimento (idempotente, com bloqueio):
+ *  - perfil 'garcom' e nome a mostrar em admin_users;
+ *  - garçom atribuído a cada mesa (dining_tables.waiter_id);
+ *  - chamadas do cliente (service_calls): chamar empregado, chamar gerente, pedir a conta.
+ *    O `rev` usa a MESMA sequência dos pedidos: um só cursor no tempo real e na sincronização.
+ */
+export const MIGRATE_SERVICE_SQL = /* sql */ `
+select pg_advisory_xact_lock(727003);
+alter table admin_users drop constraint if exists admin_users_role_check;
+alter table admin_users add constraint admin_users_role_check check (role in ('admin','gerente','garcom'));
+alter table admin_users add column if not exists name text check (name is null or length(name) between 1 and 60);
+alter table dining_tables add column if not exists waiter_id uuid references admin_users(id) on delete set null;
+create table if not exists service_calls (
+  id uuid primary key default gen_random_uuid(),
+  table_id int not null references dining_tables(id),
+  kind text not null check (kind in ('waiter','manager','bill')),
+  status text not null default 'open' check (status in ('open','ack','done','cancelled')),
+  amount int check (amount is null or amount >= 0),
+  idempotency_key text not null unique check (length(idempotency_key) between 16 and 64),
+  origin text not null default 'central' check (origin in ('central','local')),
+  created_at timestamptz not null default now(),
+  ack_at timestamptz,
+  ack_by text,
+  done_at timestamptz,
+  done_by text,
+  status_changed_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  rev bigint not null default nextval('orders_rev_seq'),
+  needs_push boolean not null default false,
+  synced_at timestamptz
+);
+create index if not exists service_calls_rev_idx on service_calls(rev);
+create index if not exists service_calls_table_idx on service_calls(table_id, created_at desc);
+create index if not exists service_calls_open_idx on service_calls(status) where status in ('open','ack');
+create index if not exists service_calls_updated_idx on service_calls(updated_at);
+create index if not exists service_calls_push_idx on service_calls(needs_push) where needs_push;
+drop trigger if exists service_calls_touch_trg on service_calls;
+create trigger service_calls_touch_trg before update on service_calls
+  for each row execute function orders_touch();
+alter table service_calls enable row level security;
 `;

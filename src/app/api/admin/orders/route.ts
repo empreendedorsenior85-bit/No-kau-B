@@ -1,5 +1,6 @@
 import { getManager } from "@/lib/auth";
 import { snapshot, tableHistory } from "@/lib/orders";
+import { callsSnapshot } from "@/lib/calls";
 
 
 /** Instantâneo dos pedidos (ou histórico de uma mesa). Só para o gerente autenticado. */
@@ -15,7 +16,9 @@ export async function GET(req: Request) {
       const orders = await tableHistory(id, before && !Number.isNaN(Date.parse(before)) ? before : null);
       return Response.json({ orders }, { headers: { "Cache-Control": "no-store" } });
     }
-    return Response.json(await snapshot(), { headers: { "Cache-Control": "no-store" } });
+    const snap = await snapshot(); // lê o cursor ANTES: o que chegar depois vem pelo stream
+    const calls = await callsSnapshot();
+    return Response.json({ ...snap, calls }, { headers: { "Cache-Control": "no-store" } });
   } catch (e) {
     console.error("[orders]", e);
     return Response.json({ error: "server" }, { status: 500 });

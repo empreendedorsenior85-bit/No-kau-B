@@ -3,14 +3,19 @@ import { useMemo, useState } from "react";
 import type { Order } from "@/lib/types";
 import { useLive } from "./LiveOrders";
 import { OrderCard, STATUS_STYLE } from "./OrderCard";
+import { CallCard, elapsed } from "./CallCard";
+import { CALL_SHORT } from "@/lib/types";
+import { useNow } from "@/lib/use-client-value";
 
-export type TableInfo = { id: number; number: number; label: string; active: boolean };
-type Filter = "all" | "pending" | "preparing" | "done";
+export type TableInfo = { id: number; number: number; label: string; active: boolean; waiterId: string | null; waiterName: string | null };
+type Filter = "all" | "mine" | "calls" | "pending" | "preparing" | "done";
 
 export function TablesView({ tables }: { tables: TableInfo[] }) {
-  const { orders, loaded } = useLive();
+  const { orders, loaded, calls, me } = useLive();
+  const now = useNow(15_000);
+  const isWaiter = me.role === "garcom";
   const [sel, setSel] = useState<number | null>(null);
-  const [filter, setFilter] = useState<Filter>("all");
+  const [filter, setFilter] = useState<Filter>(isWaiter && tables.some((t) => t.waiterId === me.id) ? "mine" : "all");
   const [older, setOlder] = useState<Record<number, Order[]>>({});
   const [loadingOlder, setLoadingOlder] = useState(false);
   const [histErr, setHistErr] = useState<string | null>(null);
@@ -26,8 +31,21 @@ export function TablesView({ tables }: { tables: TableInfo[] }) {
     const s = stats.get(id)!;
     return s.pending ? "pending" : s.preparing ? "preparing" : s.done ? "done" : "none";
   };
+  /** Chamadas ativas por mesa (a mais antiga primeiro). */
+  const activeCalls = useMemo(() => {
+    const m = new Map<number, typeof calls>();
+    for (const c of [...calls].reverse()) if (c.status === "open" || c.status === "ack") m.set(c.tableId, [...(m.get(c.tableId) ?? []), c]);
+    return m;
+  }, [calls]);
+  const waitingList = calls.filter((c) => c.status === "open" || c.status === "ack")
+    .filter((c) => !isWaiter || filter !== "mine" || !c.waiterId || c.waiterId === me.id)
+    .sort((a, b) => +new Date(a.createdAt) - +new Date(b.createdAt));
 
-  const visible = tables.filter((t) => t.active && (filter === "all" || stats.get(t.id)![filter] > 0));
+  const visible = tables.filter((t) => t.active && (
+    filter === "all" ? true
+      : filter === "mine" ? t.waiterId === me.id
+      : filter === "calls" ? (activeCalls.get(t.id)?.length ?? 0) > 0
+      : stats.get(t.id)![filter] > 0));
   const selTable = tables.find((t) => t.id === sel) ?? null;
 
   const tableOrders = (() => {
@@ -57,7 +75,9 @@ export function TablesView({ tables }: { tables: TableInfo[] }) {
 
   if (!loaded) return <p className="py-20 text-center text-mist">A carregar…</p>;
 
-  const FILTERS: [Filter, string][] = [["all", "Todas"], ["pending", "Com pendentes"], ["preparing", "Em preparação"], ["done", "Com concluídos"]];
+  const FILTERS: [Filter, string][] = [
+    ...(isWaiter ? [["mine", "As minhas mesas"] as [Filter, string]] : []),
+    ["all", "Todas"], ["calls", `Com chamadas${waitingList.length ? ` (${waitingList.length})` : ""}`], ["pending", "Com pendentes"], ["preparing", "Em preparação"], ["done", "Com concluídos"]];
   const TONE_LABEL = { pending: "Pendente", preparing: "Em preparação", done: "Concluído", none: "Livre" } as const;
 
   return (
@@ -71,22 +91,42 @@ export function TablesView({ tables }: { tables: TableInfo[] }) {
             </button>
           ))}
         </div>
+        {waitingList.length > 0 && (
+          <section aria-labelledby="chamadas" className="mb-5" data-testid="calls-waiting">
+            <h2 id="chamadas" className="mb-2 font-display text-xl text-white">Clientes a chamar ({waitingList.length})</h2>
+            <div className="grid gap-3 sm:grid-cols-2">
+              {waitingList.map((c) => <CallCard key={c.id} call={c} />)}
+            </div>
+          </section>
+        )}
         <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-4">
           {visible.map((t) => {
             const s = stats.get(t.id)!;
             const k = tone(t.id);
+            const tc = activeCalls.get(t.id) ?? [];
+            const calling = tc.find((c) => c.status === "open");
+            const coming = tc.find((c) => c.status === "ack");
+            const mine = isWaiter && t.waiterId === me.id;
             return (
               <li key={t.id}>
                 <button
                   onClick={() => setSel(t.id)}
                   data-testid={`table-${t.number}`}
                   data-tone={k}
+                  data-call={calling ? "open" : coming ? "ack" : "none"}
                   aria-pressed={sel === t.id}
-                  className={`relative w-full overflow-hidden rounded-2xl border p-4 text-left transition-colors ${sel === t.id ? "border-gold" : "border-kau-800"} bg-kau-900 hover:border-gold/60`}
+                  className={`relative w-full overflow-hidden rounded-2xl border p-4 text-left transition-colors ${sel === t.id ? "border-gold" : calling ? "border-[#e48a7d]" : "border-kau-800"} ${calling ? "bg-[#e48a7d]/10" : "bg-kau-900"} hover:border-gold/60`}
                 >
-                  <span className={`absolute inset-x-0 top-0 h-1 ${k === "none" ? "bg-kau-800" : STATUS_STYLE[k].bar} ${k === "pending" ? "animate-pulse" : ""}`} />
-                  <p className="font-display text-xl text-white">{t.label}</p>
-                  <p className="mt-1 text-xs uppercase tracking-wider text-mist">{TONE_LABEL[k]}</p>
+                  <span className={`absolute inset-x-0 top-0 h-1 ${calling ? "animate-pulse bg-[#e48a7d]" : k === "none" ? "bg-kau-800" : STATUS_STYLE[k].bar} ${k === "pending" ? "animate-pulse" : ""}`} />
+                  <p className="font-display text-xl text-white">{t.label}{mine && <span className="ml-2 align-middle text-[0.6rem] uppercase tracking-wider text-gold-300">sua</span>}</p>
+                  <p className="mt-0.5 truncate text-xs text-mist" data-testid="table-waiter">{t.waiterName ? `Garçom: ${t.waiterName}` : "Sem garçom"}</p>
+                  {calling ? (
+                    <p className="mt-1 text-xs font-semibold uppercase tracking-wider text-[#f0b2a8]">{CALL_SHORT[calling.kind]} · há {elapsed(calling.createdAt, now)}</p>
+                  ) : coming ? (
+                    <p className="mt-1 text-xs uppercase tracking-wider text-[#f3d29b]">{CALL_SHORT[coming.kind]} · a caminho</p>
+                  ) : (
+                    <p className="mt-1 text-xs uppercase tracking-wider text-mist">{TONE_LABEL[k]}</p>
+                  )}
                   <p className="mt-3 flex gap-3 text-sm">
                     <span title="Pendentes" className="text-[#e0a64a]">● {s.pending}</span>
                     <span title="Em preparação" className="text-[#8ab9e6]">◐ {s.preparing}</span>
@@ -100,12 +140,18 @@ export function TablesView({ tables }: { tables: TableInfo[] }) {
         </ul>
       </div>
 
-      <aside aria-label="Pedidos da mesa" className="lg:sticky lg:top-28 lg:max-h-[calc(100svh-8rem)] lg:self-start lg:overflow-y-auto">
+      <aside aria-label="Pedidos e chamadas da mesa" className="lg:sticky lg:top-28 lg:max-h-[calc(100svh-8rem)] lg:self-start lg:overflow-y-auto">
         {!selTable ? (
-          <p className="rounded-2xl border border-dashed border-kau-800 p-8 text-center text-mist">Escolha uma mesa para ver os pedidos e o histórico.</p>
+          <p className="rounded-2xl border border-dashed border-kau-800 p-8 text-center text-mist">Escolha uma mesa para ver as chamadas, os pedidos e o histórico.</p>
         ) : (
           <div>
-            <h2 className="mb-3 font-display text-2xl text-white">{selTable.label}</h2>
+            <h2 className="font-display text-2xl text-white">{selTable.label}</h2>
+            <p className="mb-3 text-sm text-mist">{selTable.waiterName ? `Garçom: ${selTable.waiterName}` : "Sem garçom atribuído"}</p>
+            {calls.some((c) => c.tableId === selTable.id) && (
+              <div className="mb-4 space-y-2">
+                {calls.filter((c) => c.tableId === selTable.id).slice(0, 6).map((c) => <CallCard key={c.id} call={c} />)}
+              </div>
+            )}
             <div className="space-y-4">
               {tableOrders.map((o) => <OrderCard key={o.id} order={o} />)}
               {tableOrders.length === 0 && <p className="rounded-2xl border border-dashed border-kau-800 p-6 text-center text-sm text-mist">Sem pedidos recentes.</p>}

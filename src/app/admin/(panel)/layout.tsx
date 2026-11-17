@@ -4,7 +4,7 @@ import type { Metadata } from "next";
 import { LiveOrdersProvider } from "@/components/admin/LiveOrders";
 import { PanelFrame } from "@/components/admin/PanelNav";
 import { BrandLoader } from "@/components/brand/BrandLoader";
-import { requireManager } from "@/lib/auth";
+import { requireStaff } from "@/lib/auth";
 import { dbConfigured } from "@/lib/db";
 
 export const metadata: Metadata = { title: { default: "Painel", template: "%s · Painel Nô Kau" }, robots: { index: false, follow: false } };
@@ -19,9 +19,9 @@ export default function PanelLayout({ children }: { children: ReactNode }) {
 
 async function Shell({ children }: { children: ReactNode }) {
   if (!dbConfigured()) redirect("/admin/login");
-  const m = await requireManager(); // verificação no servidor em cada pedido
+  const m = await requireStaff(); // verificação no servidor em cada pedido
   return (
-    <LiveOrdersProvider>
+    <LiveOrdersProvider me={{ id: m.id, role: m.role }}>
       <div className="nums-lining">
         <PanelFrame email={m.email} role={m.role}>{children}</PanelFrame>
       </div>

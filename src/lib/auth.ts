@@ -6,6 +6,7 @@ import { connection } from "next/server";
 import { redirect } from "next/navigation";
 import { query } from "./db";
 import { ensureMigrated } from "@/db/init";
+import { isManagerRole } from "./auth-types";
 
 const COOKIE = "nk_session";
 const SESSION_HOURS = 12;
@@ -61,7 +62,7 @@ export async function endSession() {
 
 import type { Role } from "./auth-types";
 export type { Role };
-export type Manager = { id: string; email: string; role: Role };
+export type Manager = { id: string; email: string; role: Role; name: string | null };
 
 /** Valida assinatura, validade e se o utilizador continua ativo na base de dados. */
 export async function getManager(): Promise<Manager | null> {
@@ -78,7 +79,7 @@ export async function getManager(): Promise<Manager | null> {
     if (sig.length !== good.length || !timingSafeEqual(Buffer.from(sig), Buffer.from(good))) return null;
     const [uid, exp] = payload.split(".");
     if (!uid || Number(exp) < Date.now()) return null;
-    const r = await query<Manager>("select id, email, role from admin_users where id = $1 and active", [uid]);
+    const r = await query<Manager>("select id, email, role, name from admin_users where id = $1 and active", [uid]);
     return r.rows[0] ?? null;
   } catch {
     return null;
@@ -92,8 +93,15 @@ export async function requireAdmin(): Promise<Manager> {
   return m;
 }
 
-/** Para páginas: redireciona para o login. */
+/** Para páginas da gestão (Admin e Gerente). Sem sessão → login; Garçom → painel de mesas. */
 export async function requireManager(): Promise<Manager> {
+  const m = await requireStaff();
+  if (!isManagerRole(m.role)) redirect("/admin/mesas");
+  return m;
+}
+
+/** Para páginas da operação, abertas a toda a equipa (inclui Garçom). */
+export async function requireStaff(): Promise<Manager> {
   const m = await getManager();
   if (!m) redirect("/admin/login");
   return m;

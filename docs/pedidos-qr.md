@@ -17,7 +17,8 @@ Todas são **apenas do servidor** (exceto `NEXT_PUBLIC_SITE_URL`, que é públic
 | Perfil | Pode |
 |---|---|
 | **Admin** | Tudo: pedidos, mesas e QR Codes (adicionar, renomear, desativar, gerar novo), menu, utilizadores (criar, perfil, ativar/desativar, redefinir palavra-passe). |
-| **Gerente** | Acompanhar e atualizar pedidos, consultar mesas, consultar/descarregar/imprimir QR Codes e gerir o menu. Não altera mesas, QR Codes nem utilizadores. |
+| **Gerente** | Acompanhar e atualizar pedidos, painel de mesas e chamadas, consultar/descarregar/imprimir QR Codes, gerir o menu, **gerir garçons** (criar, desativar, redefinir palavra-passe, atribuir mesas) e ver o histórico de **Atendimento**. Não altera mesas, QR Codes nem utilizadores. |
+| **Garçom** | Só atendimento: painel de **Mesas** (chamadas dos clientes, “A caminho”, “Resolvido”), **Pedidos** (mudar o estado) e a própria conta. Não vê faturação, menu, relatórios, QR Codes, garçons nem utilizadores — no servidor, não só no menu. Entra direto no painel de mesas. |
 
 Quem faz o primeiro acesso fica como Admin. O sistema nunca deixa de ter um Admin ativo. Cada pessoa pode mudar a própria palavra-passe em `/admin/conta`.
 
@@ -77,3 +78,13 @@ Entrada: `/admin` → **Visão geral** (`/admin/dashboard`). Menu lateral: Visã
 ## Sem internet
 
 O menu da mesa funciona sem internet depois da primeira visita, e os pedidos feitos sem rede ficam guardados no telemóvel e seguem sozinhos quando a ligação volta (sem duplicados). Para o restaurante continuar a trabalhar com a internet em baixo existe o **servidor local** — instalação, sincronização, regras e limitações em [`docs/servidor-local.md`](servidor-local.md).
+
+## Atendimento (Etapa 3)
+
+- **No menu da mesa** o cliente tem “Precisa de ajuda?”: **Chamar empregado**, **Pedir a conta** (mostra o total estimado dos pedidos da mesa desde a última conta entregue) e **Chamar gerente**. Vê o estado: “o restaurante foi avisado” → “a caminho” → “resolvido”, e pode cancelar enquanto ninguém respondeu.
+- Uma só chamada ativa por tipo e por mesa (tocar outra vez não duplica); máximo de 12 chamadas por mesa em 10 minutos.
+- **Sem internet** a chamada não fica em fila (chegaria tarde e enganaria o cliente): aparece “faça sinal a um empregado”. Com o servidor local instalado, as chamadas feitas na rede do restaurante funcionam sem internet.
+- **Painel de Mesas** (toda a equipa): mesas a chamar em destaque com o tempo de espera, lista “Clientes a chamar” com **A caminho** / **Resolvido**, garçom de cada mesa, pedidos e histórico. Alertas com som, vibração e título a piscar enquanto houver clientes à espera.
+- **Garçons** (`/admin/garcons`): cada mesa pode ter um garçom. As chamadas dessa mesa tocam no garçom dela; mesas sem garçom avisam toda a equipa; “Chamar gerente” toca só na gestão. Desativar um garçom termina a sessão dele e retira-o das mesas.
+- **Atendimento** (`/admin/atendimento`): número de chamadas, tempo médio de resposta (até “A caminho”), % respondidas em ≤ 2 min, por pessoa, por mesa e histórico detalhado.
+- As chamadas, os garçons e as atribuições sincronizam com o servidor local (atualize primeiro o site central e só depois o servidor local).

@@ -130,7 +130,8 @@ export async function getOrderForTable(orderId: string, token: string): Promise<
 export async function snapshot(): Promise<{ orders: Order[]; rev: number }> {
   await ensureMigrated();
   // ler o rev ANTES dos pedidos: qualquer pedido posterior chega pelo stream
-  const rev = await query<{ r: string }>("select coalesce(max(rev),0) r from orders");
+  // rev partilhado por pedidos e chamadas (mesma sequência): um só cursor para o tempo real
+  const rev = await query<{ r: string }>("select greatest((select coalesce(max(rev),0) from orders), (select coalesce(max(rev),0) from service_calls)) r");
   const r = await query<Row>(
     `${SELECT} where o.status <> 'done' or o.updated_at > now() - interval '24 hours' order by o.created_at desc`);
   return { orders: r.rows.map(toOrder), rev: Number(rev.rows[0].r) };
@@ -159,7 +160,8 @@ export async function changedSince(cursor: number): Promise<Order[]> {
 }
 
 export async function currentRev(): Promise<number> {
-  const r = await query<{ r: string }>("select coalesce(max(rev),0) r from orders");
+  await ensureMigrated();
+  const r = await query<{ r: string }>("select greatest((select coalesce(max(rev),0) from orders), (select coalesce(max(rev),0) from service_calls)) r");
   return Number(r.rows[0].r);
 }
 

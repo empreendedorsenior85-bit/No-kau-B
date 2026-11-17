@@ -1,10 +1,13 @@
 import { getManager } from "@/lib/auth";
+import { isManagerRole } from "@/lib/auth-types";
 import { toCsv } from "@/lib/csv";
 import { parseRange, reportDays, reportOrders, reportProducts, reportTables } from "@/lib/stats";
 
 /** Exportação CSV dos relatórios. Só para utilizadores autenticados. */
 export async function GET(req: Request) {
-  if (!(await getManager())) return new Response("unauthorized", { status: 401 });
+  const m = await getManager();
+  if (!m) return new Response("unauthorized", { status: 401 });
+  if (!isManagerRole(m.role)) return new Response("forbidden", { status: 403 }); // Garçom: sem acesso
   const url = new URL(req.url);
   const range = parseRange(Object.fromEntries(url.searchParams));
   const tipo = url.searchParams.get("tipo") ?? "dias";

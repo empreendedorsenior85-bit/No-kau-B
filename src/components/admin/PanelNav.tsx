@@ -9,23 +9,26 @@ import { useLive, type Conn } from "./LiveOrders";
 import { NotificationBell } from "./NotificationBell";
 import { ROLE_LABEL, type Role } from "@/lib/auth-types";
 
-type Item = { href: string; label: string; icon: ReactNode; adminOnly?: boolean };
+/** `who`: quem vê o item — "admin" (só Admin), "manager" (Admin e Gerente) ou "staff" (toda a equipa, incluindo Garçom). */
+type Item = { href: string; label: string; icon: ReactNode; who: "admin" | "manager" | "staff" };
 const ic = (d: string) => (<svg aria-hidden width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><path d={d} /></svg>);
 const GROUPS: { title: string; items: Item[] }[] = [
   { title: "Operação", items: [
-    { href: "/admin/dashboard", label: "Visão geral", icon: ic("M3 12l9-8 9 8M5 10v10h5v-6h4v6h5V10") },
-    { href: "/admin/pedidos", label: "Pedidos", icon: ic("M6 2h12l2 5v13a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V7l2-5zM4 7h16M9 11h6") },
-    { href: "/admin/mesas", label: "Mesas", icon: ic("M4 9h16M6 9v10M18 9v10M3 9l1-4h16l1 4") },
+    { href: "/admin/dashboard", label: "Visão geral", who: "manager", icon: ic("M3 12l9-8 9 8M5 10v10h5v-6h4v6h5V10") },
+    { href: "/admin/pedidos", label: "Pedidos", who: "staff", icon: ic("M6 2h12l2 5v13a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V7l2-5zM4 7h16M9 11h6") },
+    { href: "/admin/mesas", label: "Mesas", who: "staff", icon: ic("M4 9h16M6 9v10M18 9v10M3 9l1-4h16l1 4") },
+    { href: "/admin/atendimento", label: "Atendimento", who: "manager", icon: ic("M12 8v4l3 2M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20z") },
   ] },
   { title: "Gestão", items: [
-    { href: "/admin/menu", label: "Menu", icon: ic("M4 4h16v4H4zM4 12h16M4 16h16M4 20h10") },
-    { href: "/admin/relatorios", label: "Relatórios", icon: ic("M4 20V10M10 20V4M16 20v-8M22 20H2") },
-    { href: "/admin/qr", label: "QR Codes", icon: ic("M3 3h7v7H3zM14 3h7v7h-7zM3 14h7v7H3zM14 14h3v3h-3zM20 14v3M14 20h3M20 20v1") },
+    { href: "/admin/menu", label: "Menu", who: "manager", icon: ic("M4 4h16v4H4zM4 12h16M4 16h16M4 20h10") },
+    { href: "/admin/relatorios", label: "Relatórios", who: "manager", icon: ic("M4 20V10M10 20V4M16 20v-8M22 20H2") },
+    { href: "/admin/qr", label: "QR Codes", who: "manager", icon: ic("M3 3h7v7H3zM14 3h7v7h-7zM3 14h7v7H3zM14 14h3v3h-3zM20 14v3M14 20h3M20 20v1") },
   ] },
   { title: "Equipa", items: [
-    { href: "/admin/utilizadores", label: "Utilizadores", adminOnly: true, icon: ic("M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM22 21v-2a4 4 0 0 0-3-3.9M16 3.1a4 4 0 0 1 0 7.8") },
-    { href: "/admin/atividade", label: "Atividade", adminOnly: true, icon: ic("M22 12h-4l-3 9L9 3l-3 9H2") },
-    { href: "/admin/conta", label: "A minha conta", icon: ic("M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2M12 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8z") },
+    { href: "/admin/garcons", label: "Garçons", who: "manager", icon: ic("M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM4 21v-1a6 6 0 0 1 12 0v1M18 8v6M15 11h6") },
+    { href: "/admin/utilizadores", label: "Utilizadores", who: "admin", icon: ic("M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM22 21v-2a4 4 0 0 0-3-3.9M16 3.1a4 4 0 0 1 0 7.8") },
+    { href: "/admin/atividade", label: "Atividade", who: "admin", icon: ic("M22 12h-4l-3 9L9 3l-3 9H2") },
+    { href: "/admin/conta", label: "A minha conta", who: "staff", icon: ic("M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2M12 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8z") },
   ] },
 ];
 
@@ -41,7 +44,8 @@ export function PanelFrame({ email, role, children }: { email: string; role: Rol
   const path = usePathname();
   const { conn, unseen, alertsOn, enableAlerts } = useLive();
   const c = CONN[conn];
-  const groups = GROUPS.map((g) => ({ ...g, items: g.items.filter((i) => !i.adminOnly || role === "admin") })).filter((g) => g.items.length);
+  const sees = (i: Item) => i.who === "staff" || (i.who === "manager" && role !== "garcom") || role === "admin";
+  const groups = GROUPS.map((g) => ({ ...g, items: g.items.filter(sees) })).filter((g) => g.items.length);
   const flat = groups.flatMap((g) => g.items);
   const active = (h: string) => path === h || path.startsWith(h + "/");
   const badge = (href: string) => href === "/admin/pedidos" && unseen.size > 0 && (
@@ -52,7 +56,7 @@ export function PanelFrame({ email, role, children }: { email: string; role: Rol
     <div className="min-h-svh bg-kau-950 lg:pl-64 print:pl-0">
       {/* menu lateral */}
       <aside className="fixed inset-y-0 left-0 z-40 hidden w-64 flex-col border-r border-kau-800 bg-kau-900/60 p-4 lg:flex print:hidden">
-        <Link href="/admin/dashboard" className="flex items-center gap-3 px-2 py-2" aria-label="Painel Nô Kau">
+        <Link href={role === "garcom" ? "/admin/mesas" : "/admin/dashboard"} className="flex items-center gap-3 px-2 py-2" aria-label="Painel Nô Kau">
           <Logo size={40} className="h-10 w-10" />
           <span><span className="block font-display text-lg leading-tight text-white">Nô Kau</span><span className="text-xs text-mist">Painel de gestão</span></span>
         </Link>
@@ -83,7 +87,7 @@ export function PanelFrame({ email, role, children }: { email: string; role: Rol
       {/* barra superior */}
       <header className="sticky top-0 z-30 border-b border-kau-800 bg-kau-950/95 backdrop-blur print:hidden">
         <div className="flex items-center gap-3 px-4 py-3 lg:px-8">
-          <Link href="/admin/dashboard" className="flex items-center gap-2 lg:hidden" aria-label="Painel Nô Kau">
+          <Link href={role === "garcom" ? "/admin/mesas" : "/admin/dashboard"} className="flex items-center gap-2 lg:hidden" aria-label="Painel Nô Kau">
             <Logo size={32} className="h-8 w-8" /><span className="font-display text-lg text-white">Painel</span>
           </Link>
           <div className="ml-auto flex items-center gap-3 text-xs text-mist">

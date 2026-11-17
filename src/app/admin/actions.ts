@@ -9,8 +9,10 @@ import {
   endSession, getManager, hashPassword, loginFailed, loginLocked, loginOk, safeEqual, startSession, verifyPassword,
 } from "@/lib/auth";
 import { changeStatus } from "@/lib/orders";
+import { setCallStatus, type CallActionResult } from "@/lib/calls";
 import { newQrToken } from "@/lib/tokens";
 import { isLocalServer } from "@/lib/node-role";
+import { isManagerRole } from "@/lib/auth-types";
 import { hasAdmin, initDatabase } from "@/db/init";
 import { CATALOG_CATEGORIES, CATALOG_ITEMS } from "@/content/nokau-menu";
 import type { Order, OrderStatus } from "@/lib/types";
@@ -23,9 +25,16 @@ async function clientIp() {
 }
 
 /** Toda ação administrativa verifica a sessão no servidor — nunca confia no navegador. */
-async function manager() {
+async function staff() {
   const m = await getManager();
   if (!m) throw new Error("Não autorizado");
+  return m;
+}
+
+/** Ações de gestão (Admin e Gerente). Um Garçom é recusado no servidor. */
+async function manager() {
+  const m = await staff();
+  if (!isManagerRole(m.role)) throw new Error("Não autorizado");
   return m;
 }
 
@@ -55,8 +64,8 @@ export async function loginAction(_: AdminFormState, fd: FormData): Promise<Admi
   const password = String(fd.get("password") ?? "");
   const key = `${await clientIp()}|${email}`;
   if (loginLocked(key)) return { error: "Demasiadas tentativas. Aguarde 15 minutos." };
-  const r = await query<{ id: string; password_hash: string }>(
-    "select id, password_hash from admin_users where email = $1 and active", [email]);
+  const r = await query<{ id: string; password_hash: string; role: string }>(
+    "select id, password_hash, role from admin_users where email = $1 and active", [email]);
   const ok = await verifyPassword(password, r.rows[0]?.password_hash ?? null);
   if (!ok || !r.rows[0]) {
     loginFailed(key);
@@ -65,7 +74,7 @@ export async function loginAction(_: AdminFormState, fd: FormData): Promise<Admi
   loginOk(key);
   await startSession(r.rows[0].id);
   await audit(email, "login", "admin", r.rows[0].id);
-  redirect("/admin/dashboard");
+  redirect(r.rows[0].role === "garcom" ? "/admin/mesas" : "/admin/dashboard"); // o garçom entra direto no atendimento
 }
 
 export async function logoutAction() {
@@ -105,11 +114,19 @@ export async function setupAction(_: AdminFormState, fd: FormData): Promise<Admi
 // ---------- pedidos ----------
 export async function changeStatusAction(orderId: string, from: OrderStatus, to: OrderStatus):
   Promise<{ ok: true; order: Order } | { ok: false; message: string }> {
-  const m = await manager();
+  const m = await staff();
   if (!["pending", "preparing", "done"].includes(from) || !["pending", "preparing", "done"].includes(to)) {
     return { ok: false, message: "Estado inválido." };
   }
   return changeStatus(orderId, from, to, m.email);
+}
+
+// ---------- chamadas dos clientes (toda a equipa, incluindo Garçom) ----------
+export async function setCallStatusAction(id: string, to: "ack" | "done"): Promise<CallActionResult> {
+  const m = await staff();
+  if (to !== "ack" && to !== "done") return { ok: false, message: "Estado inválido." };
+  if (!/^[0-9a-f-]{36}$/i.test(id)) return { ok: false, message: "Chamada inválida." };
+  return setCallStatus(id, to, m.name ?? m.email);
 }
 
 // ---------- mesas ----------
@@ -228,7 +245,7 @@ export async function seedDemoAction(): Promise<AdminFormState> {
 const passwordSchema = z.string().min(10, "A palavra-passe precisa de pelo menos 10 caracteres.").max(200);
 const userSchema = z.object({
   email: z.email("Email inválido.").transform((v) => v.toLowerCase()),
-  role: z.enum(["admin", "gerente"], { message: "Escolha o perfil." }),
+  role: z.enum(["admin", "gerente", "garcom"], { message: "Escolha o perfil." }),
   password: passwordSchema,
 });
 
@@ -252,10 +269,10 @@ async function otherActiveAdmins(excludeId: string) {
   return Number(r.rows[0].n);
 }
 
-export async function setUserRoleAction(id: string, role: "admin" | "gerente"): Promise<AdminFormState> {
+export async function setUserRoleAction(id: string, role: "admin" | "gerente" | "garcom"): Promise<AdminFormState> {
   assertEditableHere();
   const m = await adminOnly();
-  if (role !== "admin" && role !== "gerente") return { error: "Perfil inválido." };
+  if (role !== "admin" && role !== "gerente" && role !== "garcom") return { error: "Perfil inválido." };
   if (id === m.id && role !== "admin") return { error: "Não pode retirar o seu próprio perfil de Admin." };
   const u = await query<{ role: string }>("select role from admin_users where id = $1", [id]);
   if (!u.rows[0]) return { error: "Utilizador não encontrado." };
@@ -291,7 +308,7 @@ export async function resetUserPasswordAction(id: string, password: string): Pro
 // ---------- a minha conta (qualquer perfil) ----------
 export async function changeOwnPasswordAction(_: AdminFormState, fd: FormData): Promise<AdminFormState> {
   assertEditableHere();
-  const m = await manager();
+  const m = await staff();
   const current = String(fd.get("current") ?? "");
   const next = passwordSchema.safeParse(fd.get("next"));
   if (!next.success) return { error: next.error.issues[0].message };
@@ -414,4 +431,80 @@ export async function importCatalogAction(): Promise<AdminFormState> {
   });
   await audit(m.email, "menu.import_catalog", "menu_item", "-", r);
   return { ok: `Ementa importada: ${r.created} produtos novos, ${r.kept} já existiam${r.demo ? `, ${r.demo} de demonstração removidos` : ""}${r.images ? `, ${r.images} fotografias ligadas` : ""}.` };
+}
+
+// ---------- garçons e atribuição de mesas (Admin e Gerente) ----------
+const waiterSchema = z.object({
+  name: z.string().trim().min(1, "Indique o nome do garçom.").max(60, "Nome demasiado longo."),
+  email: z.email("Email inválido.").transform((v) => v.toLowerCase()),
+  password: passwordSchema,
+});
+
+/** Conta de garçom: o Gerente pode criar e gerir contas de GARÇOM (não de gerente/admin). */
+export async function createWaiterAction(_: AdminFormState, fd: FormData): Promise<AdminFormState> {
+  assertEditableHere();
+  const m = await manager();
+  const p = waiterSchema.safeParse({ name: fd.get("name"), email: fd.get("email"), password: fd.get("password") });
+  if (!p.success) return { error: p.error.issues[0].message };
+  const exists = await query("select 1 from admin_users where email = $1", [p.data.email]);
+  if (exists.rows[0]) return { error: "Já existe um utilizador com esse email." };
+  const r = await query<{ id: string }>(
+    "insert into admin_users (email, password_hash, role, name) values ($1,$2,'garcom',$3) returning id",
+    [p.data.email, await hashPassword(p.data.password), p.data.name]);
+  await audit(m.email, "waiter.create", "admin", r.rows[0].id, { email: p.data.email, name: p.data.name });
+  return { ok: `Garçom “${p.data.name}” criado. Entra em /admin com o email e a palavra-passe.` };
+}
+
+async function waiterById(id: string) {
+  if (!/^[0-9a-f-]{36}$/i.test(id)) return null;
+  const r = await query<{ id: string; role: string }>("select id, role from admin_users where id = $1", [id]);
+  return r.rows[0]?.role === "garcom" ? r.rows[0] : null;
+}
+
+export async function setWaiterActiveAction(id: string, active: boolean): Promise<AdminFormState> {
+  assertEditableHere();
+  const m = await manager();
+  if (!(await waiterById(id))) return { error: "Garçom não encontrado." };
+  await query("update admin_users set active = $2 where id = $1 and role = 'garcom'", [id, active]);
+  // garçom desativado deixa de estar atribuído às mesas (as chamadas voltam a avisar toda a equipa)
+  if (!active) await query("update dining_tables set waiter_id = null where waiter_id = $1", [id]);
+  await audit(m.email, active ? "waiter.activate" : "waiter.deactivate", "admin", id);
+  return { ok: active ? "Garçom ativado." : "Garçom desativado e retirado das mesas." };
+}
+
+export async function renameWaiterAction(id: string, name: string): Promise<AdminFormState> {
+  assertEditableHere();
+  const m = await manager();
+  const n = name.trim().slice(0, 60);
+  if (!n) return { error: "Indique o nome." };
+  if (!(await waiterById(id))) return { error: "Garçom não encontrado." };
+  await query("update admin_users set name = $2 where id = $1 and role = 'garcom'", [id, n]);
+  await audit(m.email, "waiter.rename", "admin", id, { name: n });
+  return { ok: "Nome guardado." };
+}
+
+export async function resetWaiterPasswordAction(id: string, password: string): Promise<AdminFormState> {
+  assertEditableHere();
+  const m = await manager();
+  const p = passwordSchema.safeParse(password);
+  if (!p.success) return { error: p.error.issues[0].message };
+  if (!(await waiterById(id))) return { error: "Garçom não encontrado." };
+  await query("update admin_users set password_hash = $2 where id = $1 and role = 'garcom'", [id, await hashPassword(p.data)]);
+  await audit(m.email, "waiter.reset_password", "admin", id);
+  return { ok: "Palavra-passe redefinida." };
+}
+
+/** Atribui (ou retira) o garçom de uma mesa. */
+export async function assignTableAction(tableId: number, waiterId: string | null): Promise<AdminFormState> {
+  assertEditableHere();
+  const m = await manager();
+  if (!Number.isInteger(tableId)) return { error: "Mesa inválida." };
+  if (waiterId) {
+    const w = await query("select 1 from admin_users where id = $1 and role = 'garcom' and active", [waiterId]);
+    if (!w.rows[0]) return { error: "Garçom inválido ou desativado." };
+  }
+  const r = await query("update dining_tables set waiter_id = $2 where id = $1 returning id", [tableId, waiterId]);
+  if (!r.rows[0]) return { error: "Mesa não encontrada." };
+  await audit(m.email, "table.assign", "table", tableId, { waiterId });
+  return { ok: "Atribuição guardada." };
 }

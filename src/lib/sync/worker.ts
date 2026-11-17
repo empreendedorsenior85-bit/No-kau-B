@@ -4,6 +4,7 @@ import { initDatabase } from "@/db/init";
 import { centralUrl, isLocalServer, syncToken } from "@/lib/node-role";
 import { applyCatalog, saveFetchedImage, type WireCatalog } from "./catalog-sync";
 import { applyOrders, getSyncState, pendingPush, setSyncState, type WireOrder } from "./orders-sync";
+import { applyCalls, pendingCallsPush, type WireCall } from "./calls-sync";
 
 /**
  * Sincronização do SERVIDOR LOCAL do restaurante com o servidor central. Corre em ciclo, sozinha:
@@ -28,7 +29,7 @@ export type LocalSyncStatus = {
 
 const g = globalThis as unknown as { __nokauSync?: { started: boolean; status: LocalSyncStatus } };
 const INTERVAL_MS = Number(process.env.NOKAU_SYNC_INTERVAL_MS ?? 5000);
-const CATALOG_EVERY_MS = 60_000;
+const CATALOG_EVERY_MS = Number(process.env.NOKAU_CATALOG_INTERVAL_MS ?? 60_000);
 const TIMEOUT_MS = 10_000;
 
 function state(): LocalSyncStatus {
@@ -105,6 +106,37 @@ async function pullOrders() {
   }
 }
 
+/** Chamadas dos clientes: mesma lógica dos pedidos (enviar as alteradas aqui; receber as do central). */
+async function pushCalls() {
+  for (let round = 0; round < 10; round++) {
+    const batch = await pendingCallsPush(100);
+    if (!batch.length) return;
+    const r = await central<{ applied: string[]; rejected: { id: string; reason: string }[] }>("/api/sync/calls", {
+      method: "POST", body: JSON.stringify({ calls: batch.map((b) => b.call) }),
+    });
+    const revById = new Map(batch.map((b) => [b.call.id, b.rev]));
+    for (const id of r.applied) await query("update service_calls set needs_push = false, synced_at = now() where id = $1 and rev = $2", [id, revById.get(id)]);
+    for (const x of r.rejected) {
+      await query("update service_calls set needs_push = false where id = $1 and rev = $2", [x.id, revById.get(x.id)]);
+      await query(`insert into audit_log (actor, action, entity, entity_id, detail) values ('sincronização','sync.rejected','service_call',$1,$2)`,
+        [x.id, JSON.stringify({ reason: x.reason })]);
+      state().rejected = [{ ...x, at: new Date().toISOString() }, ...state().rejected].slice(0, 20);
+    }
+    if (batch.length < 100) return;
+  }
+}
+
+async function pullCalls() {
+  let cursor = (await getSyncState<{ cursor: number }>("local:pull-calls"))?.cursor ?? 0;
+  for (let round = 0; round < 50; round++) {
+    const r = await central<{ calls: WireCall[]; cursor: number; more: boolean }>(`/api/sync/calls?after=${cursor}`);
+    if (r.calls.length) await applyCalls(r.calls);
+    cursor = r.cursor;
+    await setSyncState("local:pull-calls", { cursor });
+    if (!r.more) return;
+  }
+}
+
 let ready: Promise<void> | null = null;
 let lastCatalog = 0;
 
@@ -117,7 +149,9 @@ export async function syncOnce(): Promise<LocalSyncStatus> {
     if (!centralUrl() || !syncToken()) throw new Error("NOKAU_CENTRAL_URL ou NOKAU_SYNC_TOKEN (mín. 32 caracteres) em falta");
     if (Date.now() - lastCatalog > CATALOG_EVERY_MS) { await syncCatalog(); lastCatalog = Date.now(); }
     await pushOrders();
+    await pushCalls();
     await pullOrders();
+    await pullCalls();
     s.online = true;
     s.lastOkAt = new Date().toISOString();
     s.lastError = null;
@@ -127,7 +161,7 @@ export async function syncOnce(): Promise<LocalSyncStatus> {
     s.lastError = describe(e);
   }
   try {
-    const n = await query<{ n: string }>("select count(*) n from orders where needs_push");
+    const n = await query<{ n: string }>("select (select count(*) from orders where needs_push) + (select count(*) from service_calls where needs_push) n");
     s.pending = Number(n.rows[0].n);
   } catch {}
   return s;
