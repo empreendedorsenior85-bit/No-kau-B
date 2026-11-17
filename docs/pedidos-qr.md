@@ -8,6 +8,7 @@
 | `SESSION_SECRET` | Texto aleatório com 32+ caracteres (assina a sessão do gerente). |
 | `SETUP_TOKEN` | Código de uso único para o primeiro acesso (`/admin/setup`). |
 | `NEXT_PUBLIC_SITE_URL` | (Opcional) Domínio definitivo, ex.: `https://nokau.com`. Define o endereço dentro dos QR Codes. |
+| `NOKAU_SYNC_TOKEN` | (Opcional) Segredo partilhado com o servidor local do restaurante (32+ caracteres). Sem ele, a sincronização está desligada. Ver `docs/servidor-local.md`. |
 
 Todas são **apenas do servidor** (exceto `NEXT_PUBLIC_SITE_URL`, que é público por natureza). Nunca vão para o navegador.
 
@@ -72,3 +73,7 @@ Entrada: `/admin` → **Visão geral** (`/admin/dashboard`). Menu lateral: Visã
 - Base de dados: erros transitórios (ligação cortada, base a "acordar") são repetidos automaticamente; uma ligação partida é destruída e nunca devolvida ao pool. Arranque a frio sem DDL (migração só se faltar).
 - Limites: 20 pedidos por mesa em 10 minutos; 1000 pedidos por IP em 10 minutos (abuso em massa).
 - Telemóveis: o Next 16 suporta Chrome 111+, Safari 16.4+, Firefox 111+. Navegadores mais antigos podem não carregar o menu.
+
+## Sem internet
+
+O menu da mesa funciona sem internet depois da primeira visita, e os pedidos feitos sem rede ficam guardados no telemóvel e seguem sozinhos quando a ligação volta (sem duplicados). Para o restaurante continuar a trabalhar com a internet em baixo existe o **servidor local** — instalação, sincronização, regras e limitações em [`docs/servidor-local.md`](servidor-local.md).

@@ -1,4 +1,5 @@
 "use client";
+import { LocalOfflineBanner, SyncStatus } from "./SyncStatus";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
@@ -87,6 +88,7 @@ export function PanelFrame({ email, role, children }: { email: string; role: Rol
           </Link>
           <div className="ml-auto flex items-center gap-3 text-xs text-mist">
             <span className="flex items-center gap-2" role="status" aria-live="polite"><span className={`h-2.5 w-2.5 rounded-full ${c.dot}`} aria-hidden />{c.label}</span>
+            <SyncStatus />
             {!alertsOn ? (
               <button onClick={enableAlerts} className="rounded-full border border-gold/60 px-3 py-1.5 text-gold-300 hover:bg-gold/10">🔔 Ativar alertas</button>
             ) : <span className="rounded-full bg-ok/15 px-3 py-1.5 text-[#7fc290]">🔔 Alertas ativos</span>}
@@ -106,6 +108,7 @@ export function PanelFrame({ email, role, children }: { email: string; role: Rol
             </Link>
           ))}
         </nav>
+        <LocalOfflineBanner />
         {conn !== "live" && conn !== "connecting" && (
           <p role="alert" className="bg-[#e0a64a]/15 px-4 py-2 text-center text-sm text-[#e0a64a]">
             {conn === "offline"

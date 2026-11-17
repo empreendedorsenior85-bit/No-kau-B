@@ -49,7 +49,7 @@ export function LiveNow() {
           {late.map((o) => (
             <li key={o.id}>
               <Link href="/admin/pedidos" className="flex items-center justify-between rounded-xl border border-[#e0a64a]/40 bg-[#e0a64a]/10 px-3 py-2 text-sm">
-                <span className="text-white">{formatOrderNumber(o.number)} · {o.tableLabel}</span>
+                <span className="text-white">{formatOrderNumber(o.number, o.origin)} · {o.tableLabel}</span>
                 <span className="text-[#e0a64a]">⏱ {formatWait(mins(o.createdAt))}</span>
               </Link>
             </li>
@@ -61,7 +61,7 @@ export function LiveNow() {
       <ul className="mt-2 divide-y divide-kau-800" data-testid="live-recent">
         {recent.map((o) => (
           <li key={o.id} className="flex items-center justify-between gap-3 py-2 text-sm">
-            <span className="min-w-0 truncate text-white">{formatOrderNumber(o.number)} · {o.tableLabel}</span>
+            <span className="min-w-0 truncate text-white">{formatOrderNumber(o.number, o.origin)} · {o.tableLabel}</span>
             <span className="flex shrink-0 items-center gap-2">
               <span className="tabular-nums text-mist">{formatXOF(o.total)}</span>
               <StatusBadge status={o.status} />

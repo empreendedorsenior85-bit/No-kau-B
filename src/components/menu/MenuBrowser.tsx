@@ -4,7 +4,8 @@ import { useClientValue } from "@/lib/use-client-value";
 import { Reveal } from "@/components/motion/Reveal";
 import { AnimatePresence } from "motion/react";
 import * as m from "motion/react-m";
-import { categories, items, type MenuItem } from "@/content/menu";
+import type { MenuCategory, MenuItem } from "@/content/menu";
+import { isIllustrative } from "@/lib/illustrative";
 import { formatXOF } from "@/lib/format";
 import { DiamondMark } from "@/components/brand/DiamondPattern";
 
@@ -13,13 +14,13 @@ function normalize(s: string) {
 }
 
 const readCategoryFromUrl = () => new URLSearchParams(window.location.search).get("categoria") ?? "";
-const isCategory = (id: string | null) => !!id && categories.some((c) => c.id === id);
 
 /**
  * Sem useSearchParams/Suspense: o servidor renderiza o menu completo (visível sem JS);
  * no cliente, a categoria do URL (?categoria=) é aplicada.
  */
-export function MenuBrowser() {
+export function MenuBrowser({ categories, items }: { categories: MenuCategory[]; items: MenuItem[] }) {
+  const isCategory = (id: string | null) => !!id && categories.some((c) => c.id === id);
   const urlCat = useClientValue(readCategoryFromUrl);
   const [chosen, setChosen] = useState<string | null>(null);
   const cat = chosen ?? (isCategory(urlCat) ? urlCat! : "todos");
@@ -42,7 +43,7 @@ export function MenuBrowser() {
         (!onlyAvailable || i.available === true) &&
         (!nq || normalize(`${i.name} ${i.description} ${(i.ingredients ?? []).join(" ")}`).includes(nq)),
     );
-  }, [cat, q, onlyAvailable]);
+  }, [items, cat, q, onlyAvailable]);
 
   const groups = categories
     .map((c) => ({ ...c, items: filtered.filter((i) => i.category === c.id) }))
@@ -146,7 +147,16 @@ function MenuCard({ item, index }: { item: MenuItem; index: number }) {
       delay={(index % 2) * 0.06}
       className="group relative overflow-hidden rounded-[1.5rem] border border-gold-100 bg-gold-50 p-6 transition-[box-shadow,transform] duration-500 hover:-translate-y-0.5 hover:shadow-[0_18px_40px_-24px_rgba(95,73,35,0.45)]"
     >
-      <DiamondMark className="absolute -right-5 -top-5 text-gold/15 transition-transform duration-700 group-hover:rotate-45" size={96} />
+      {item.image && (
+        <figure className="relative -mx-6 -mt-6 mb-5">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={item.image} alt={item.name} loading="lazy" decoding="async" className="aspect-[16/9] w-full object-cover" />
+          {isIllustrative(item.image) && (
+            <figcaption className="absolute bottom-2 left-2 rounded-full bg-kau-950/75 px-2.5 py-1 text-[0.65rem] uppercase tracking-[0.12em] text-white/90 backdrop-blur-sm">Imagem ilustrativa</figcaption>
+          )}
+        </figure>
+      )}
+      {!item.image && <DiamondMark className="absolute -right-5 -top-5 text-gold/15 transition-transform duration-700 group-hover:rotate-45" size={96} />}
       <div className="relative flex items-start justify-between gap-6">
         <div>
           {item.demo && (

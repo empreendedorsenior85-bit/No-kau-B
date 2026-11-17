@@ -18,3 +18,9 @@ export function rateLimit(key: string, max = 5, windowMs = 10 * 60_000): boolean
   if (hits.size > 5000) hits.clear();
   return true;
 }
+
+/** Só consulta (não conta): já atingiu o limite? */
+export function isRateLimited(key: string, max: number, windowMs: number): boolean {
+  const now = Date.now();
+  return (hits.get(key) ?? []).filter((t) => now - t < windowMs).length >= max;
+}

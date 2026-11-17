@@ -1,12 +1,15 @@
 import "server-only";
 import { query, tx } from "@/lib/db";
-import { MIGRATE_MENU_SQL, MIGRATE_ROLES_SQL, SCHEMA_SQL } from "./schema";
+import { MIGRATE_MENU_SQL, MIGRATE_ROLES_SQL, MIGRATE_SYNC_SQL, SCHEMA_SQL } from "./schema";
+import { isLocalServer } from "@/lib/node-role";
 import { newQrToken } from "@/lib/tokens";
 
 /** Cria o esquema (se faltar) e as 10 mesas por defeito (só se ainda não houver mesas). */
 export async function initDatabase(defaultTables = 10) {
   await query(SCHEMA_SQL);
   await migrateRoles();
+  // no servidor local as mesas (e os seus QR Codes) vêm do servidor central, com os mesmos ids e tokens
+  if (isLocalServer()) return;
   await tx(async (c) => {
     const n = await c.query<{ n: string }>("select count(*) n from dining_tables");
     if (Number(n.rows[0].n) === 0) {
@@ -36,6 +39,9 @@ async function upToDate(): Promise<boolean> {
        (select count(*) from information_schema.columns where table_schema = current_schema() and table_name = 'menu_items' and column_name in ('image_path','review_note')) = 2
        and coalesce((select pg_get_constraintdef(oid) like '%gerente%' from pg_constraint where conname = 'admin_users_role_check'), false)
        and not exists (select 1 from admin_users where role in ('manager','staff'))
+       and exists (select 1 from information_schema.columns where table_schema = current_schema() and table_name = 'orders' and column_name = 'needs_push')
+       and exists (select 1 from information_schema.tables where table_schema = current_schema() and table_name = 'sync_state')
+       and not exists (select 1 from pg_constraint where conname = 'orders_number_key')
      ) ok`);
   return !!r.rows[0]?.ok;
 }
@@ -52,5 +58,5 @@ export function ensureMigrated(): Promise<void> {
 }
 
 async function migrateRoles() {
-  await tx(async (c) => { await c.query(MIGRATE_ROLES_SQL); await c.query(MIGRATE_MENU_SQL); });
+  await tx(async (c) => { await c.query(MIGRATE_ROLES_SQL); await c.query(MIGRATE_MENU_SQL); await c.query(MIGRATE_SYNC_SQL); });
 }

@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { UsersManager } from "@/components/admin/UsersManager";
+import { LocalReadOnly } from "@/components/admin/LocalReadOnly";
 import { requireAdmin } from "@/lib/auth";
 import { query } from "@/lib/db";
 
@@ -16,7 +17,7 @@ export default async function Page() {
         <strong className="text-white">Admin</strong>: controlo total (QR Codes e mesas, utilizadores, menu, pedidos).{" "}
         <strong className="text-white">Gerente</strong>: acompanha e atualiza pedidos, consulta mesas e QR Codes e gere o menu.
       </p>
-      <UsersManager meId={me.id} users={r.rows.map((u) => ({ id: u.id, email: u.email, role: u.role, active: u.active, createdAt: u.created_at.toISOString() }))} />
+      <LocalReadOnly what="os utilizadores"><UsersManager meId={me.id} users={r.rows.map((u) => ({ id: u.id, email: u.email, role: u.role, active: u.active, createdAt: u.created_at.toISOString() }))} /></LocalReadOnly>
     </>
   );
 }

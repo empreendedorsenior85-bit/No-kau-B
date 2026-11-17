@@ -15,7 +15,7 @@ export async function GET(req: Request, ctx: { params: Promise<{ id: string }> }
     if (!o) return Response.json({ error: "not_found" }, { status: 404 });
     // dados mínimos: nada de ids internos nem de outras mesas
     return Response.json(
-      { number: o.number, tableLabel: o.tableLabel, status: o.status, total: o.total, createdAt: o.createdAt, items: o.items },
+      { number: o.number, origin: o.origin, tableLabel: o.tableLabel, status: o.status, total: o.total, createdAt: o.createdAt, items: o.items },
       { headers: { "Cache-Control": "no-store" } },
     );
   } catch (e) {

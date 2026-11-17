@@ -22,6 +22,8 @@ export type OrderItem = { name: string; quantity: number; unitPrice: number; not
 export type Order = {
   id: string;
   number: number;
+  /** 'local' = criado no servidor do restaurante (numeração L0001…), 'central' = site na internet. */
+  origin: "central" | "local";
   tableId: number;
   tableLabel: string;
   status: OrderStatus;
@@ -33,4 +35,5 @@ export type Order = {
   items: OrderItem[];
 };
 
-export const formatOrderNumber = (n: number) => `#${String(n).padStart(4, "0")}`;
+export const formatOrderNumber = (n: number, origin: "central" | "local" = "central") =>
+  `${origin === "local" ? "L" : "#"}${String(n).padStart(4, "0")}`;

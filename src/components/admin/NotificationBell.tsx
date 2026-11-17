@@ -55,7 +55,7 @@ export function NotificationBell() {
                 <li key={o.id}>
                   <Link href="/admin/pedidos" onClick={() => setOpen(false)} className="flex items-start justify-between gap-3 rounded-xl px-2 py-2.5 hover:bg-kau-900">
                     <span className="min-w-0 text-sm">
-                      <span className="block text-white">{lateIds.has(o.id) ? "⏱ À espera: " : "Novo pedido "}{formatOrderNumber(o.number)} · {o.tableLabel}</span>
+                      <span className="block text-white">{lateIds.has(o.id) ? "⏱ À espera: " : "Novo pedido "}{formatOrderNumber(o.number, o.origin)} · {o.tableLabel}</span>
                       <span className="text-xs text-mist">{new Date(o.createdAt).toLocaleTimeString("pt-PT", { hour: "2-digit", minute: "2-digit", timeZone: "Africa/Bissau" })} · {formatXOF(o.total)}</span>
                     </span>
                     <StatusBadge status={o.status} />

@@ -49,7 +49,7 @@ export function OrderCard({ order, compact }: { order: Order; compact?: boolean 
   return (
     <article
       onClick={() => isNew && acknowledge(order.id)}
-      data-testid={`order-${order.number}`}
+      data-testid={`order-${order.origin === "local" ? "L" : ""}${order.number}`}
       data-status={order.status}
       className={`relative overflow-hidden rounded-2xl border bg-kau-900 ${isNew ? "animate-[nk-pulse_1.2s_ease-in-out_infinite] border-[#e0a64a]" : "border-kau-800"}`}
     >
@@ -58,7 +58,7 @@ export function OrderCard({ order, compact }: { order: Order; compact?: boolean 
         {isNew && <p className="mb-2 inline-block rounded-full bg-[#e0a64a] px-2.5 py-0.5 text-xs font-bold uppercase tracking-wider text-kau-950">Novo</p>}
         <div className="flex items-start justify-between gap-3">
           <div>
-            <p className="font-display text-2xl text-white">{formatOrderNumber(order.number)}</p>
+            <p className="font-display text-2xl text-white">{formatOrderNumber(order.number, order.origin)}</p>
             <p className="font-display text-lg text-gold-300">{order.tableLabel}</p>
           </div>
           <div className="text-right">

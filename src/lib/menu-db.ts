@@ -1,5 +1,6 @@
 import "server-only";
-import { query } from "./db";
+import { cacheLife, cacheTag } from "next/cache";
+import { dbConfigured, query } from "./db";
 import { ensureMigrated } from "@/db/init";
 
 export type DbMenuItem = {
@@ -55,4 +56,30 @@ export async function getTableByToken(token: string): Promise<{ id: number; numb
   const r = await query<{ id: number; number: number; label: string }>(
     "select id, number, label from dining_tables where qr_token = $1 and active", [token]);
   return r.rows[0] ?? null;
+}
+
+/**
+ * Menu público do site (/menu) — sem mesa, só para consulta. Em cache (tag "menu"): as ações do painel que
+ * mexem no menu invalidam-no; sem invalidação, renova-se ao fim de 60 s. Sem base de dados → null (o site
+ * mostra a estrutura de demonstração, assinalada como tal).
+ */
+export async function getPublicSiteMenu(): Promise<{ categories: { id: string; label: string; description: string }[]; items: { id: string; category: string; name: string; description: string; price: number; available: boolean; image?: string; demo: boolean }[] } | null> {
+  "use cache";
+  cacheTag("menu");
+  cacheLife({ stale: 60, revalidate: 60, expire: 3600 });
+  if (!dbConfigured()) return null;
+  try {
+    const cats = await getPublicMenu();
+    if (cats.length === 0) return null;
+    return {
+      categories: cats.map((c) => ({ id: c.id, label: c.label, description: c.description })),
+      items: cats.flatMap((c) => c.items.map((i) => ({
+        id: String(i.id), category: c.id, name: i.name, description: i.description, price: i.price,
+        available: i.available, image: i.imageUrl ?? undefined, demo: i.isDemo,
+      }))),
+    };
+  } catch (e) {
+    console.error("[menu público] base de dados indisponível:", (e as Error).message);
+    return null;
+  }
 }

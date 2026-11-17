@@ -7,7 +7,7 @@ import { formatXOF } from "@/lib/format";
 import { Logo } from "@/components/brand/Logo";
 import { ButtonLink } from "@/components/ui/Button";
 
-type View = { number: number; tableLabel: string; status: OrderStatus; total: number; createdAt: string; items: OrderItem[] };
+type View = { number: number; origin: "central" | "local"; tableLabel: string; status: OrderStatus; total: number; createdAt: string; items: OrderItem[] };
 const STEPS: OrderStatus[] = ["pending", "preparing", "done"];
 const STEP_LABEL = ["Recebido", "Em preparação", "Pronto"];
 
@@ -48,7 +48,7 @@ export function OrderTracker({ token, orderId, initial }: { token: string; order
 
       <div role="status" aria-live="polite" className="mt-8 rounded-[1.75rem] border border-ok/40 bg-ok/10 p-6 text-center">
         <p className="text-sm uppercase tracking-[0.2em] text-[#7fc290]">{o.status === "done" ? "Pedido pronto" : "Pedido enviado"}</p>
-        <h1 className="mt-2 font-display text-5xl text-white">{formatOrderNumber(o.number)}</h1>
+        <h1 className="mt-2 font-display text-5xl text-white">{formatOrderNumber(o.number, o.origin)}</h1>
         <p className="mt-2 font-display text-2xl text-gold-300">{o.tableLabel}</p>
         <p className="mt-3 text-sm text-mist">Feito às {time}</p>
       </div>

@@ -4,6 +4,9 @@ import { newKey, isValidKey, useCart } from "@/lib/cart";
 import { sendOrder } from "@/lib/send-order";
 import { formatXOF } from "@/lib/format";
 import { isIllustrative } from "@/lib/illustrative";
+import { formatOrderNumber } from "@/lib/types";
+import { deleteRecord, flushOutbox, outboxAvailable, putRecord, recordsFor, requestBackgroundSync, type OutboxRecord } from "@/lib/outbox";
+import { useOffline } from "@/components/pwa/useOffline";
 import { Logo } from "@/components/brand/Logo";
 import { DiamondMark } from "@/components/brand/DiamondPattern";
 import { Button } from "@/components/ui/Button";
@@ -24,6 +27,30 @@ export function TableMenu({ token, table, categories }: { token: string; table: 
   const [gone, setGone] = useState<Set<number>>(new Set()); // produtos que o servidor disse já não estarem disponíveis
   const sending = useRef(false);
   const [active, setActive] = useState(categories[0]?.id);
+  const net = useOffline(all.map((i) => i.imageUrl).filter((u): u is string => !!u));
+  const [records, setRecords] = useState<OutboxRecord[]>([]);
+  const [outboxOk, setOutboxOk] = useState<boolean | null>(null);
+  const [flushingNow, setFlushingNow] = useState(false);
+
+  // fila de pedidos guardados no telemóvel: mostra o estado e envia sozinha quando há rede
+  useEffect(() => {
+    let stop = false;
+    const refresh = async () => { try { const r = await recordsFor(token); if (!stop) setRecords(r); } catch {} };
+    const flush = async () => {
+      if (!navigator.onLine) return;
+      setFlushingNow(true);
+      try { await flushOutbox(); } finally { if (!stop) setFlushingNow(false); }
+      await refresh();
+    };
+    outboxAvailable().then((ok) => { if (stop) return; setOutboxOk(ok); if (ok) { refresh(); flush(); } });
+    const onOnline = () => flush();
+    const onMsg = (e: MessageEvent) => { if (e.data?.type === "outbox-updated") refresh(); };
+    window.addEventListener("online", onOnline);
+    navigator.serviceWorker?.addEventListener("message", onMsg);
+    const t = setInterval(() => { if (document.visibilityState === "visible") flush(); }, 10_000);
+    return () => { stop = true; clearInterval(t); window.removeEventListener("online", onOnline); navigator.serviceWorker?.removeEventListener("message", onMsg); };
+  }, [token]);
+  const queuedCount = records.filter((r) => r.state === "queued").length;
 
   // destaque da categoria visível
   useEffect(() => {
@@ -54,28 +81,49 @@ export function TableMenu({ token, table, categories }: { token: string; table: 
     setPending(true);
     setRetrying(false);
     setError(null);
+    const key = isValidKey(cart.key) ? cart.key : newKey();
+    const lines = cart.lines.map((l) => ({ itemId: l.itemId, quantity: l.qty, note: l.note.trim() || undefined }));
+    // 1) guardar o pedido NO TELEMÓVEL antes de o enviar (sem rede, a meio do envio, página fechada: não se perde)
+    let queued = false;
+    if (outboxOk) {
+      try {
+        await putRecord({ key, token, tableLabel: table.label, lines: cart.lines.map((l) => ({ ...l })), estTotal: cart.total, createdAt: Date.now(), state: "queued", attempts: 0 });
+        queued = true;
+      } catch {}
+    }
+    const keepQueued = async () => {
+      cart.reset();
+      setOpen(false);
+      setRecords(await recordsFor(token));
+      requestBackgroundSync();
+    };
     try {
-      const key = isValidKey(cart.key) ? cart.key : newKey();
-      const r = await sendOrder(
-        { token, key, lines: cart.lines.map((l) => ({ itemId: l.itemId, quantity: l.qty, note: l.note.trim() || undefined })) },
-        () => setRetrying(true),
-      );
+      if (queued && !navigator.onLine) { await keepQueued(); return; }
+      const r = await sendOrder({ token, key, lines }, () => setRetrying(true));
       if (r.ok) {
+        if (queued) await putRecord({ key, token, tableLabel: table.label, lines: cart.lines.map((l) => ({ ...l })), estTotal: cart.total, createdAt: Date.now(), state: "sent", attempts: 1, sentAt: Date.now(), orderId: r.orderId, number: r.number, origin: r.origin }).catch(() => {});
         cart.reset();
         // navegação completa de propósito: não depende de pedidos extra à rede para mostrar a confirmação
         // eslint-disable-next-line @next/next/no-location-assign-relative-destination
         window.location.assign(`/m/${token}/pedido/${r.orderId}`);
         return; // mantém a trava até a navegação
       }
+      // falha de rede/servidor (não do pedido): fica guardado e segue sozinho quando houver ligação
+      if (queued && (r.network || r.temporary)) { await keepQueued(); return; }
+      if (queued) await deleteRecord(key).catch(() => {});
       if (r.itemIds?.length) { cart.remove(r.itemIds); setGone((g) => new Set([...g, ...r.itemIds!])); }
       setError(r.message + (r.itemIds?.length ? " Retirámos esses produtos do seu pedido." : ""));
     } catch {
+      if (queued) { await keepQueued(); return; }
       setError("Não foi possível enviar o pedido. O pedido está guardado — tente novamente.");
+    } finally {
+      setPending(false);
+      setRetrying(false);
+      sending.current = false;
     }
-    setPending(false);
-    setRetrying(false);
-    sending.current = false;
   };
+
+  const removeRecord = async (key: string) => { await deleteRecord(key).catch(() => {}); setRecords(await recordsFor(token)); };
 
   const scrollTo = (id: string) => document.getElementById(`cat-${id}`)?.scrollIntoView({ behavior: "smooth", block: "start" });
 
@@ -117,6 +165,49 @@ export function TableMenu({ token, table, categories }: { token: string; table: 
         <p className="mt-2 text-sm leading-relaxed text-mist">
           Escolha os produtos e envie. O pedido vai direto para o restaurante e é associado à <strong className="text-white">{table.label}</strong>. O pagamento é feito no restaurante.
         </p>
+
+        {/* estado da ligação e do funcionamento sem internet */}
+        {!net.online ? (
+          <p role="status" data-testid="net-offline" className="mt-4 rounded-2xl border border-[#e0a64a]/50 bg-[#e0a64a]/10 px-4 py-3 text-sm leading-relaxed text-[#f3d29b]">
+            <strong className="text-white">Sem internet.</strong> Está a ver o menu guardado neste telemóvel. Pode pedir na mesma: o pedido fica
+            guardado e é enviado sozinho quando a ligação voltar.
+          </p>
+        ) : net.saved ? (
+          <p data-testid="offline-ready" className="mt-3 text-xs text-mist">✓ Menu guardado neste telemóvel — funciona mesmo que a internet falhe.</p>
+        ) : null}
+
+        {records.length > 0 && (
+          <section aria-labelledby="meus-pedidos" data-testid="outbox" className="mt-5 rounded-2xl border border-kau-800 bg-kau-900 p-4">
+            <h2 id="meus-pedidos" className="font-display text-xl text-white">Os seus pedidos</h2>
+            <ul className="mt-3 space-y-3">
+              {records.map((r) => (
+                <li key={r.key} data-testid="outbox-item" data-state={r.state} className="rounded-xl border border-kau-800 p-3 text-sm">
+                  {r.state === "queued" && (
+                    <p className="font-medium text-[#f3d29b]">
+                      {net.online && flushingNow ? "A enviar ao restaurante…" : "⏳ Guardado no telemóvel — será enviado automaticamente quando houver ligação"}
+                    </p>
+                  )}
+                  {r.state === "sent" && (
+                    <p className="font-medium text-[#7fc290]">
+                      ✓ Recebido pelo restaurante — Pedido {formatOrderNumber(r.number ?? 0, r.origin)}{" "}
+                      {r.orderId && <a href={`/m/${token}/pedido/${r.orderId}`} className="text-gold-300 underline underline-offset-4">ver estado</a>}
+                    </p>
+                  )}
+                  {r.state === "rejected" && (
+                    <p className="font-medium text-[#f0b2a8]">✕ Não foi aceite: {r.message}</p>
+                  )}
+                  <p className="mt-1 text-mist">
+                    {r.lines.map((l) => `${l.qty}× ${l.name}`).join(", ")} · {r.state === "sent" ? "" : "estimado "}{formatXOF(r.estTotal)}
+                  </p>
+                  {r.state === "rejected" && (
+                    <button onClick={() => removeRecord(r.key)} className="mt-2 text-xs text-mist underline underline-offset-4 hover:text-white">Remover da lista</button>
+                  )}
+                </li>
+              ))}
+            </ul>
+            {queuedCount > 0 && <p className="mt-3 text-xs text-mist">Se um pedido continuar por enviar durante muito tempo, avise um empregado.</p>}
+          </section>
+        )}
 
         {categories.map((c) => (
           <section key={c.id} id={`cat-${c.id}`} className="scroll-mt-36 pt-10" aria-labelledby={`h-${c.id}`}>

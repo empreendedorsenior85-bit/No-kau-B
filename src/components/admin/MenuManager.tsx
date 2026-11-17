@@ -30,21 +30,31 @@ function ItemForm({ categories, item, onDone }: { categories: AdminCategory[]; i
   const fileRef = useRef<HTMLInputElement>(null);
   const formRef = useRef<HTMLFormElement>(null);
   const [fileErr, setFileErr] = useState<string | null>(null);
+  // a foto é reduzida no navegador antes do envio: até terminar, não se pode guardar (senão seguia o ficheiro original, grande demais)
+  const [preparing, setPreparing] = useState(false);
 
   useEffect(() => {
     if (state.ok) { if (!item) formRef.current?.reset(); router.refresh(); onDone?.(); }
   }, [state, item, router, onDone]);
 
   const onFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const f = e.target.files?.[0];
+    const input = e.target;
+    const f = input.files?.[0];
     if (!f) return;
+    setPreparing(true);
     try {
       const small = await shrink(f);
+      if (small.size > 900_000) throw new Error("grande");
       const dt = new DataTransfer();
       dt.items.add(small);
-      e.target.files = dt.files;
+      input.files = dt.files;
       setFileErr(null);
-    } catch { setFileErr("Não foi possível preparar a foto."); }
+    } catch {
+      input.value = ""; // nunca enviar o original
+      setFileErr("Não foi possível preparar a foto (máx. 900 KB depois de reduzida). Experimente outra imagem.");
+    } finally {
+      setPreparing(false);
+    }
   };
 
   return (
@@ -64,7 +74,7 @@ function ItemForm({ categories, item, onDone }: { categories: AdminCategory[]; i
       </label>
       {(state.error || fileErr) && <p role="alert" className="text-sm text-[#e48a7d] sm:col-span-2">{state.error ?? fileErr}</p>}
       {state.ok && <p role="status" className="text-sm text-[#7fc290] sm:col-span-2">{state.ok}</p>}
-      <div className="sm:col-span-2"><button disabled={pending} className="h-11 rounded-full bg-gold px-6 text-sm font-medium text-kau-950 disabled:opacity-50">{pending ? "A guardar…" : item ? "Guardar alterações" : "Adicionar produto"}</button></div>
+      <div className="sm:col-span-2"><button disabled={pending || preparing} className="h-11 rounded-full bg-gold px-6 text-sm font-medium text-kau-950 disabled:opacity-50">{preparing ? "A preparar a foto…" : pending ? "A guardar…" : item ? "Guardar alterações" : "Adicionar produto"}</button></div>
     </form>
   );
 }

@@ -5,7 +5,7 @@ import { rateLimit } from "./rate-limit";
 import { isTransient } from "./db";
 
 export type OrderApiBody =
-  | { ok: true; orderId: string; number: number; duplicate: boolean }
+  | { ok: true; orderId: string; number: number; origin: "central" | "local"; duplicate: boolean }
   | { ok: false; message: string; itemIds?: number[]; retry?: boolean };
 export type OrderApiResult = { status: number; body: OrderApiBody };
 
@@ -30,7 +30,7 @@ export async function submitOrder(input: unknown, ip: string | null): Promise<Or
   try {
     const r = await placeOrder(token, lines, key);
     if (!r.ok) return { status: RATE_CODES[r.code], body: { ok: false, message: r.message, itemIds: r.itemIds } };
-    return { status: 200, body: { ok: true, orderId: r.order.id, number: r.order.number, duplicate: r.duplicate } };
+    return { status: 200, body: { ok: true, orderId: r.order.id, number: r.order.number, origin: r.order.origin, duplicate: r.duplicate } };
   } catch (e) {
     const err = e as { code?: string; message?: string };
     console.error("[pedido] falha ao gravar:", err.code ?? "", err.message ?? e);

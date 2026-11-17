@@ -139,3 +139,35 @@ export const MIGRATE_MENU_SQL = /* sql */ `
 alter table menu_items add column if not exists image_path text;
 alter table menu_items add column if not exists review_note text;
 `;
+
+/**
+ * Funcionamento offline / servidor local (idempotente, com bloqueio):
+ *  - `origin`: onde o pedido nasceu ('central' = site na internet, 'local' = servidor do restaurante).
+ *    O número é único POR ORIGEM (#0042 no central, L0042 no local): os dois servidores numeram
+ *    sem se falarem e nunca colidem.
+ *  - `status_changed_at`: última mudança de estado — decide conflitos (vence a mais recente).
+ *  - `needs_push` (só no servidor local): alteração ainda não enviada ao central.
+ *  - `sync_state`: estado da sincronização (cursor, último sucesso/erro, último contacto do servidor local).
+ */
+export const MIGRATE_SYNC_SQL = /* sql */ `
+select pg_advisory_xact_lock(727002);
+alter table orders add column if not exists origin text not null default 'central';
+alter table orders drop constraint if exists orders_origin_check;
+alter table orders add constraint orders_origin_check check (origin in ('central','local'));
+alter table orders add column if not exists status_changed_at timestamptz;
+update orders set status_changed_at = updated_at where status_changed_at is null;
+alter table orders alter column status_changed_at set default now();
+alter table orders alter column status_changed_at set not null;
+alter table orders add column if not exists needs_push boolean not null default false;
+alter table orders add column if not exists synced_at timestamptz;
+alter table orders drop constraint if exists orders_number_key;
+create unique index if not exists orders_origin_number_uq on orders(origin, number);
+create index if not exists orders_needs_push_idx on orders(needs_push) where needs_push;
+create sequence if not exists orders_local_number_seq;
+create table if not exists sync_state (
+  key text primary key,
+  value jsonb not null default '{}'::jsonb,
+  updated_at timestamptz not null default now()
+);
+alter table sync_state enable row level security;
+`;

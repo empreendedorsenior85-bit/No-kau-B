@@ -1,4 +1,5 @@
 import "server-only";
+import { isLocalServer } from "./node-role";
 import { createHmac, randomBytes, scrypt, timingSafeEqual, createHash } from "node:crypto";
 import { cookies } from "next/headers";
 import { connection } from "next/server";
@@ -46,7 +47,8 @@ export async function startSession(userId: string) {
   const payload = `${userId}.${exp}`;
   (await cookies()).set(COOKIE, `${payload}.${sign(payload)}`, {
     httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
+    // servidor local do restaurante: http na rede Wi-Fi (sem certificado) → cookie sem "secure", senão o login falhava
+    secure: process.env.NODE_ENV === "production" && !isLocalServer(),
     sameSite: "lax",
     path: "/",
     maxAge: SESSION_HOURS * 3600,

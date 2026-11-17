@@ -1,4 +1,5 @@
 import "server-only";
+import { formatOrderNumber } from "./types";
 import { query } from "./db";
 
 /**
@@ -179,11 +180,11 @@ export async function reportTables(range: Range): Promise<ReportRow[]> {
 }
 
 export async function reportOrders(range: Range): Promise<ReportRow[]> {
-  const r = await query<{ number: number; at: string; mesa: string; status: string; total: number; test: boolean; items: string }>(
-    `select o.number, to_char(o.created_at at time zone '${TZ}', 'YYYY-MM-DD HH24:MI') "at", t.label mesa, o.status, o.total, o.is_test test,
+  const r = await query<{ number: number; origin: "central" | "local"; at: string; mesa: string; status: string; total: number; test: boolean; items: string }>(
+    `select o.number, o.origin, to_char(o.created_at at time zone '${TZ}', 'YYYY-MM-DD HH24:MI') "at", t.label mesa, o.status, o.total, o.is_test test,
             (select string_agg(i.quantity || 'x ' || i.name || coalesce(' (' || i.note || ')', ''), '; ' order by i.id) from order_items i where i.order_id = o.id) items
      from orders o join dining_tables t on t.id = o.table_id where ${sel} order by o.created_at`,
     [range.from, range.to, range.includeTest]);
   const label = { pending: "Pendente", preparing: "Em preparação", done: "Concluído" } as const;
-  return r.rows.map((x) => ({ Pedido: `#${String(x.number).padStart(4, "0")}`, "Data/hora": x.at, Mesa: x.mesa, Estado: label[x.status as keyof typeof label], "Total (FCFA)": x.total, Teste: x.test ? "sim" : "não", Itens: x.items ?? "" }));
+  return r.rows.map((x) => ({ Pedido: formatOrderNumber(x.number, x.origin), "Data/hora": x.at, Mesa: x.mesa, Estado: label[x.status as keyof typeof label], "Total (FCFA)": x.total, Teste: x.test ? "sim" : "não", Itens: x.items ?? "" }));
 }

@@ -3,14 +3,19 @@ import { PageHero } from "@/components/layout/PageHero";
 import { MenuBrowser } from "@/components/menu/MenuBrowser";
 import { Provisional } from "@/components/ui/Provisional";
 import { ButtonLink } from "@/components/ui/Button";
-import { menuIsDemo } from "@/content/menu";
+import { categories as demoCategories, items as demoItems } from "@/content/menu";
+import { getPublicSiteMenu } from "@/lib/menu-db";
+import { OfflineMenu } from "@/components/pwa/OfflineMenu";
 
 export const metadata: Metadata = {
   title: "Menu",
-  description: "O menu do Nô Kau: grelhados, especialidades da casa, pratos tradicionais, sobremesas, bebidas e cocktails.",
+  description: "O menu do Nô Kau: entradas, peixes e mariscos, carnes grelhadas, pizzas, sandes, bebidas e vinhos. Preços em francos CFA.",
 };
 
-export default function MenuPage() {
+export default async function MenuPage() {
+  // menu real (painel do restaurante); sem base de dados, a estrutura de demonstração — assinalada como tal
+  const live = await getPublicSiteMenu();
+  const isDemo = !live;
   return (
     <main>
       <PageHero
@@ -20,18 +25,24 @@ export default function MenuPage() {
       >
         <div className="mt-8 flex flex-wrap items-center gap-4">
           <ButtonLink href="/reservas" size="lg">Reservar mesa</ButtonLink>
-          {menuIsDemo && <Provisional>Menu em preparação — conteúdo de demonstração</Provisional>}
+          {isDemo && <Provisional>Menu em preparação — conteúdo de demonstração</Provisional>}
         </div>
       </PageHero>
       <div className="bg-white text-kau-950">
         <div className="mx-auto max-w-7xl px-6 pb-16 sm:px-8">
-          {menuIsDemo && (
+          {isDemo ? (
             <p className="mx-auto max-w-3xl pt-10 text-center text-sm leading-relaxed text-stone">
               Os pratos abaixo são exemplos para demonstrar o funcionamento do menu. Os pratos, ingredientes e preços
               reais serão publicados pelo restaurante.
             </p>
+          ) : (
+            <p className="mx-auto max-w-3xl pt-10 text-center text-sm leading-relaxed text-stone">
+              Para pedir, leia o QR Code da sua mesa. Preços em FCFA; a disponibilidade pode mudar ao longo do dia.
+              As fotografias assinaladas como “Imagem ilustrativa” não são dos pratos servidos.
+            </p>
           )}
-          <MenuBrowser />
+          {live && <OfflineMenu images={live.items.map((i) => i.image).filter((u): u is string => !!u)} />}
+          <MenuBrowser categories={live?.categories ?? demoCategories} items={live?.items ?? demoItems} />
         </div>
       </div>
     </main>

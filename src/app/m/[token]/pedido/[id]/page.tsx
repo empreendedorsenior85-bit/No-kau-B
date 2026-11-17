@@ -26,7 +26,7 @@ async function Content({ params }: { params: PageProps<"/m/[token]/pedido/[id]">
     <OrderTracker
       token={token}
       orderId={o.id}
-      initial={{ number: o.number, tableLabel: o.tableLabel, status: o.status, total: o.total, createdAt: o.createdAt, items: o.items }}
+      initial={{ number: o.number, origin: o.origin, tableLabel: o.tableLabel, status: o.status, total: o.total, createdAt: o.createdAt, items: o.items }}
     />
   );
 }

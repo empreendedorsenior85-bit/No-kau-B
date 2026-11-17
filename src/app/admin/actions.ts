@@ -2,6 +2,7 @@
 
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
+import { updateTag } from "next/cache";
 import { z } from "zod";
 import { query, tx } from "@/lib/db";
 import {
@@ -9,6 +10,7 @@ import {
 } from "@/lib/auth";
 import { changeStatus } from "@/lib/orders";
 import { newQrToken } from "@/lib/tokens";
+import { isLocalServer } from "@/lib/node-role";
 import { hasAdmin, initDatabase } from "@/db/init";
 import { CATALOG_CATEGORIES, CATALOG_ITEMS } from "@/content/nokau-menu";
 import type { Order, OrderStatus } from "@/lib/types";
@@ -34,9 +36,18 @@ async function adminOnly() {
   return m;
 }
 
-const audit = (actor: string, action: string, entity: string, id: string | number, detail?: unknown) =>
-  query("insert into audit_log (actor, action, entity, entity_id, detail) values ($1,$2,$3,$4,$5)",
+/** Registo de auditoria. Toda a alteração ao menu (menu.* / category.*) passa por aqui: invalida o menu público em cache. */
+/** Servidor local: menu, mesas e utilizadores vêm do servidor central (seriam sobrescritos na sincronização). */
+const LOCAL_READONLY = "No servidor local do restaurante o menu, as mesas e os utilizadores são só de leitura — altere-os no site central; chegam aqui na sincronização seguinte.";
+function assertEditableHere() {
+  if (isLocalServer()) throw new Error(LOCAL_READONLY);
+}
+
+const audit = async (actor: string, action: string, entity: string, id: string | number, detail?: unknown) => {
+  await query("insert into audit_log (actor, action, entity, entity_id, detail) values ($1,$2,$3,$4,$5)",
     [actor, action, entity, String(id), detail ? JSON.stringify(detail) : null]);
+  if (/^(menu|category)\./.test(action)) updateTag("menu");
+};
 
 // ---------- autenticação ----------
 export async function loginAction(_: AdminFormState, fd: FormData): Promise<AdminFormState> {
@@ -70,6 +81,7 @@ const setupSchema = z.object({
 
 /** Primeiro acesso: só funciona enquanto não existe nenhum gerente e com o SETUP_TOKEN do servidor. */
 export async function setupAction(_: AdminFormState, fd: FormData): Promise<AdminFormState> {
+  assertEditableHere();
   const expected = process.env.SETUP_TOKEN;
   if (!expected) return { error: "SETUP_TOKEN não configurado no servidor." };
   const parsed = setupSchema.safeParse({ token: fd.get("token"), email: fd.get("email"), password: fd.get("password") });
@@ -102,6 +114,7 @@ export async function changeStatusAction(orderId: string, from: OrderStatus, to:
 
 // ---------- mesas ----------
 export async function addTableAction(): Promise<{ ok: boolean; message?: string }> {
+  assertEditableHere();
   const m = await adminOnly();
   const r = await tx(async (c) => {
     const n = await c.query<{ n: number }>("select coalesce(max(number),0)+1 n from dining_tables");
@@ -114,12 +127,14 @@ export async function addTableAction(): Promise<{ ok: boolean; message?: string 
 }
 
 export async function toggleTableAction(id: number, active: boolean) {
+  assertEditableHere();
   const m = await adminOnly();
   await query("update dining_tables set active = $2 where id = $1", [id, active]);
   await audit(m.email, active ? "table.activate" : "table.deactivate", "table", id);
 }
 
 export async function renameTableAction(id: number, label: string) {
+  assertEditableHere();
   const m = await adminOnly();
   const l = label.trim().slice(0, 40);
   if (!l) return;
@@ -129,6 +144,7 @@ export async function renameTableAction(id: number, label: string) {
 
 /** Gera um novo token: o QR Code antigo deixa de funcionar de imediato. */
 export async function rotateTokenAction(id: number) {
+  assertEditableHere();
   const m = await adminOnly();
   await query("update dining_tables set qr_token = $2, token_rotated_at = now() where id = $1", [id, newQrToken()]);
   await audit(m.email, "table.rotate_token", "table", id);
@@ -144,6 +160,7 @@ const itemSchema = z.object({
 });
 
 export async function saveItemAction(_: AdminFormState, fd: FormData): Promise<AdminFormState> {
+  assertEditableHere();
   const m = await manager();
   const parsed = itemSchema.safeParse({
     id: fd.get("id") || undefined, name: fd.get("name"), description: fd.get("description") ?? "",
@@ -179,6 +196,7 @@ export async function saveItemAction(_: AdminFormState, fd: FormData): Promise<A
 }
 
 export async function setItemFlagsAction(id: number, flags: { available?: boolean; active?: boolean }) {
+  assertEditableHere();
   const m = await manager();
   if (typeof flags.available === "boolean") await query("update menu_items set available=$2, updated_at=now() where id=$1", [id, flags.available]);
   if (typeof flags.active === "boolean") await query("update menu_items set active=$2, updated_at=now() where id=$1", [id, flags.active]);
@@ -187,6 +205,7 @@ export async function setItemFlagsAction(id: number, flags: { available?: boolea
 
 /** Pratos de DEMONSTRAÇÃO (marcados, preço simbólico). Pedidos com eles ficam marcados como TESTE. */
 export async function seedDemoAction(): Promise<AdminFormState> {
+  assertEditableHere();
   const m = await manager();
   const n = await query<{ n: string }>("select count(*) n from menu_items where is_demo");
   if (Number(n.rows[0].n) > 0) return { error: "Os pratos de demonstração já foram carregados." };
@@ -214,6 +233,7 @@ const userSchema = z.object({
 });
 
 export async function createUserAction(_: AdminFormState, fd: FormData): Promise<AdminFormState> {
+  assertEditableHere();
   const m = await adminOnly();
   const parsed = userSchema.safeParse({ email: fd.get("email"), role: fd.get("role"), password: fd.get("password") });
   if (!parsed.success) return { error: parsed.error.issues[0].message };
@@ -233,6 +253,7 @@ async function otherActiveAdmins(excludeId: string) {
 }
 
 export async function setUserRoleAction(id: string, role: "admin" | "gerente"): Promise<AdminFormState> {
+  assertEditableHere();
   const m = await adminOnly();
   if (role !== "admin" && role !== "gerente") return { error: "Perfil inválido." };
   if (id === m.id && role !== "admin") return { error: "Não pode retirar o seu próprio perfil de Admin." };
@@ -245,6 +266,7 @@ export async function setUserRoleAction(id: string, role: "admin" | "gerente"): 
 }
 
 export async function setUserActiveAction(id: string, active: boolean): Promise<AdminFormState> {
+  assertEditableHere();
   const m = await adminOnly();
   if (id === m.id && !active) return { error: "Não pode desativar a sua própria conta." };
   const u = await query<{ role: string; active: boolean }>("select role, active from admin_users where id = $1", [id]);
@@ -256,6 +278,7 @@ export async function setUserActiveAction(id: string, active: boolean): Promise<
 }
 
 export async function resetUserPasswordAction(id: string, password: string): Promise<AdminFormState> {
+  assertEditableHere();
   const m = await adminOnly();
   const p = passwordSchema.safeParse(password);
   if (!p.success) return { error: p.error.issues[0].message };
@@ -267,6 +290,7 @@ export async function resetUserPasswordAction(id: string, password: string): Pro
 
 // ---------- a minha conta (qualquer perfil) ----------
 export async function changeOwnPasswordAction(_: AdminFormState, fd: FormData): Promise<AdminFormState> {
+  assertEditableHere();
   const m = await manager();
   const current = String(fd.get("current") ?? "");
   const next = passwordSchema.safeParse(fd.get("next"));
@@ -283,6 +307,7 @@ const slug = (t: string) => t.normalize("NFD").replace(/\p{Diacritic}/gu, "").to
 const catSchema = z.object({ label: z.string().trim().min(1, "Indique o nome da categoria.").max(60, "Nome demasiado longo."), description: z.string().trim().max(120).default("") });
 
 export async function createCategoryAction(_: AdminFormState, fd: FormData): Promise<AdminFormState> {
+  assertEditableHere();
   const m = await manager();
   const p = catSchema.safeParse({ label: fd.get("label"), description: fd.get("description") ?? "" });
   if (!p.success) return { error: p.error.issues[0].message };
@@ -296,6 +321,7 @@ export async function createCategoryAction(_: AdminFormState, fd: FormData): Pro
 }
 
 export async function updateCategoryAction(id: string, label: string, description: string): Promise<AdminFormState> {
+  assertEditableHere();
   const m = await manager();
   const p = catSchema.safeParse({ label, description });
   if (!p.success) return { error: p.error.issues[0].message };
@@ -307,6 +333,7 @@ export async function updateCategoryAction(id: string, label: string, descriptio
 
 /** Troca a posição com a categoria vizinha (as posições são renumeradas para ficarem sempre únicas). */
 export async function moveCategoryAction(id: string, dir: "up" | "down"): Promise<AdminFormState> {
+  assertEditableHere();
   const m = await manager();
   await tx(async (c) => {
     const all = await c.query<{ id: string }>("select id from menu_categories order by position, id");
@@ -321,6 +348,7 @@ export async function moveCategoryAction(id: string, dir: "up" | "down"): Promis
 }
 
 export async function setCategoryActiveAction(id: string, active: boolean): Promise<AdminFormState> {
+  assertEditableHere();
   const m = await manager();
   await query("update menu_categories set active = $2 where id = $1", [id, active]);
   await audit(m.email, "category.active", "menu_category", id, { active });
@@ -329,6 +357,7 @@ export async function setCategoryActiveAction(id: string, active: boolean): Prom
 
 /** Só elimina categorias vazias; com produtos, o gerente deve escondê-la ou mover os produtos. */
 export async function deleteCategoryAction(id: string): Promise<AdminFormState> {
+  assertEditableHere();
   const m = await manager();
   const n = await query<{ n: string }>("select count(*) n from menu_items where category_id = $1", [id]);
   if (Number(n.rows[0].n) > 0) return { error: "A categoria tem produtos. Mova-os para outra categoria ou esconda a categoria." };
@@ -338,6 +367,7 @@ export async function deleteCategoryAction(id: string): Promise<AdminFormState> 
 }
 
 export async function removeItemImageAction(id: number): Promise<AdminFormState> {
+  assertEditableHere();
   const m = await manager();
   await query("update menu_items set image = null, image_type = null, image_path = null, image_version = image_version + 1, updated_at = now() where id = $1", [id]);
   await audit(m.email, "menu.image_remove", "menu_item", id);
@@ -351,6 +381,7 @@ export async function removeItemImageAction(id: number): Promise<AdminFormState>
  * Remove os produtos de DEMONSTRAÇÃO e esconde as categorias antigas que ficaram vazias.
  */
 export async function importCatalogAction(): Promise<AdminFormState> {
+  assertEditableHere();
   const m = await adminOnly();
   const r = await tx(async (c) => {
     const demo = await c.query("delete from menu_items where is_demo returning id");

@@ -5,13 +5,14 @@ import QRCode from "qrcode";
 import { requireManager } from "@/lib/auth";
 import { query } from "@/lib/db";
 import { originFrom } from "@/lib/origin";
+import { isLocalServer } from "@/lib/node-role";
 import { AddTableButton, TableControls } from "@/components/admin/TableActions";
 
 export const metadata: Metadata = { title: "QR Codes" };
 
 export default async function Page() {
   const me = await requireManager();
-  const canManage = me.role === "admin"; // Gerente: consulta, descarrega e imprime; só o Admin altera mesas e QR Codes
+  const canManage = me.role === "admin" && !isLocalServer(); // servidor local: mesas vêm do central // Gerente: consulta, descarrega e imprime; só o Admin altera mesas e QR Codes
   const origin = originFrom(await headers());
   const r = await query<{ id: number; number: number; label: string; qr_token: string; active: boolean }>(
     "select id, number, label, qr_token, active from dining_tables order by number");
