@@ -101,13 +101,15 @@ export async function setupAction(_: AdminFormState, fd: FormData): Promise<Admi
   if (!expected) return { error: "SETUP_TOKEN não configurado no servidor." };
   const parsed = setupSchema.safeParse({ token: fd.get("token"), email: fd.get("email"), password: fd.get("password") });
   if (!parsed.success) return { error: parsed.error.issues[0].message };
+  if (await hasAdmin()) return { error: "Já existe um gerente. Use o login." };
+  // base de dados nova: o esquema (idempotente) tem de existir para registar as tentativas falhadas
+  await initDatabase();
   const keys = loginKeys("setup", await clientIp(), "primeiro-acesso");
   if (await isThrottled(keys)) return { error: "Demasiadas tentativas. Aguarde 15 minutos." };
   if (!safeEqual(parsed.data.token, expected)) {
     await recordFailure(keys);
     return { error: "Código de configuração incorreto." };
   }
-  await initDatabase();
   if (await hasAdmin()) return { error: "Já existe um gerente. Use o login." };
   const hash = await hashPassword(parsed.data.password);
   const r = await query<{ id: string }>(
