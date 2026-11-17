@@ -88,3 +88,16 @@ O menu da mesa funciona sem internet depois da primeira visita, e os pedidos fei
 - **Garçons** (`/admin/garcons`): cada mesa pode ter um garçom. As chamadas dessa mesa tocam no garçom dela; mesas sem garçom avisam toda a equipa; “Chamar gerente” toca só na gestão. Desativar um garçom termina a sessão dele e retira-o das mesas.
 - **Atendimento** (`/admin/atendimento`): número de chamadas, tempo médio de resposta (até “A caminho”), % respondidas em ≤ 2 min, por pessoa, por mesa e histórico detalhado.
 - As chamadas, os garçons e as atribuições sincronizam com o servidor local (atualize primeiro o site central e só depois o servidor local).
+
+## Clientes e pagamentos (Etapa 4)
+
+- **Conta do cliente** (opcional, `/cliente`): registo único com nome, email, telefone e palavra-passe (guardada com scrypt). Entra com email **ou** telefone. Com a sessão iniciada, os pedidos feitos no menu da mesa ficam no histórico do cliente (“Os meus pedidos”), com o estado e se já estão **pagos**. A sessão do cliente é separada da equipa e nunca dá acesso ao painel. As contas existem só no site central.
+- **Pagamento em mão, no restaurante**: em **Mesas → escolher a mesa → Conta**, o gerente vê os pedidos por pagar, escolhe o método (Numerário com troco, Orange Money, MTN MoMo, Cartão/TPA, Transferência) e confirma. Fica registado: valor (calculado pelo servidor), método, data e hora, quem recebeu, valor entregue/troco e nota. O pedido de conta da mesa fica resolvido.
+- **Quem pode**: só **Admin e Gerente** confirmam e anulam. O Garçom vê a conta mas não confirma.
+- **Proteção**: um pedido nunca é pago duas vezes (mesmo com dois gerentes ao mesmo tempo). Um pagamento **não se altera nem se apaga** — garantido pela própria base de dados — só se **anula**, com motivo, e fica na Atividade. Os pedidos de um pagamento anulado voltam a ficar por pagar.
+- **Páginas**: **Pagamentos** (total recebido e por método, lista, anulação) e **Clientes** (contas, pedidos, pago/por pagar).
+- **Servidor local**: os pagamentos sincronizam nos dois sentidos. Se o mesmo pedido for cobrado no local e no central enquanto não havia internet, o segundo é recusado e aparece na Atividade (“sync.payment_conflict”) para o gerente resolver (devolver o dinheiro / anular um deles).
+
+## WhatsApp
+
+Botão flutuante no site público (abre o WhatsApp do restaurante com uma mensagem pronta). O número está em `src/lib/site.ts` (`whatsappE164`). **Confirmar que o número tem WhatsApp**; para esconder o botão, pôr `null`.
