@@ -188,3 +188,15 @@ export async function reportOrders(range: Range): Promise<ReportRow[]> {
   const label = { pending: "Pendente", preparing: "Em preparação", done: "Concluído" } as const;
   return r.rows.map((x) => ({ Pedido: formatOrderNumber(x.number, x.origin), "Data/hora": x.at, Mesa: x.mesa, Estado: label[x.status as keyof typeof label], "Total (FCFA)": x.total, Teste: x.test ? "sim" : "não", Itens: x.items ?? "" }));
 }
+
+/** Vendas por categoria, a partir do relatório de produtos (mesma fonte, mesmos números). */
+export function reportCategories(products: ReportRow[]): ReportRow[] {
+  const m = new Map<string, { Unidades: number; "Vendas (FCFA)": number }>();
+  for (const p of products) {
+    const k = String(p.Categoria);
+    const c = m.get(k) ?? { Unidades: 0, "Vendas (FCFA)": 0 };
+    c.Unidades += Number(p.Unidades); c["Vendas (FCFA)"] += Number(p["Vendas (FCFA)"]);
+    m.set(k, c);
+  }
+  return [...m.entries()].map(([Categoria, v]) => ({ Categoria, ...v })).sort((a, b) => b["Vendas (FCFA)"] - a["Vendas (FCFA)"]);
+}

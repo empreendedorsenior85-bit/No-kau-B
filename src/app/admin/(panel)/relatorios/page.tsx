@@ -41,9 +41,14 @@ export default async function Page({ searchParams }: PageProps<"/admin/relatorio
 
   return (
     <div className="space-y-8">
-      <div>
-        <h1 className="font-display text-3xl text-white">Relatórios</h1>
-        <p className="mt-1 text-sm text-mist">{range.label}{range.includeTest && " · inclui pedidos de teste"} · Vendas = pedidos concluídos. Os ficheiros CSV abrem no Excel.</p>
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <h1 className="font-display text-3xl text-white">Relatórios</h1>
+          <p className="mt-1 text-sm text-mist">{range.label}{range.includeTest && " · inclui pedidos de teste"} · Vendas = pedidos concluídos. Os ficheiros CSV abrem no Excel.</p>
+        </div>
+        <a href={`/admin/relatorios/pdf?${q}`} data-testid="report-pdf" className="rounded-full bg-gold px-5 py-2.5 text-sm font-medium text-kau-950 hover:bg-gold-300 print:hidden">
+          Descarregar PDF
+        </a>
       </div>
       <RangeFilter base="/admin/relatorios" range={range} />
       <Section title="Vendas por dia" sub="Pedidos, vendas e ticket médio de cada dia" csv={csv("dias")}>
