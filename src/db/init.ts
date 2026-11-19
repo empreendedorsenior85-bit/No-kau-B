@@ -34,6 +34,18 @@ let migrated: Promise<void> | null = null;
 
 /** Já está tudo no formato atual? (só leitura — evita DDL, que bloqueia a tabela, em cada arranque a frio) */
 async function upToDate(): Promise<boolean> {
+  // Uma verificação que falha (ex.: coluna nova ainda não existe — 42703) significa "não está atualizado":
+  // a migração corre e cria-a. Antes, o erro impedia a migração de correr (e bloqueava logins e pedidos).
+  try {
+    return await checkUpToDate();
+  } catch (e) {
+    const code = (e as { code?: string }).code;
+    if (code === "42703" || code === "42P01" || code === "42883") return false;
+    throw e; // erro de ligação: não é "desatualizado"
+  }
+}
+
+async function checkUpToDate(): Promise<boolean> {
   const r = await query<{ ok: boolean }>(
     `select (
        (select count(*) from information_schema.columns where table_schema = current_schema() and table_name = 'menu_items' and column_name in ('image_path','review_note')) = 2
