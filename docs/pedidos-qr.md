@@ -91,7 +91,19 @@ O menu da mesa funciona sem internet depois da primeira visita, e os pedidos fei
 
 ## Clientes e pagamentos (Etapa 4)
 
-- **Conta do cliente** (opcional, `/cliente`): registo único com nome, email, telefone e palavra-passe (guardada com scrypt). Entra com email **ou** telefone. Com a sessão iniciada, os pedidos feitos no menu da mesa ficam no histórico do cliente (“Os meus pedidos”), com o estado e se já estão **pagos**. A sessão do cliente é separada da equipa e nunca dá acesso ao painel. As contas existem só no site central.
+- **Conta do cliente** (`/cliente`): registo único com nome, email, telefone e palavra-passe (guardada com scrypt). Entra com email **ou** telefone. Os pedidos feitos no menu da mesa ficam no histórico do cliente (“Os meus pedidos”), com o estado e se já estão **pagos**. A sessão do cliente é separada da equipa e nunca dá acesso ao painel.
+- **Conta obrigatória para pedir (Etapa C)**:
+  - Sem sessão, o carrinho mostra **“Entrar ou criar conta para enviar”**, com os formulários dentro do próprio carrinho. Depois o cliente volta ao carrinho, com os mesmos produtos.
+  - O servidor recusa pedidos sem sessão (`401`).
+  - A **equipa com sessão** (garçom ou gerente) pode registar pedidos em nome da mesa.
+  - **Sessão terminada (ex.: mudou a palavra-passe):**
+    - antes de enviar, o carrinho pede para entrar de novo;
+    - um pedido já guardado no telemóvel sem rede fica à espera (“entre na sua conta”) e segue sozinho depois do login.
+- **Contas no servidor do restaurante**:
+  - As contas são copiadas do site para o servidor local: nome, email, telefone e o **hash** da palavra-passe, nunca a palavra-passe. Assim o cliente entra e pede no Wi-Fi do restaurante mesmo sem internet.
+  - As contas criadas no restaurante seguem para o site.
+  - **Se a mesma pessoa se registar nos dois lados sem internet** (mesmo email ou telefone), fica a conta do site e os pedidos passam para ela. A fusão fica na Atividade (`sync.customer_alias` / `sync.customer_merge`).
+  - O servidor local passa assim a guardar dados pessoais dos clientes. Deve estar num computador do restaurante com acesso restrito e cópias de segurança.
 - **Pagamento em mão, no restaurante**: em **Mesas → escolher a mesa → Conta**, o gerente vê os pedidos por pagar, escolhe o método (Numerário com troco, Orange Money, MTN MoMo, Cartão/TPA, Transferência) e confirma. Fica registado: valor (calculado pelo servidor), método, data e hora, quem recebeu, valor entregue/troco e nota. O pedido de conta da mesa fica resolvido.
 - **Quem pode**: só **Admin e Gerente** confirmam e anulam. O Garçom vê a conta mas não confirma.
 - **Proteção**: um pedido nunca é pago duas vezes (mesmo com dois gerentes ao mesmo tempo). Um pagamento **não se altera nem se apaga** — garantido pela própria base de dados — só se **anula**, com motivo, e fica na Atividade. Os pedidos de um pagamento anulado voltam a ficar por pagar.
