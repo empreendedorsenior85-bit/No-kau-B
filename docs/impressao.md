@@ -35,7 +35,8 @@ ESC/POS e a generalidade das "POS-80"). O sistema usa só comandos do conjunto b
 |---|---|---|
 | **Rede Wi-Fi / Ethernet** (porta RAW 9100) | ✅ Recomendado | Funciona em Linux e Windows. Deteta sem papel e tampa aberta quando a impressora responde a `DLE EOT`. |
 | **USB** | ✅ Só em Linux | Escreve diretamente em `/dev/usb/lp0` (ou `/dev/lpN`). Sem deteção de papel. |
-| Bluetooth BLE | ❌ Não implementado | Exige biblioteca nativa (BlueZ) e emparelhamento no servidor; não foi possível testar. Alternativa: impressora de rede. |
+| **Bluetooth (clássico / SPP)** | ✅ Só em Linux | A impressora é emparelhada com o servidor e aparece como `/dev/rfcomm0`. Impressão automática, como as outras ligações. Sem deteção de papel. |
+| Bluetooth só BLE (Web Bluetooth) | ❌ Não implementado | Só funcionaria com o painel aberto no Chrome; no iPhone não funciona. Não serve para impressão automática. A maioria das impressoras portáteis tem Bluetooth clássico (ver acima). |
 | Terminais Android (Sunmi, iMin) | ❌ Não implementado | A impressora interna só é acessível por uma app Android nativa com o SDK do fabricante. Seria um projeto à parte. |
 | Impressão pelo navegador | ❌ Não usado | Exige confirmação manual em cada talão. Não serve para impressão automática. |
 
@@ -46,6 +47,32 @@ ESC/POS e a generalidade das "POS-80"). O sistema usa só comandos do conjunto b
 2. Dar-lhe um **IP fixo**, por reserva DHCP no router ou na própria impressora (ex.: `192.168.1.50`).
 3. Confirmar que a porta **9100** (RAW / JetDirect) está ativa. É o padrão.
 4. Escolher a tabela de caracteres **PC860 (Português)** se o modelo a tiver. Caso contrário, use PC850 ou "Sem acentos".
+
+## Impressora Bluetooth (Linux)
+
+Funciona com impressoras térmicas Bluetooth **clássico (SPP)**, que é a maioria das portáteis de 58 e 80 mm (por exemplo Xprinter, Goojprt e MTP). O PIN de emparelhamento costuma ser `0000` ou `1234`.
+
+1. **Ligar e emparelhar.** Ligue a impressora perto do servidor e emparelhe-a, uma vez:
+   ```
+   bluetoothctl
+   power on
+   scan on            # anote o endereço da impressora, ex.: 86:67:7A:12:34:56
+   pair 86:67:7A:12:34:56
+   trust 86:67:7A:12:34:56
+   quit
+   ```
+2. **Ligar a porta série** (canal 1 é o habitual):
+   ```
+   sudo rfcomm bind 0 86:67:7A:12:34:56 1
+   ```
+   Cria `/dev/rfcomm0`. Para ficar ativo depois de reiniciar o servidor, ponha o mesmo comando num serviço `systemd` ou em `/etc/rc.local`.
+3. **Permissões:** `sudo usermod -aG dialout <utilizador>` e reinicie a sessão.
+4. **No painel:** em *Adicionar impressora*, escolha a ligação **Bluetooth** e a porta `/dev/rfcomm0`. Depois faça *Testar ligação* e *Imprimir teste*.
+
+Notas:
+- O servidor põe a porta em modo binário ("raw") antes de cada envio. Sem isso, o Linux troca cada LF por CR LF e estraga os comandos ESC/POS. Foi verificado em teste.
+- **Impressora desligada ou fora de alcance:** o talão fica na fila com a mensagem e sai sozinho quando ela voltar. O alcance típico é de cerca de 10 m, sem paredes grossas pelo meio.
+- **Várias impressoras Bluetooth:** use `rfcomm bind 1 …`, `rfcomm bind 2 …` e configure `/dev/rfcomm1`, `/dev/rfcomm2`.
 
 ## Impressora USB (Linux)
 
@@ -96,7 +123,8 @@ O histórico mostra os últimos 150 trabalhos (pedido, mesa, impressora, estado,
 ## Como foi testado
 
 - Impressora **virtual** ESC/POS por TCP (porta RAW, como uma impressora de rede real) e escrita num ficheiro de
-  dispositivo para o modo USB.
+  dispositivo para o modo USB. Para o Bluetooth, uma porta série virtual (pseudo-terminal, o mesmo tipo de dispositivo
+  que `/dev/rfcomm0`).
 - A impressora virtual interpreta os comandos e recusa os desconhecidos. Também descodifica PC860/PC850 e responde aos
   pedidos de estado de papel e tampa.
 - O fluxo completo foi testado de ponta a ponta: pedido por QR, aceitação no painel local e no central, talão impresso,

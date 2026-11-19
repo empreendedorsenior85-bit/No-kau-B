@@ -24,15 +24,16 @@ import { formatOrderNumber } from "@/lib/types";
 export const isPrintAgent = () => process.env.NOKAU_ROLE === "local" || process.env.NOKAU_PRINT_AGENT === "1";
 
 export type PrinterRow = {
-  id: number; name: string; station: "kitchen" | "counter"; connection: "network" | "usb"; host: string | null; port: number;
+  id: number; name: string; station: "kitchen" | "counter"; connection: "network" | "usb" | "bluetooth"; host: string | null; port: number;
   device_path: string | null; paper_width: 58 | 80; codepage: Codepage; categories: string[] | null; auto_print: boolean; copies: number;
   active: boolean; enabled_at: Date; last_status: string | null; last_status_at: Date | null; last_error: string | null;
 };
 
 export const connOf = (p: Pick<PrinterRow, "connection" | "host" | "port" | "device_path">): Connection =>
-  p.connection === "network" ? { kind: "network", host: p.host!, port: p.port } : { kind: "usb", path: p.device_path! };
+  p.connection === "network" ? { kind: "network", host: p.host!, port: p.port }
+    : p.connection === "bluetooth" ? { kind: "bluetooth", path: p.device_path! } : { kind: "usb", path: p.device_path! };
 export const connLabel = (p: Pick<PrinterRow, "connection" | "host" | "port" | "device_path">) =>
-  p.connection === "network" ? `Rede ${p.host}:${p.port}` : `USB ${p.device_path}`;
+  p.connection === "network" ? `Rede ${p.host}:${p.port}` : p.connection === "bluetooth" ? `Bluetooth ${p.device_path}` : `USB ${p.device_path}`;
 
 const BACKOFF_S = [2, 5, 15, 30, 60];
 const MAX_ATTEMPTS = BACKOFF_S.length + 1;

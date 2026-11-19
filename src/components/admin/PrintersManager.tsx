@@ -1,5 +1,5 @@
 "use client";
-import { useActionState, useEffect, useRef, useState, useTransition } from "react";
+import { startTransition, useActionState, useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import {
   cancelPrintJobAction, reprintAction, retryPrintJobAction, savePrinterAction, setPrinterActiveAction, testPrintAction,
@@ -8,7 +8,7 @@ import {
 import { newKey } from "@/lib/cart";
 
 export type PrinterView = {
-  id: number; name: string; station: "kitchen" | "counter"; connection: "network" | "usb"; host: string | null; port: number; devicePath: string | null;
+  id: number; name: string; station: "kitchen" | "counter"; connection: "network" | "usb" | "bluetooth"; host: string | null; port: number; devicePath: string | null;
   paperWidth: 58 | 80; codepage: "cp860" | "cp850" | "ascii"; categories: string[] | null; autoPrint: boolean; copies: number; active: boolean;
   lastStatus: string | null; lastStatusAt: string | null; lastError: string | null;
 };
@@ -47,11 +47,13 @@ function Refresher() {
 function PrinterForm({ printer, categories, onDone }: { printer?: PrinterView; categories: { id: string; label: string }[]; onDone?: () => void }) {
   const router = useRouter();
   const [state, action, pending] = useActionState<AdminFormState, FormData>(savePrinterAction, {});
-  const [conn, setConn] = useState<"network" | "usb">(printer?.connection ?? "network");
+  const [conn, setConn] = useState<"network" | "usb" | "bluetooth">(printer?.connection ?? "network");
   const form = useRef<HTMLFormElement>(null);
   useEffect(() => { if (state.ok) { if (!printer) form.current?.reset(); router.refresh(); onDone?.(); } }, [state, printer, router, onDone]);
   return (
-    <form ref={form} action={action} className="grid gap-4 sm:grid-cols-2" data-testid={printer ? `printer-form-${printer.id}` : "printer-form-new"}>
+    // envio manual: com erro, o que o gerente escreveu fica nos campos (o React limpa o formulário depois de uma ação)
+    <form ref={form} action={action} onSubmit={(e) => { e.preventDefault(); const fd = new FormData(e.currentTarget); startTransition(() => action(fd)); }}
+      className="grid gap-4 sm:grid-cols-2" data-testid={printer ? `printer-form-${printer.id}` : "printer-form-new"}>
       {printer && <input type="hidden" name="id" value={printer.id} />}
       <label className="text-sm text-mist">Nome<input name="name" required maxLength={40} defaultValue={printer?.name} placeholder="Ex.: Cozinha" className={field} /></label>
       <label className="text-sm text-mist">Onde imprime
@@ -60,8 +62,8 @@ function PrinterForm({ printer, categories, onDone }: { printer?: PrinterView; c
         </select>
       </label>
       <label className="text-sm text-mist">Tipo de ligação
-        <select name="connection" value={conn} onChange={(e) => setConn(e.target.value as "network" | "usb")} className={field}>
-          <option value="network">Rede (Wi-Fi / Ethernet) — recomendado</option><option value="usb">USB (no computador do servidor)</option>
+        <select name="connection" value={conn} onChange={(e) => setConn(e.target.value as "network" | "usb" | "bluetooth")} className={field}>
+          <option value="network">Rede (Wi-Fi / Ethernet) — recomendado</option><option value="bluetooth">Bluetooth (emparelhada com o servidor)</option><option value="usb">USB (no computador do servidor)</option>
         </select>
       </label>
       {conn === "network" ? (
@@ -69,8 +71,13 @@ function PrinterForm({ printer, categories, onDone }: { printer?: PrinterView; c
           <label className="text-sm text-mist">Endereço IP<input name="host" required defaultValue={printer?.host ?? ""} placeholder="192.168.1.50" className={field} inputMode="decimal" /></label>
           <label className="text-sm text-mist">Porta<input name="port" type="number" defaultValue={printer?.port ?? 9100} className={field} /></label>
         </div>
+      ) : conn === "bluetooth" ? (
+        <label className="text-sm text-mist">Porta Bluetooth
+          <input key="bt" name="devicePath" required defaultValue={printer?.connection === "bluetooth" ? printer.devicePath ?? "" : "/dev/rfcomm0"} className={field} />
+          <span className="mt-1 block text-xs">Primeiro emparelhe a impressora com o servidor e ligue-a a /dev/rfcomm0 (instruções em docs/impressao.md).</span>
+        </label>
       ) : (
-        <label className="text-sm text-mist">Dispositivo USB<input name="devicePath" required defaultValue={printer?.devicePath ?? "/dev/usb/lp0"} className={field} /></label>
+        <label className="text-sm text-mist">Dispositivo USB<input key="usb" name="devicePath" required defaultValue={printer?.connection === "usb" ? printer.devicePath ?? "" : "/dev/usb/lp0"} className={field} /></label>
       )}
       <label className="text-sm text-mist">Largura do papel
         <select name="paperWidth" defaultValue={String(printer?.paperWidth ?? 80)} className={field}>
@@ -116,7 +123,7 @@ function PrinterCard({ p, categories }: { p: PrinterView; categories: { id: stri
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <p className="font-display text-xl text-white">{p.name} <span className="text-sm text-gold-300">· {p.station === "kitchen" ? "Cozinha" : "Balcão"}</span></p>
-          <p className="text-xs text-mist">{p.connection === "network" ? `Rede ${p.host}:${p.port}` : `USB ${p.devicePath}`} · {p.paperWidth} mm · {p.codepage.toUpperCase()} · {p.copies} cópia(s){p.autoPrint ? " · automático" : " · só manual"}</p>
+          <p className="text-xs text-mist">{p.connection === "network" ? `Rede ${p.host}:${p.port}` : p.connection === "bluetooth" ? `Bluetooth ${p.devicePath}` : `USB ${p.devicePath}`} · {p.paperWidth} mm · {p.codepage.toUpperCase()} · {p.copies} cópia(s){p.autoPrint ? " · automático" : " · só manual"}</p>
           <p className="text-xs text-mist">{p.categories?.length ? `Categorias: ${p.categories.map((c) => categories.find((x) => x.id === c)?.label ?? c).join(", ")}` : "Todos os produtos"}</p>
         </div>
         <span className="flex items-center gap-2 text-sm text-white" data-testid="printer-status" title={p.lastError ?? ""}>

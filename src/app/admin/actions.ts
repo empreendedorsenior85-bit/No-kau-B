@@ -554,7 +554,7 @@ const printerSchema = z.object({
   id: z.coerce.number().int().positive().optional(),
   name: z.string().trim().min(1, "Dê um nome à impressora (ex.: Cozinha).").max(40),
   station: z.enum(["kitchen", "counter"], { message: "Escolha cozinha ou balcão." }),
-  connection: z.enum(["network", "usb"], { message: "Escolha o tipo de ligação." }),
+  connection: z.enum(["network", "usb", "bluetooth"], { message: "Escolha o tipo de ligação." }),
   host: z.string().trim().max(100).optional(),
   port: z.coerce.number().int().min(1).max(65535).default(9100),
   devicePath: z.string().trim().max(120).optional(),
@@ -580,9 +580,12 @@ export async function savePrinterAction(_: AdminFormState, fd: FormData): Promis
   const allowTmp = process.env.NOKAU_PRINT_ALLOW_TMP === "1";
   if (d.connection === "usb" && !(d.devicePath && (/^\/dev\/(usb\/lp\d+|lp\d+)$/.test(d.devicePath) || (allowTmp && /^\/tmp\/[\w./-]+$/.test(d.devicePath) && !d.devicePath.includes("..")))))
     return { error: "Indique o dispositivo USB (ex.: /dev/usb/lp0)." };
+  // Bluetooth: só portas série Bluetooth (/dev/rfcommN) — nunca outro ficheiro do sistema
+  if (d.connection === "bluetooth" && !(d.devicePath && (/^\/dev\/rfcomm\d+$/.test(d.devicePath) || (allowTmp && /^\/tmp\/[\w./-]+$/.test(d.devicePath) && !d.devicePath.includes("..")))))
+    return { error: "Indique a porta Bluetooth (ex.: /dev/rfcomm0)." };
   const known = new Set((await query<{ id: string }>("select id from menu_categories")).rows.map((r) => r.id));
   const cats = d.categories.filter((c) => known.has(c));
-  const values = [d.name, d.station, d.connection, d.connection === "network" ? d.host : null, d.port, d.connection === "usb" ? d.devicePath : null,
+  const values = [d.name, d.station, d.connection, d.connection === "network" ? d.host : null, d.port, d.connection !== "network" ? d.devicePath : null,
     d.paperWidth, d.codepage, cats.length ? cats : null, d.autoPrint, d.copies];
   if (d.id) {
     await query(`update printers set name=$2, station=$3, connection=$4, host=$5, port=$6, device_path=$7, paper_width=$8, codepage=$9, categories=$10,

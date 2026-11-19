@@ -508,3 +508,16 @@ create table if not exists customer_aliases (
 );
 alter table customer_aliases enable row level security;
 `;
+
+/** Impressoras Bluetooth (clássico/SPP): ligadas ao servidor do restaurante como dispositivo série /dev/rfcommN. */
+export const MIGRATE_PRINT_BT_SQL = /* sql */ `
+select pg_advisory_xact_lock(727010);
+alter table printers drop constraint if exists printers_connection_check;
+alter table printers add constraint printers_connection_check check (connection in ('network','usb','bluetooth'));
+alter table printers drop constraint if exists printers_device_path_check;
+alter table printers add constraint printers_device_path_check check (device_path is null
+  or device_path ~ '^/dev/(usb/lp[0-9]+|lp[0-9]+|rfcomm[0-9]+)$' or device_path ~ '^/tmp/');
+alter table printers drop constraint if exists printers_check;
+alter table printers add constraint printers_check check (
+  (connection = 'network' and host is not null) or (connection in ('usb','bluetooth') and device_path is not null));
+`;

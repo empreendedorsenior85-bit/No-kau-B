@@ -137,10 +137,11 @@ export function orderTicket(d: TicketData, paper: 58 | 80, cp: Codepage): Buffer
 export function testTicket(printerName: string, paper: 58 | 80, cp: Codepage, connection: string): Buffer {
   const r = new Receipt(paper, cp);
   r.align("center").bold(true).size(2, 2).line("NO KAU").size(1, 1).line("TESTE DE IMPRESSAO").bold(false).feed(1);
-  r.align("left").line(`Impressora: ${printerName}`).line(`Ligacao: ${connection}`).line(`Papel: ${paper} mm (${r.cols} colunas)`);
-  r.line(`Tabela: ${cp.toUpperCase()}`).line(`Data: ${when(new Date().toISOString())}`).rule();
-  r.line("Acentos: Nô Kau · Camarão · Ação · Pão").line("Maiúsculas: ÁÉÍÓÚ ÂÊÔ ÃÕ Ç");
-  r.line("1".repeat(r.cols)).line("Se a linha acima ocupa a largura toda,");
-  r.line("a largura do papel esta certa.").rule().align("center").line("Fim do teste").feed(2).cut();
+  // todas as linhas cabem na largura do papel (58 mm = 32 colunas): as mais longas são divididas por palavras
+  r.align("left").wrap(`Impressora: ${printerName}`).wrap(`Ligacao: ${connection}`).wrap(`Papel: ${paper} mm (${r.cols} colunas)`);
+  r.wrap(`Tabela: ${cp.toUpperCase()}`).wrap(`Data: ${when(new Date().toISOString())}`).rule();
+  r.wrap("Acentos: Nô Kau · Camarão · Ação · Pão").wrap("Maiúsculas: ÁÉÍÓÚ ÂÊÔ ÃÕ Ç");
+  r.line("1".repeat(r.cols)).wrap("Se a linha acima ocupa a largura toda, a largura do papel esta certa.");
+  r.rule().align("center").line("Fim do teste").feed(2).cut();
   return r.bytes();
 }
