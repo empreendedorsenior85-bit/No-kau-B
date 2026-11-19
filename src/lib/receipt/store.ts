@@ -39,7 +39,7 @@ export async function saveLogo(input: Buffer): Promise<{ ok: true } | { ok: fals
   try {
     png = await sharp(input, { limitInputPixels: 40_000_000, failOn: "error" })
       .rotate().flatten({ background: "#ffffff" }).resize({ width: 576, height: 400, fit: "inside", withoutEnlargement: true })
-      .grayscale().png({ compressionLevel: 9 }).toBuffer();
+      .grayscale().toColourspace("b-w").png({ compressionLevel: 9 }).toBuffer();
   } catch {
     return { ok: false, error: "Não foi possível ler a imagem. Use PNG ou JPG." };
   }
