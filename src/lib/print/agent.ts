@@ -2,7 +2,12 @@ import "server-only";
 import { errInfo, log } from "@/lib/log";
 import { query } from "@/lib/db";
 import { ensureMigrated } from "@/db/init";
-import { orderTicket, testTicket, type Codepage } from "./escpos";
+import { renderDoc, testTicket, type Codepage } from "./escpos";
+import { getReceiptSettings, logoRaster } from "@/lib/receipt/store";
+import { orderTicketDoc, receiptDoc } from "@/lib/receipt/doc";
+import { receiptData } from "@/lib/receipt/data";
+import { getReceipt } from "@/lib/payments";
+import { site } from "@/lib/site";
 import { probe, sendBytes, type Connection } from "./transport";
 import { formatOrderNumber } from "@/lib/types";
 
@@ -53,6 +58,31 @@ export async function enqueueAccepted(): Promise<number> {
   return r.rowCount ?? 0;
 }
 
+/**
+ * Recibo automático (opção "Imprimir o recibo ao confirmar o pagamento"): pagamentos confirmados ainda sem recibo
+ * nas impressoras do BALCÃO ativas. Só pagamentos confirmados depois de a impressora ser ligada (nada de histórico).
+ */
+export async function enqueueReceipts(): Promise<number> {
+  const { settings } = await getReceiptSettings();
+  if (!settings.autoPrintReceipt) return 0;
+  const r = await query(
+    `insert into print_jobs (printer_id, payment_id, kind, dedupe_key, requested_by)
+     select p.id, pay.id, 'receipt', 'receipt:' || pay.id || ':p' || p.id, 'automático'
+     from printers p join payments pay on pay.status = 'confirmed' and pay.created_at >= p.enabled_at and pay.created_at > now() - interval '12 hours'
+     where p.active and p.station = 'counter'
+     on conflict (dedupe_key) do nothing`);
+  return r.rowCount ?? 0;
+}
+
+/** Recibo pedido à mão (botão "Imprimir no talão"). `key` evita o duplo toque. */
+export async function enqueueReceiptPrint(paymentId: string, printerId: number, actor: string, key: string) {
+  await ensureMigrated();
+  const r = await query(
+    `insert into print_jobs (printer_id, payment_id, kind, requested_by, dedupe_key) values ($1,$2,'receipt',$3,$4) on conflict (dedupe_key) do nothing`,
+    [printerId, paymentId, actor, `receiptp:${key}`]);
+  return (r.rowCount ?? 0) > 0;
+}
+
 /** Recuperação: trabalhos "a imprimir" há mais de 60 s (o agente parou a meio) → "incerto". */
 export async function recoverStuck(): Promise<number> {
   const r = await query(
@@ -61,13 +91,22 @@ export async function recoverStuck(): Promise<number> {
   return r.rowCount ?? 0;
 }
 
-type JobRow = { id: string; printer_id: number; order_id: string | null; kind: "order" | "reprint" | "test"; attempts: number; requested_by: string | null };
+type JobRow = { id: string; printer_id: number; order_id: string | null; payment_id: string | null; kind: "order" | "reprint" | "test" | "receipt"; attempts: number; requested_by: string | null };
 
 async function buildBytes(job: JobRow, p: PrinterRow): Promise<Buffer | null> {
   if (job.kind === "test") return testTicket(p.name, p.paper_width, p.codepage, connLabel(p));
+  const { settings } = await getReceiptSettings(); // personalização (largura do papel = a da impressora; tamanho do texto = configuração)
+  if (job.kind === "receipt") {
+    if (!job.payment_id) return null;
+    const rec = await getReceipt(job.payment_id);
+    if (!rec) return null;
+    const doc = receiptDoc(settings, await receiptData(rec), { address: site.address, phone: site.phoneDisplay }, p.paper_width);
+    return renderDoc(doc, p.codepage, settings.header.showLogo ? await logoRaster(p.paper_width) : null);
+  }
   if (!job.order_id) return null;
-  const o = await query<{ number: number; origin: "central" | "local"; label: string; created_at: Date; is_test: boolean }>(
-    `select o.number, o.origin, t.label, o.created_at, o.is_test from orders o join dining_tables t on t.id = o.table_id where o.id = $1`, [job.order_id]);
+  const o = await query<{ number: number; origin: "central" | "local"; label: string; created_at: Date; is_test: boolean; cname: string | null; cphone: string | null }>(
+    `select o.number, o.origin, t.label, o.created_at, o.is_test, c.name cname, c.phone cphone
+     from orders o join dining_tables t on t.id = o.table_id left join customers c on c.id = o.customer_id where o.id = $1`, [job.order_id]);
   if (!o.rows[0]) return null;
   const items = await query<{ name: string; quantity: number; unit_price: number; note: string | null }>(
     `select i.name, i.quantity, i.unit_price, i.note from order_items i left join menu_items m on m.id = i.menu_item_id
@@ -76,13 +115,14 @@ async function buildBytes(job: JobRow, p: PrinterRow): Promise<Buffer | null> {
   const acc = await query<{ actor: string }>(
     `select actor from audit_log where entity = 'order' and entity_id = $1 and action in ('order.status','sync.status')
        and detail->>'to' = 'preparing' order by at desc limit 1`, [job.order_id]);
-  const one = orderTicket({
-    station: p.station, printerName: p.name, restaurant: "Nô Kau", tableLabel: o.rows[0].label,
+  const one = renderDoc(orderTicketDoc(settings, {
+    station: p.station, printerName: p.name, tableLabel: o.rows[0].label,
     orderNumber: formatOrderNumber(o.rows[0].number, o.rows[0].origin), createdAt: o.rows[0].created_at.toISOString(),
     acceptedBy: acc.rows[0]?.actor ?? null, reprint: job.kind === "reprint", isTest: o.rows[0].is_test,
+    customer: o.rows[0].cname ? { name: o.rows[0].cname, phone: o.rows[0].cphone ?? "" } : null,
     items: items.rows.map((i) => ({ name: i.name, quantity: i.quantity, unitPrice: i.unit_price, note: i.note })),
     total: items.rows.reduce((n, i) => n + i.quantity * i.unit_price, 0),
-  }, p.paper_width, p.codepage);
+  }, p.paper_width), p.codepage, null);
   return Buffer.concat(Array.from({ length: job.kind === "order" ? p.copies : 1 }, () => one));
 }
 
@@ -93,7 +133,7 @@ export async function processNext(): Promise<boolean> {
      where id = (select j.id from print_jobs j join printers p on p.id = j.printer_id
                  where j.status = 'queued' and j.next_attempt_at <= now() and p.active
                  order by j.created_at limit 1 for update of j skip locked)
-     returning id, printer_id, order_id, kind, attempts, requested_by`);
+     returning id, printer_id, order_id, payment_id, kind, attempts, requested_by`);
   const job = j.rows[0];
   if (!job) return false;
   const p = (await query<PrinterRow>("select * from printers where id = $1", [job.printer_id])).rows[0];
@@ -184,6 +224,7 @@ export function startPrintAgent() {
       await ensureMigrated();
       await recoverStuck();
       await enqueueAccepted();
+      await enqueueReceipts();
       for (let i = 0; i < 20 && (await processNext()); i++) { /* esvazia a fila */ }
       if (Date.now() - lastProbe > 20_000) { lastProbe = Date.now(); await probeAll(); }
     } catch (e) {

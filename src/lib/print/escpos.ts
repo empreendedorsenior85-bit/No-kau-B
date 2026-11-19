@@ -4,6 +4,11 @@
  * Sem dependências: os bytes gerados são exatamente os que seguem para a impressora.
  */
 
+import QRCode from "qrcode";
+import type { Doc } from "@/lib/receipt/doc";
+import { rowLines, wrapText } from "@/lib/receipt/doc";
+import { dotsFor } from "@/lib/receipt/settings";
+
 export type Codepage = "cp860" | "cp850" | "ascii";
 export const CODEPAGES: { id: Codepage; label: string }[] = [
   { id: "cp860", label: "PC860 — Português (recomendado)" },
@@ -94,44 +99,7 @@ export class Receipt {
   bytes(): Buffer { return Buffer.from(this.b); }
 }
 
-export type TicketData = {
-  station: "kitchen" | "counter";
-  printerName: string;
-  restaurant: string;
-  tableLabel: string;
-  orderNumber: string;
-  createdAt: string;
-  acceptedBy: string | null;
-  items: { name: string; quantity: number; unitPrice: number; note: string | null }[];
-  total: number;
-  reprint: boolean;
-  isTest: boolean;
-};
-
-const fcfa = (n: number) => `${new Intl.NumberFormat("pt-PT", { useGrouping: "always", maximumFractionDigits: 0 }).format(n).replace(/\s/g, " ")} FCFA`;
 const when = (iso: string) => new Date(iso).toLocaleString("pt-PT", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit", timeZone: "Africa/Bissau" });
-
-/** Talão de pedido: mesa e número em destaque, produtos, quantidades, preços, observações e total. */
-export function orderTicket(d: TicketData, paper: 58 | 80, cp: Codepage): Buffer {
-  const r = new Receipt(paper, cp);
-  r.align("center").bold(true).size(2, 2).line(d.restaurant.toUpperCase()).size(1, 1).bold(false);
-  r.line(d.station === "kitchen" ? "*** COZINHA ***" : "*** BALCAO / BAR ***");
-  if (d.reprint) r.bold(true).line("*** REIMPRESSAO ***").bold(false);
-  if (d.isTest) r.bold(true).line("PEDIDO DE TESTE (demonstracao)").bold(false);
-  r.feed(1).bold(true).size(2, 2).line(d.tableLabel).size(1, 1).line(`Pedido ${d.orderNumber}`).bold(false);
-  r.line(when(d.createdAt));
-  if (d.acceptedBy) r.line(`Aceite por: ${d.acceptedBy}`);
-  r.align("left").rule();
-  for (const it of d.items) {
-    r.bold(true).row(`${it.quantity}x ${it.name}`, fcfa(it.unitPrice * it.quantity)).bold(false);
-    if (it.quantity > 1) r.line(`   (${fcfa(it.unitPrice)} cada)`);
-    if (it.note) r.bold(true).wrap(`>> ${it.note}`, "   ").bold(false);
-  }
-  r.rule();
-  r.bold(true).size(1, 2).row("TOTAL", fcfa(d.total)).size(1, 1).bold(false);
-  r.feed(1).align("center").line(`${d.printerName}`).feed(2).cut();
-  return r.bytes();
-}
 
 /** Talão de teste de impressão: confirma ligação, largura, acentos e corte. */
 export function testTicket(printerName: string, paper: 58 | 80, cp: Codepage, connection: string): Buffer {
@@ -144,4 +112,74 @@ export function testTicket(printerName: string, paper: 58 | 80, cp: Codepage, co
   r.line("1".repeat(r.cols)).wrap("Se a linha acima ocupa a largura toda, a largura do papel esta certa.");
   r.rule().align("center").line("Fim do teste").feed(2).cut();
   return r.bytes();
+}
+
+// ======================================================================================================
+// Recibos e talões personalizados: a descrição (Doc) é a mesma da pré-visualização e do recibo no ecrã.
+// ======================================================================================================
+
+export type Bitmap = { width: number; height: number; data: Buffer }; // 1 bit por ponto, 1 = preto
+
+/** QR Code como imagem (funciona em qualquer impressora com imagens, ao contrário do comando QR nativo). */
+export function qrBitmap(text: string, maxDots: number): Bitmap {
+  const q = QRCode.create(text, { errorCorrectionLevel: "M" });
+  const n = q.modules.size, quiet = 2;
+  const scale = Math.max(2, Math.min(8, Math.floor(maxDots / (n + quiet * 2))));
+  const w = (n + quiet * 2) * scale;
+  const bpr = Math.ceil(w / 8);
+  const data = Buffer.alloc(bpr * w);
+  for (let y = 0; y < n; y++) for (let x = 0; x < n; x++) {
+    if (!q.modules.data[y * n + x]) continue;
+    for (let dy = 0; dy < scale; dy++) for (let dx = 0; dx < scale; dx++) {
+      const px = (x + quiet) * scale + dx, py = (y + quiet) * scale + dy;
+      data[py * bpr + (px >> 3)] |= 0x80 >> (px & 7);
+    }
+  }
+  return { width: w, height: w, data };
+}
+
+/** GS v 0 — imagem rasterizada (o comando de imagem mais suportado). Em blocos de 255 linhas. */
+function raster(img: Bitmap): number[] {
+  const out: number[] = [];
+  const bpr = Math.ceil(img.width / 8);
+  for (let y0 = 0; y0 < img.height; y0 += 255) {
+    const h = Math.min(255, img.height - y0);
+    out.push(GS, 0x76, 0x30, 0, bpr & 0xff, bpr >> 8, h & 0xff, h >> 8);
+    for (const b of img.data.subarray(y0 * bpr, (y0 + h) * bpr)) out.push(b);
+  }
+  return out;
+}
+
+/**
+ * Bytes ESC/POS de um recibo/talão. Tamanho do texto: pequeno = fonte B (mais colunas), médio = fonte A,
+ * grande = fonte A em dupla altura. Destaques ("big") em dupla largura+altura (metade das colunas).
+ */
+export function renderDoc(doc: Doc, cp: Codepage, logo: Bitmap | null): Buffer {
+  const b: number[] = [ESC, 0x40, ESC, 0x74, CODEPAGE_N[cp]];
+  const font = doc.textSize === "small" ? 1 : 0;
+  const base = doc.textSize === "large" ? 0x01 : 0x00; // GS ! — dupla altura no tamanho grande
+  b.push(ESC, 0x4d, font, GS, 0x21, base);
+  const enc = (s: string) => encodeText(s, cp);
+  const line = (s: string) => { b.push(...enc(s), LF); };
+  const align = (a: "left" | "center" | "right" = "left") => b.push(ESC, 0x61, a === "left" ? 0 : a === "center" ? 1 : 2);
+  const bold = (on: boolean) => b.push(ESC, 0x45, on ? 1 : 0);
+  const big = (on: boolean) => b.push(GS, 0x21, on ? 0x11 : base);
+  for (const k of doc.blocks) {
+    if (k.t === "text") {
+      const cols = k.big ? Math.floor(doc.cols / 2) : doc.cols;
+      align(k.align); if (k.bold) bold(true); if (k.big) big(true);
+      for (const l of wrapText(k.text, cols)) line(l);
+      if (k.big) big(false); if (k.bold) bold(false);
+    } else if (k.t === "row") {
+      const cols = k.big ? Math.floor(doc.cols / 2) : doc.cols;
+      align("left"); if (k.bold) bold(true); if (k.big) big(true);
+      for (const l of rowLines(k.left, k.right, cols)) line(l);
+      if (k.big) big(false); if (k.bold) bold(false);
+    } else if (k.t === "rule") { align("left"); line((k.char ?? "-").repeat(doc.cols)); }
+    else if (k.t === "feed") { for (let i = 0; i < (k.n ?? 1); i++) b.push(LF); }
+    else if (k.t === "logo") { if (logo) { align("center"); b.push(...raster(logo), LF); } }
+    else if (k.t === "qr") { align("center"); b.push(...raster(qrBitmap(k.data, Math.round(dotsFor(doc.paper) * 0.45))), LF); }
+    else if (k.t === "cut") b.push(GS, 0x56, 66, 3);
+  }
+  return Buffer.from(b);
 }

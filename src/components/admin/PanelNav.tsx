@@ -25,6 +25,7 @@ const GROUPS: { title: string; items: Item[] }[] = [
   { title: "Gestão", items: [
     { href: "/admin/menu", label: "Menu", who: "manager", icon: ic("M4 4h16v4H4zM4 12h16M4 16h16M4 20h10") },
     { href: "/admin/relatorios", label: "Relatórios", who: "manager", icon: ic("M4 20V10M10 20V4M16 20v-8M22 20H2") },
+    { href: "/admin/recibos", label: "Recibos", who: "admin", icon: ic("M6 2h12v20l-3-2-3 2-3-2-3 2zM9 7h6M9 11h6M9 15h4") },
     { href: "/admin/impressoras", label: "Impressoras", who: "manager", icon: ic("M6 9V3h12v6M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2M6 14h12v7H6z") },
     { href: "/admin/qr", label: "QR Codes", who: "manager", icon: ic("M3 3h7v7H3zM14 3h7v7h-7zM3 14h7v7H3zM14 14h3v3h-3zM20 14v3M14 20h3M20 20v1") },
   ] },

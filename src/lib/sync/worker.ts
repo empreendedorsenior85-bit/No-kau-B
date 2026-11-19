@@ -3,6 +3,7 @@ import { query } from "@/lib/db";
 import { initDatabase } from "@/db/init";
 import { centralUrl, isLocalServer, syncToken } from "@/lib/node-role";
 import { applyCatalog, saveFetchedImage, type WireCatalog } from "./catalog-sync";
+import { applySyncedReceiptSettings, saveSyncedLogo } from "@/lib/receipt/store";
 import { applyOrders, getSyncState, pendingPush, setSyncState, type WireOrder } from "./orders-sync";
 import { applyCalls, pendingCallsPush, type WireCall } from "./calls-sync";
 import { applyPayments, pendingPaymentsPush, type WirePayment } from "./payments-sync";
@@ -71,6 +72,18 @@ async function syncCatalog() {
     if (!res.ok) continue;
     await saveFetchedImage(img.id, Number(res.headers.get("x-image-version") ?? img.version), res.headers.get("content-type") ?? "image/jpeg",
       Buffer.from(await res.arrayBuffer()));
+  }
+  // personalização dos recibos: a configuração em cada ciclo; o logótipo só quando a versão muda
+  if (cat.receiptSettings) {
+    await applySyncedReceiptSettings(cat.receiptSettings.settings);
+    const local = await query<{ logo_version: number }>("select logo_version from receipt_settings where id = 1");
+    if ((local.rows[0]?.logo_version ?? 0) !== cat.receiptSettings.logoVersion) {
+      const res = await fetch(`${centralUrl()}/api/sync/receipt-logo`, {
+        headers: { authorization: `Bearer ${syncToken()}` }, signal: AbortSignal.timeout(TIMEOUT_MS), cache: "no-store",
+      });
+      if (res.status === 204) await saveSyncedLogo(null, cat.receiptSettings.logoVersion);
+      else if (res.ok) await saveSyncedLogo(Buffer.from(await res.arrayBuffer()), Number(res.headers.get("x-logo-version") ?? cat.receiptSettings.logoVersion));
+    }
   }
   state().lastCatalogAt = new Date().toISOString();
 }

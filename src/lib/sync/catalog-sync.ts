@@ -18,10 +18,12 @@ export type WireCatalog = {
   maxLocalNumber: number;
   /** Maior número de recibo do servidor local já conhecido no central (opcional: versões antigas não o enviam). */
   maxLocalReceipt?: number;
+  /** Personalização dos recibos (opcional: versões antigas não a enviam). O logótipo vem à parte, só quando muda. */
+  receiptSettings?: { settings: unknown; logoVersion: number };
 };
 
 export async function exportCatalog(): Promise<WireCatalog> {
-  const [cats, items, tables, users, maxLocal, maxReceipt] = await Promise.all([
+  const [cats, items, tables, users, maxLocal, maxReceipt, rs] = await Promise.all([
     query<WireCatalog["categories"][number]>("select id, label, description, position, active from menu_categories order by position, id"),
     query<WireCatalog["items"][number]>(
       `select id, category_id "categoryId", name, description, price, available, active, is_demo "isDemo", position,
@@ -31,8 +33,10 @@ export async function exportCatalog(): Promise<WireCatalog> {
     query<WireCatalog["users"][number]>(`select id, email, password_hash "passwordHash", role, active, name from admin_users order by created_at`),
     query<{ n: number }>("select coalesce(max(number),0)::int n from orders where origin = 'local'"),
     query<{ n: number }>("select coalesce(max(receipt_number),0)::int n from payments where origin = 'local'"),
+    query<{ settings: unknown; logo_version: number }>("select settings, logo_version from receipt_settings where id = 1"),
   ]);
-  return { categories: cats.rows, items: items.rows, tables: tables.rows, users: users.rows, maxLocalNumber: maxLocal.rows[0].n, maxLocalReceipt: maxReceipt.rows[0].n };
+  return { categories: cats.rows, items: items.rows, tables: tables.rows, users: users.rows, maxLocalNumber: maxLocal.rows[0].n, maxLocalReceipt: maxReceipt.rows[0].n,
+    receiptSettings: rs.rows[0] ? { settings: rs.rows[0].settings, logoVersion: rs.rows[0].logo_version } : undefined };
 }
 
 /**

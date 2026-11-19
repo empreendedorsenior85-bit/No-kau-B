@@ -521,3 +521,25 @@ alter table printers drop constraint if exists printers_check;
 alter table printers add constraint printers_check check (
   (connection = 'network' and host is not null) or (connection in ('usb','bluetooth') and device_path is not null));
 `;
+
+/**
+ * Personalização dos recibos e talões: uma configuração por estabelecimento (id = 1) e o logótipo.
+ * Editada no site central; copiada para o servidor do restaurante (onde se imprime). Talões de recibo na fila de impressão.
+ */
+export const MIGRATE_RECEIPT_SETTINGS_SQL = /* sql */ `
+select pg_advisory_xact_lock(727011);
+create table if not exists receipt_settings (
+  id int primary key default 1 check (id = 1),
+  settings jsonb not null default '{}'::jsonb,
+  logo bytea,
+  logo_type text check (logo_type is null or logo_type = 'image/png'),
+  logo_version int not null default 0,
+  updated_at timestamptz not null default now(),
+  updated_by text
+);
+insert into receipt_settings (id) values (1) on conflict (id) do nothing;
+alter table receipt_settings enable row level security;
+alter table print_jobs add column if not exists payment_id uuid references payments(id);
+alter table print_jobs drop constraint if exists print_jobs_kind_check;
+alter table print_jobs add constraint print_jobs_kind_check check (kind in ('order','reprint','test','receipt'));
+`;

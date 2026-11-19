@@ -1,6 +1,7 @@
 "use server";
 
 import { MENU_IMAGE_MAX_UPLOAD, normalizeMenuImage } from "@/lib/images";
+import { getReceiptSettings, removeLogo, saveLogo, saveReceiptSettings } from "@/lib/receipt/store";
 import { clearFailures, isThrottled, loginKeys, recordFailure, revokeAllSessions } from "@/lib/sessions";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
@@ -13,7 +14,7 @@ import {
 import { changeStatus } from "@/lib/orders";
 import { setCallStatus, type CallActionResult } from "@/lib/calls";
 import { decideReservation, type DecideResult } from "@/lib/reservations";
-import { cancelJob, connOf, enqueueReprint, enqueueTest, isPrintAgent, retryJob, type PrinterRow } from "@/lib/print/agent";
+import { cancelJob, connOf, enqueueReceiptPrint, enqueueReprint, enqueueTest, isPrintAgent, retryJob, type PrinterRow } from "@/lib/print/agent";
 import { probe } from "@/lib/print/transport";
 import { confirmPayment, voidPayment, type ConfirmInput, type ConfirmResult } from "@/lib/payments";
 import { newQrToken } from "@/lib/tokens";
@@ -638,6 +639,18 @@ export async function reprintAction(orderId: string, printerId: number, key: str
   return { ok: added ? "Reimpressão enviada para a fila." : "Esta reimpressão já foi pedida." };
 }
 
+/** Imprimir o recibo de um pagamento na impressora térmica (servidor do restaurante). Admin e Gerente. */
+export async function printReceiptAction(paymentId: string, printerId: number, key: string): Promise<AdminFormState> {
+  assertPrintAgent();
+  const m = await manager();
+  if (!/^[0-9a-f-]{36}$/i.test(paymentId) || !Number.isInteger(printerId) || !/^[A-Za-z0-9_-]{16,64}$/.test(key)) return { error: "Pedido inválido." };
+  const ok = await query("select 1 from printers where id = $1 and active", [printerId]);
+  if (!ok.rows[0]) return { error: "Escolha uma impressora ativa." };
+  const added = await enqueueReceiptPrint(paymentId, printerId, m.name ?? m.email, key);
+  if (added) await audit(m.email, "print.receipt", "payment", paymentId, { printerId });
+  return { ok: added ? "Recibo enviado para a impressora." : "Este pedido de impressão já foi feito." };
+}
+
 export async function retryPrintJobAction(id: string): Promise<AdminFormState> {
   assertPrintAgent();
   const m = await manager();
@@ -652,4 +665,36 @@ export async function cancelPrintJobAction(id: string): Promise<AdminFormState> 
   await cancelJob(id);
   await audit(m.email, "print.cancel", "print_job", id);
   return { ok: "Trabalho cancelado." };
+}
+
+// ---------- personalização dos recibos (só Admin; edita-se no site central) ----------
+export async function saveReceiptSettingsAction(input: unknown): Promise<{ ok: true; message: string } | { ok: false; message: string }> {
+  assertEditableHere();
+  const m = await adminOnly();
+  const r = await saveReceiptSettings(input, m.name ?? m.email);
+  if (!r.ok) return { ok: false, message: r.error };
+  await audit(m.email, "receipt.settings", "receipt_settings", 1, { paper: r.settings.format.paper, textSize: r.settings.format.textSize });
+  return { ok: true, message: "Configuração guardada. Os próximos recibos e talões já saem assim." };
+}
+
+export async function uploadReceiptLogoAction(fd: FormData): Promise<{ ok: true; message: string; version: number } | { ok: false; message: string }> {
+  assertEditableHere();
+  const m = await adminOnly();
+  const file = fd.get("logo");
+  if (!(file instanceof File) || file.size === 0) return { ok: false, message: "Escolha uma imagem." };
+  if (!["image/png", "image/jpeg", "image/webp"].includes(file.type)) return { ok: false, message: "O logótipo deve ser PNG, JPG ou WebP." };
+  if (file.size > 950_000) return { ok: false, message: "Imagem demasiado grande (máx. 900 KB)." };
+  const r = await saveLogo(Buffer.from(await file.arrayBuffer()));
+  if (!r.ok) return { ok: false, message: r.error };
+  await audit(m.email, "receipt.logo", "receipt_settings", 1);
+  const s = await getReceiptSettings();
+  return { ok: true, message: "Logótipo atualizado.", version: s.logoVersion };
+}
+
+export async function removeReceiptLogoAction(): Promise<{ ok: true; message: string }> {
+  assertEditableHere();
+  const m = await adminOnly();
+  await removeLogo();
+  await audit(m.email, "receipt.logo_remove", "receipt_settings", 1);
+  return { ok: true, message: "Logótipo removido." };
 }
