@@ -474,3 +474,37 @@ update payments p set receipt_number = n.rn from n where p.id = n.id;
 select setval('payments_receipt_seq', greatest(m, 1), m > 0) from (select coalesce(max(receipt_number), 0) m from payments where origin = 'central') x;
 select setval('payments_local_receipt_seq', greatest(m, 1), m > 0) from (select coalesce(max(receipt_number), 0) m from payments where origin = 'local') x;
 `;
+
+/**
+ * Contas de cliente também no servidor local do restaurante (para entrar e pedir mesmo sem internet).
+ *  - central → local: todas as contas (nome, email, telefone, hash da palavra-passe, ativa) — nunca a palavra-passe;
+ *  - local → central: contas criadas no restaurante (needs_push);
+ *  - a mesma pessoa registada nos dois lados (mesmo email/telefone): fica a conta do central; a do restaurante passa a
+ *    ser um "pseudónimo" dela (customer_aliases) e os pedidos feitos com ela ficam na conta certa.
+ */
+export const MIGRATE_CUSTOMER_SYNC_SQL = /* sql */ `
+select pg_advisory_xact_lock(727009);
+alter table customers add column if not exists origin text not null default 'central' check (origin in ('central','local'));
+alter table customers add column if not exists updated_at timestamptz not null default now();
+alter table customers add column if not exists rev bigint not null default nextval('orders_rev_seq');
+alter table customers add column if not exists needs_push boolean not null default false;
+create index if not exists customers_rev_idx on customers(rev);
+create index if not exists customers_push_idx on customers(needs_push) where needs_push;
+create or replace function customers_touch() returns trigger as $$
+begin
+  new.updated_at := now();
+  new.rev := nextval('orders_rev_seq');
+  return new;
+end $$ language plpgsql;
+drop trigger if exists customers_touch_trg on customers;
+create trigger customers_touch_trg before update on customers for each row
+  when (old.name is distinct from new.name or old.email is distinct from new.email or old.phone is distinct from new.phone
+        or old.password_hash is distinct from new.password_hash or old.active is distinct from new.active)
+  execute function customers_touch();
+create table if not exists customer_aliases (
+  alias_id uuid primary key,
+  customer_id uuid not null references customers(id) on delete cascade,
+  created_at timestamptz not null default now()
+);
+alter table customer_aliases enable row level security;
+`;

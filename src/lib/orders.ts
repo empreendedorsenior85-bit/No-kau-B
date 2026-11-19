@@ -93,7 +93,7 @@ export async function placeOrder(token: string, lines: OrderLineInput[], idemKey
         `insert into orders (table_id, total, is_test, idempotency_key, origin, number, needs_push, customer_id)
          values ($1,$2,$3,$4,$5, nextval(case when $5 = 'local' then 'orders_local_number_seq' else 'orders_number_seq' end), $6, $7)
          returning id`,
-        [tableId, total, isTest, idemKey, local ? "local" : "central", local, local ? null : customerId]);
+        [tableId, total, isTest, idemKey, local ? "local" : "central", local, customerId]); // também no servidor local (as contas são sincronizadas)
       const orderId = ins.rows[0].id;
       for (const [id, w] of wanted) {
         const m = byId.get(id)!;

@@ -7,6 +7,7 @@ import { applyOrders, getSyncState, pendingPush, setSyncState, type WireOrder } 
 import { applyCalls, pendingCallsPush, type WireCall } from "./calls-sync";
 import { applyPayments, pendingPaymentsPush, type WirePayment } from "./payments-sync";
 import { applyReservations, pendingReservationsPush, type WireReservation } from "./reservations-sync";
+import { applyCustomers, markCustomersPushed, pendingCustomersPush, type ApplyCustomersResult, type WireCustomer } from "./customers-sync";
 
 /**
  * Sincronização do SERVIDOR LOCAL do restaurante com o servidor central. Corre em ciclo, sozinha:
@@ -159,6 +160,35 @@ async function pushPayments() {
   }
 }
 
+/** Contas criadas no restaurante → central (antes dos pedidos, para os pedidos chegarem já ligados à conta). */
+async function pushCustomers() {
+  for (let round = 0; round < 10; round++) {
+    const batch = await pendingCustomersPush(100);
+    if (!batch.length) return;
+    const r = await central<ApplyCustomersResult>("/api/sync/customers", { method: "POST", body: JSON.stringify({ customers: batch }) });
+    await markCustomersPushed([...r.applied, ...r.aliased.map((a) => a.id)]);
+    for (const x of r.rejected) {
+      await markCustomersPushed([x.id]);
+      await query(`insert into audit_log (actor, action, entity, entity_id, detail) values ('sincronização','sync.rejected','customer',$1,$2)`,
+        [x.id, JSON.stringify({ reason: x.reason })]);
+      state().rejected = [{ ...x, at: new Date().toISOString() }, ...state().rejected].slice(0, 20);
+    }
+    if (batch.length < 100) return;
+  }
+}
+
+/** Contas do central → restaurante (para os clientes entrarem e pedirem no Wi-Fi do restaurante mesmo sem internet). */
+async function pullCustomers() {
+  let cursor = (await getSyncState<{ cursor: number }>("local:pull-customers"))?.cursor ?? 0;
+  for (let round = 0; round < 100; round++) {
+    const r = await central<{ customers: WireCustomer[]; cursor: number; more: boolean }>(`/api/sync/customers?after=${cursor}`);
+    if (r.customers.length) await applyCustomers(r.customers, "local", "servidor-central");
+    cursor = r.cursor;
+    await setSyncState("local:pull-customers", { cursor });
+    if (!r.more) return;
+  }
+}
+
 async function pullPayments() {
   let cursor = (await getSyncState<{ cursor: number }>("local:pull-payments"))?.cursor ?? 0;
   for (let round = 0; round < 50; round++) {
@@ -214,6 +244,8 @@ export async function syncOnce(): Promise<LocalSyncStatus> {
     await ready;
     if (!centralUrl() || !syncToken()) throw new Error("NOKAU_CENTRAL_URL ou NOKAU_SYNC_TOKEN (mín. 32 caracteres) em falta");
     if (Date.now() - lastCatalog > CATALOG_EVERY_MS) { await syncCatalog(); lastCatalog = Date.now(); }
+    await pushCustomers();
+    await pullCustomers();
     await pushOrders();
     await pushCalls();
     await pushPayments();
@@ -231,7 +263,7 @@ export async function syncOnce(): Promise<LocalSyncStatus> {
     s.lastError = describe(e);
   }
   try {
-    const n = await query<{ n: string }>("select (select count(*) from orders where needs_push) + (select count(*) from service_calls where needs_push) + (select count(*) from payments where needs_push) + (select count(*) from reservations where needs_push) n");
+    const n = await query<{ n: string }>("select (select count(*) from orders where needs_push) + (select count(*) from service_calls where needs_push) + (select count(*) from payments where needs_push) + (select count(*) from reservations where needs_push) + (select count(*) from customers where needs_push) n");
     s.pending = Number(n.rows[0].n);
   } catch {}
   return s;

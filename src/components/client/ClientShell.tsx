@@ -23,4 +23,4 @@ export function ClientShell({ title, intro, back, children }: { title: string; i
 
 /** Regresso seguro (só para o menu de uma mesa ou para a área do cliente). */
 export const safeVolta = (v: unknown) =>
-  typeof v === "string" && (/^\/m\/[A-Za-z0-9_-]{22}$/.test(v) || /^\/cliente\/recibos\/[0-9a-f-]{36}$/.test(v)) ? v : "/cliente";
+  typeof v === "string" && (/^\/m\/[A-Za-z0-9_-]{22}(\?carrinho=1)?$/.test(v) || /^\/cliente\/recibos\/[0-9a-f-]{36}$/.test(v)) ? v : "/cliente";

@@ -8,6 +8,7 @@ import { dbConfigured } from "@/lib/db";
 import { getPublicMenu, getTableByToken } from "@/lib/menu-db";
 import { isQrToken } from "@/lib/tokens";
 import { getCustomer } from "@/lib/customers";
+import { getManager } from "@/lib/auth";
 
 export const metadata: Metadata = { title: "Faça o seu pedido", robots: { index: false, follow: false } };
 
@@ -38,5 +39,7 @@ async function Content({ params }: { params: PageProps<"/m/[token]">["params"] }
     );
   }
   const customer = await getCustomer().catch(() => null);
-  return <TableMenu token={token} table={{ number: table.number, label: table.label }} categories={categories} customer={customer ? { name: customer.name } : null} />;
+  const staff = customer ? null : await getManager().catch(() => null);
+  // `key`: quando muda quem está identificado (entrou, criou conta, sessão terminou) o menu recomeça com o estado certo
+  return <TableMenu key={customer ? `c:${customer.id}` : staff ? "equipa" : "anon"} token={token} table={{ number: table.number, label: table.label }} categories={categories} customer={customer ? { name: customer.name } : null} staff={!!staff} />;
 }

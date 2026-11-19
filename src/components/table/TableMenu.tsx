@@ -8,6 +8,7 @@ import { formatOrderNumber } from "@/lib/types";
 import { deleteRecord, flushOutbox, outboxAvailable, putRecord, recordsFor, requestBackgroundSync, type OutboxRecord } from "@/lib/outbox";
 import { useOffline } from "@/components/pwa/useOffline";
 import { TableHelp } from "./TableHelp";
+import { AccountGate } from "./AccountGate";
 import { Logo } from "@/components/brand/Logo";
 import { DiamondMark } from "@/components/brand/DiamondPattern";
 import { Button } from "@/components/ui/Button";
@@ -18,7 +19,7 @@ export type MenuItemView = {
 };
 export type MenuCategoryView = { id: string; label: string; description: string; items: MenuItemView[] };
 
-export function TableMenu({ token, table, categories, customer = null }: { token: string; table: { number: number; label: string }; categories: MenuCategoryView[]; customer?: { name: string } | null }) {
+export function TableMenu({ token, table, categories, customer = null, staff = false }: { token: string; table: { number: number; label: string }; categories: MenuCategoryView[]; customer?: { name: string } | null; staff?: boolean }) {
   const all = categories.flatMap((c) => c.items);
   const cart = useCart(token, all);
   const [open, setOpen] = useState(false);
@@ -28,6 +29,17 @@ export function TableMenu({ token, table, categories, customer = null }: { token
   const [gone, setGone] = useState<Set<number>>(new Set()); // produtos que o servidor disse já não estarem disponíveis
   const sending = useRef(false);
   const [active, setActive] = useState(categories[0]?.id);
+  // conta obrigatória para enviar (a equipa com sessão pode registar pedidos em nome da mesa)
+  const canSend = !!customer || staff;
+  const [gateWanted, setGate] = useState(false);
+  const gate = gateWanted && !canSend; // com conta (ex.: acabou de entrar), o painel de conta deixa de fazer sentido
+  // de volta do login/registo feito a partir do carrinho: reabre o carrinho
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).get("carrinho") !== "1") return;
+    window.history.replaceState(null, "", `/m/${token}`);
+    const t = setTimeout(() => setOpen(true), 0); // depois da hidratação (o carrinho já foi lido do telemóvel)
+    return () => clearTimeout(t);
+  }, [token]);
   // Fotos só depois de a página ficar interativa: em rede lenta, os botões "Adicionar" funcionam primeiro
   // (as fotos não competem com o JavaScript). Ficam guardadas para a próxima visita.
   const [imagesOn, setImagesOn] = useState(false);
@@ -85,6 +97,7 @@ export function TableMenu({ token, table, categories, customer = null }: { token
   const qtyOf = (id: number) => cart.lines.find((l) => l.itemId === id)?.qty ?? 0;
 
   const send = async () => {
+    if (!canSend) { setGate(true); return; }
     if (sending.current || cart.lines.length === 0) return;
     sending.current = true; // trava imediata contra duplo toque
     setPending(true);
@@ -115,6 +128,14 @@ export function TableMenu({ token, table, categories, customer = null }: { token
         // navegação completa de propósito: não depende de pedidos extra à rede para mostrar a confirmação
         // eslint-disable-next-line @next/next/no-location-assign-relative-destination
         window.location.assign(`/m/${token}/pedido/${r.orderId}`);
+        return; // mantém a trava até a navegação
+      }
+      // a sessão terminou entretanto: entra de novo (o carrinho continua) — não é falha do pedido
+      if (r.loginRequired) {
+        if (queued) await deleteRecord(key).catch(() => {});
+        // recarrega já sem sessão: o carrinho (guardado no telemóvel) reabre a pedir para entrar
+        // eslint-disable-next-line @next/next/no-location-assign-relative-destination
+        window.location.assign(`/m/${token}?carrinho=1`);
         return; // mantém a trava até a navegação
       }
       // falha de rede/servidor (não do pedido): fica guardado e segue sozinho quando houver ligação
@@ -189,7 +210,8 @@ export function TableMenu({ token, table, categories, customer = null }: { token
           {customer ? (
             <>Olá, <strong className="text-white">{customer.name.split(" ")[0]}</strong> — os pedidos ficam na sua conta. <a href="/cliente" className="text-gold-300 underline underline-offset-4">Os meus pedidos</a></>
           ) : (
-            <><a href={`/cliente/entrar?volta=${encodeURIComponent(`/m/${token}`)}`} className="text-gold-300 underline underline-offset-4">Entrar</a> ou <a href={`/cliente/registo?volta=${encodeURIComponent(`/m/${token}`)}`} className="text-gold-300 underline underline-offset-4">criar conta</a> para guardar o histórico dos seus pedidos (opcional).</>
+            staff ? <>Sessão da equipa: pode registar pedidos em nome desta mesa.</> :
+            <>Para pedir é preciso conta: <a href={`/cliente/entrar?volta=${encodeURIComponent(`/m/${token}`)}`} className="text-gold-300 underline underline-offset-4">entrar</a> ou <a href={`/cliente/registo?volta=${encodeURIComponent(`/m/${token}`)}`} className="text-gold-300 underline underline-offset-4">criar conta</a> — os pedidos, pagamentos e recibos ficam guardados.</>
           )}
         </p>
 
@@ -201,7 +223,12 @@ export function TableMenu({ token, table, categories, customer = null }: { token
             <ul className="mt-3 space-y-3">
               {records.map((r) => (
                 <li key={r.key} data-testid="outbox-item" data-state={r.state} className="rounded-xl border border-kau-800 p-3 text-sm">
-                  {r.state === "queued" && (
+                  {r.state === "queued" && r.needsLogin && (
+                    <p className="font-medium text-[#f3d29b]" data-testid="outbox-needs-login">
+                      Guardado — <a href={`/cliente/entrar?volta=${encodeURIComponent(`/m/${token}`)}`} className="text-gold-300 underline underline-offset-4">entre na sua conta</a> para o enviar.
+                    </p>
+                  )}
+                  {r.state === "queued" && !r.needsLogin && (
                     <p className="font-medium text-[#f3d29b]">
                       {net.online && flushingNow ? "A enviar ao restaurante…" : "⏳ Guardado no telemóvel — será enviado automaticamente quando houver ligação"}
                     </p>
@@ -313,7 +340,9 @@ export function TableMenu({ token, table, categories, customer = null }: { token
             </div>
 
             <div className="flex-1 overflow-y-auto px-5">
-              {cart.lines.length === 0 ? (
+              {gate ? (
+                <div className="py-4"><AccountGate token={token} online={net.online} /></div>
+              ) : cart.lines.length === 0 ? (
                 <div className="py-16 text-center">
                   <DiamondMark className="mx-auto text-gold" />
                   <p className="mt-4 text-mist">O pedido está vazio.</p>
@@ -352,9 +381,17 @@ export function TableMenu({ token, table, categories, customer = null }: { token
                 <div className="flex justify-between font-display text-xl text-white"><dt>Total</dt><dd className="text-gold-300">{formatXOF(cart.total)}</dd></div>
               </dl>
               {error && <p role="alert" className="mt-3 rounded-xl border border-danger/50 bg-danger/10 px-4 py-3 text-sm text-[#f0b2a8]">{error}</p>}
-              <Button size="lg" className="mt-4 w-full" onClick={send} disabled={pending || cart.lines.length === 0} aria-busy={pending}>
-                {pending ? (retrying ? "A tentar de novo…" : "A enviar…") : "Confirmar e enviar pedido"}
-              </Button>
+              {canSend ? (
+                <Button size="lg" className="mt-4 w-full" onClick={send} disabled={pending || cart.lines.length === 0} aria-busy={pending}>
+                  {pending ? (retrying ? "A tentar de novo…" : "A enviar…") : "Confirmar e enviar pedido"}
+                </Button>
+              ) : !gate ? (
+                <Button size="lg" className="mt-4 w-full" onClick={() => setGate(true)} disabled={cart.lines.length === 0} data-testid="gate-open">
+                  Entrar ou criar conta para enviar
+                </Button>
+              ) : (
+                <button onClick={() => setGate(false)} className="mt-4 w-full text-center text-sm text-mist underline underline-offset-4 hover:text-white">Voltar ao pedido</button>
+              )}
               <p className="mt-2 text-center text-xs text-mist">O pagamento é feito no restaurante. O valor final é confirmado pelo servidor.</p>
             </div>
           </div>

@@ -1,6 +1,7 @@
 import "server-only";
 import type { PoolClient } from "pg";
 import { query, tx } from "@/lib/db";
+import { resolveCustomer } from "./customers-sync";
 import type { OrderStatus } from "@/lib/types";
 
 /**
@@ -19,6 +20,8 @@ export type WireOrder = {
   idempotencyKey: string;
   createdAt: string;
   items: { menuItemId: number | null; name: string; unitPrice: number; quantity: number; note: string | null }[];
+  /** Conta do cliente que fez o pedido (opcional: versões antigas não a enviam). */
+  customerId?: string | null;
 };
 
 const STATUSES = new Set(["pending", "preparing", "done"]);
@@ -32,6 +35,7 @@ export function isWireOrder(o: unknown): o is WireOrder {
     && !Number.isNaN(Date.parse(x.statusChangedAt)) && !Number.isNaN(Date.parse(x.createdAt))
     && Number.isInteger(x.total) && x.total >= 0 && typeof x.isTest === "boolean"
     && typeof x.idempotencyKey === "string" && /^[A-Za-z0-9_-]{16,64}$/.test(x.idempotencyKey)
+    && (x.customerId == null || (typeof x.customerId === "string" && UUID.test(x.customerId)))
     && Array.isArray(x.items) && x.items.length > 0 && x.items.length <= 30
     && x.items.every((i) => i && typeof i.name === "string" && i.name.length <= 120 && Number.isInteger(i.unitPrice) && i.unitPrice >= 0
       && Number.isInteger(i.quantity) && i.quantity >= 1 && i.quantity <= 20 && (i.note === null || (typeof i.note === "string" && i.note.length <= 200))
@@ -39,18 +43,19 @@ export function isWireOrder(o: unknown): o is WireOrder {
 }
 
 const WIRE_SELECT = `
-  select o.id, o.origin, o.number, o.table_id, o.status, o.status_changed_at, o.total, o.is_test, o.idempotency_key, o.created_at, o.rev,
+  select o.id, o.origin, o.number, o.table_id, o.status, o.status_changed_at, o.total, o.is_test, o.idempotency_key, o.created_at, o.rev, o.customer_id,
          coalesce((select json_agg(json_build_object('menuItemId', i.menu_item_id, 'name', i.name, 'unitPrice', i.unit_price,
                    'quantity', i.quantity, 'note', i.note) order by i.id) from order_items i where i.order_id = o.id), '[]'::json) as items
   from orders o`;
 
 type WireRow = {
   id: string; origin: "central" | "local"; number: number; table_id: number; status: OrderStatus; status_changed_at: Date;
-  total: number; is_test: boolean; idempotency_key: string; created_at: Date; rev: string; items: WireOrder["items"];
+  total: number; is_test: boolean; idempotency_key: string; created_at: Date; rev: string; items: WireOrder["items"]; customer_id: string | null;
 };
 const toWire = (r: WireRow): WireOrder => ({
   id: r.id, origin: r.origin, number: r.number, tableId: r.table_id, status: r.status, statusChangedAt: r.status_changed_at.toISOString(),
   total: r.total, isTest: r.is_test, idempotencyKey: r.idempotency_key, createdAt: r.created_at.toISOString(), items: r.items,
+  customerId: r.customer_id,
 });
 
 /** Pedidos alterados depois de `after` (rev), mais os dos últimos 2 min (transações que confirmam fora de ordem). */
@@ -107,6 +112,11 @@ async function applyOne(c: PoolClient, o: WireOrder, actor: string): Promise<str
     } else if (new Date(o.statusChangedAt) > ex.rows[0].status_changed_at) {
       await c.query("update orders set status_changed_at = $2 where id = $1", [o.id, o.statusChangedAt]);
     }
+    // pedido já existente sem conta (ex.: a conta chegou depois): liga-o agora
+    if (o.customerId) {
+      const cid = await resolveCustomer(c, o.customerId);
+      if (cid) await c.query("update orders set customer_id = $2 where id = $1 and customer_id is null", [o.id, cid]);
+    }
     return null;
   }
   const key = await c.query<{ id: string }>("select id from orders where idempotency_key = $1", [o.idempotencyKey]);
@@ -117,9 +127,9 @@ async function applyOne(c: PoolClient, o: WireOrder, actor: string): Promise<str
   if (!t.rows[0]) return `mesa ${o.tableId} desconhecida`;
 
   await c.query(
-    `insert into orders (id, origin, number, table_id, status, status_changed_at, total, is_test, idempotency_key, created_at, needs_push, synced_at)
-     values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,false,now())`,
-    [o.id, o.origin, o.number, o.tableId, o.status, o.statusChangedAt, o.total, o.isTest, o.idempotencyKey, o.createdAt]);
+    `insert into orders (id, origin, number, table_id, status, status_changed_at, total, is_test, idempotency_key, created_at, needs_push, synced_at, customer_id)
+     values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,false,now(),$11)`,
+    [o.id, o.origin, o.number, o.tableId, o.status, o.statusChangedAt, o.total, o.isTest, o.idempotencyKey, o.createdAt, await resolveCustomer(c, o.customerId)]);
   for (const i of o.items) {
     await c.query(
       `insert into order_items (order_id, menu_item_id, name, unit_price, quantity, note)

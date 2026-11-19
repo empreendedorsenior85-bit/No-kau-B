@@ -176,6 +176,11 @@ function flushOutbox() {
         if (res.ok && data && data.ok) {
           await idbPut(db, { ...rec, state: "sent", orderId: data.orderId, number: data.number, origin: data.origin || "central", sentAt: now, attempts: (rec.attempts || 0) + 1, lastAttemptAt: now });
           changed = true;
+        } else if (res.status === 401 && data && data.loginRequired) {
+          // falta iniciar sessão: o pedido continua guardado e segue quando o cliente entrar na conta
+          await idbPut(db, { ...rec, needsLogin: true, attempts: (rec.attempts || 0) + 1, lastAttemptAt: now });
+          changed = true;
+          break;
         } else if (res.status >= 400 && res.status < 500 && res.status !== 408 && res.status !== 429 && !(data && data.retry)) {
           await idbPut(db, { ...rec, state: "rejected", message: (data && data.message) || "O restaurante não aceitou este pedido.", itemIds: data && data.itemIds, attempts: (rec.attempts || 0) + 1, lastAttemptAt: now });
           changed = true;

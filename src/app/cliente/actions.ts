@@ -12,7 +12,7 @@ export type ClientFormState = { error?: string; values?: Record<string, string> 
 /** Só regressa a páginas do próprio site (sem redirecionamentos abertos para fora). */
 function safeReturn(v: FormDataEntryValue | null): string {
   const s = typeof v === "string" ? v : "";
-  return /^\/m\/[A-Za-z0-9_-]{22}$/.test(s) || /^\/cliente\/recibos\/[0-9a-f-]{36}$/.test(s) || s === "/cliente" ? s : "/cliente";
+  return /^\/m\/[A-Za-z0-9_-]{22}(\?carrinho=1)?$/.test(s) || /^\/cliente\/recibos\/[0-9a-f-]{36}$/.test(s) || s === "/cliente" ? s : "/cliente";
 }
 async function ip() {
   const h = await headers();

@@ -1,5 +1,6 @@
 import { submitOrder } from "@/lib/submit-order";
 import { getCustomer } from "@/lib/customers";
+import { getManager } from "@/lib/auth";
 
 export const maxDuration = 30;
 
@@ -17,8 +18,10 @@ export async function POST(req: Request) {
     return Response.json({ ok: false, message: "Pedido inválido." }, { status: 400 });
   }
   const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || req.headers.get("x-real-ip");
-  // cliente com sessão iniciada: o pedido fica no histórico dele (identidade lida da sessão, nunca do corpo do pedido)
+  // conta obrigatória: o pedido fica no histórico do cliente (identidade lida da sessão, nunca do corpo do pedido).
+  // A equipa com sessão (garçom/gerente) pode registar pedidos em nome da mesa.
   const customer = await getCustomer().catch(() => null);
-  const { status, body } = await submitOrder(input, ip, customer?.id ?? null);
+  const staff = customer ? null : await getManager().catch(() => null);
+  const { status, body } = await submitOrder(input, ip, { customerId: customer?.id ?? null, staff: !!staff });
   return Response.json(body, { status, headers: { "Cache-Control": "no-store" } });
 }

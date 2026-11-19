@@ -25,6 +25,8 @@ export type OutboxRecord = {
   origin?: "central" | "local";
   message?: string;
   itemIds?: number[];
+  /** O restaurante pediu para entrar na conta (sessão terminada): continua guardado e segue depois do login. */
+  needsLogin?: boolean;
 };
 
 const DB = "nokau";
@@ -73,7 +75,8 @@ export async function recordsFor(token: string): Promise<OutboxRecord[]> {
 export type SendOnce =
   | { kind: "sent"; orderId: string; number: number; origin: "central" | "local" }
   | { kind: "rejected"; message: string; itemIds?: number[] }
-  | { kind: "retry"; message?: string };
+  | { kind: "retry"; message?: string }
+  | { kind: "login"; message: string };
 
 /** Uma tentativa de envio (a repetição é feita pela fila). */
 export async function sendOnce(r: Pick<OutboxRecord, "token" | "key" | "lines">, timeoutMs = 15_000): Promise<SendOnce> {
@@ -84,8 +87,9 @@ export async function sendOnce(r: Pick<OutboxRecord, "token" | "key" | "lines">,
       method: "POST", headers: { "content-type": "application/json" }, cache: "no-store", signal: ctl.signal,
       body: JSON.stringify({ token: r.token, key: r.key, lines: r.lines.map((l) => ({ itemId: l.itemId, quantity: l.qty, note: l.note.trim() || undefined })) }),
     });
-    const data = (await res.json().catch(() => null)) as { ok?: boolean; orderId?: string; number?: number; origin?: "central" | "local"; message?: string; itemIds?: number[]; retry?: boolean } | null;
+    const data = (await res.json().catch(() => null)) as { ok?: boolean; orderId?: string; number?: number; origin?: "central" | "local"; message?: string; itemIds?: number[]; retry?: boolean; loginRequired?: boolean } | null;
     if (res.ok && data?.ok && data.orderId) return { kind: "sent", orderId: data.orderId, number: data.number ?? 0, origin: data.origin ?? "central" };
+    if (res.status === 401 && data?.loginRequired) return { kind: "login", message: data.message ?? "Entre na sua conta para enviar." };
     const definitive = res.status >= 400 && res.status < 500 && res.status !== 408 && res.status !== 429 && !data?.retry;
     if (definitive) return { kind: "rejected", message: data?.message ?? "O restaurante não aceitou este pedido.", itemIds: data?.itemIds };
     return { kind: "retry", message: data?.message };
@@ -107,6 +111,7 @@ export function flushOutbox(): Promise<boolean> {
         const now = Date.now();
         if (s.kind === "sent") { await putRecord({ ...r, state: "sent", orderId: s.orderId, number: s.number, origin: s.origin, sentAt: now, attempts: r.attempts + 1, lastAttemptAt: now }); changed = true; }
         else if (s.kind === "rejected") { await putRecord({ ...r, state: "rejected", message: s.message, itemIds: s.itemIds, attempts: r.attempts + 1, lastAttemptAt: now }); changed = true; }
+        else if (s.kind === "login") { await putRecord({ ...r, needsLogin: true, attempts: r.attempts + 1, lastAttemptAt: now }); changed = true; break; } // fica guardado até o cliente entrar
         else { await putRecord({ ...r, attempts: r.attempts + 1, lastAttemptAt: now }); break; } // sem rede: não insistir com os restantes agora
       }
     } catch {}

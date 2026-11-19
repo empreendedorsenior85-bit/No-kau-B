@@ -3,7 +3,7 @@
 export type OrderPayload = { token: string; key: string; lines: { itemId: number; quantity: number; note?: string }[] };
 export type SendResult =
   | { ok: true; orderId: string; number: number; origin: "central" | "local"; duplicate: boolean }
-  | { ok: false; message: string; itemIds?: number[]; network?: boolean; temporary?: boolean };
+  | { ok: false; message: string; itemIds?: number[]; network?: boolean; temporary?: boolean; loginRequired?: boolean };
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 const MAX_ATTEMPTS = 4;
@@ -25,7 +25,9 @@ export async function sendOrder(payload: OrderPayload, onRetry?: (attempt: numbe
         method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(payload),
         signal: ctl.signal, cache: "no-store", keepalive: false,
       });
-      const data = await res.json().catch(() => null) as { ok?: boolean; orderId?: string; number?: number; origin?: "central" | "local"; duplicate?: boolean; message?: string; itemIds?: number[]; retry?: boolean } | null;
+      const data = await res.json().catch(() => null) as { ok?: boolean; orderId?: string; number?: number; origin?: "central" | "local"; duplicate?: boolean; message?: string; itemIds?: number[]; retry?: boolean; loginRequired?: boolean } | null;
+      // sem conta (ou sessão terminada): não é falha do pedido — o cliente entra e envia de novo
+      if (res.status === 401 && data?.loginRequired) return { ok: false, loginRequired: true, message: data.message ?? "Entre na sua conta para enviar o pedido." };
       if (res.ok && data?.ok && data.orderId) return { ok: true, orderId: data.orderId, number: data.number ?? 0, origin: data.origin ?? "central", duplicate: !!data.duplicate };
       // falha temporária do servidor (5xx, 429 sem corpo útil, página de erro do alojamento): repetir
       const temporary = res.status >= 500 || res.status === 408 || (data?.retry === true);

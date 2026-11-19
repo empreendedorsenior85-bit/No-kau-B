@@ -7,7 +7,7 @@ import { isTransient } from "./db";
 
 export type OrderApiBody =
   | { ok: true; orderId: string; number: number; origin: "central" | "local"; duplicate: boolean }
-  | { ok: false; message: string; itemIds?: number[]; retry?: boolean };
+  | { ok: false; message: string; itemIds?: number[]; retry?: boolean; loginRequired?: boolean };
 export type OrderApiResult = { status: number; body: OrderApiBody };
 
 const RATE_CODES = { invalid_table: 404, unavailable: 409, rate_limited: 429, key_conflict: 409, empty: 400 } as const;
@@ -17,9 +17,20 @@ const RATE_CODES = { invalid_table: 404, unavailable: 409, rate_limited: 429, ke
  * e pela ação de servidor (páginas já abertas de uma versão anterior). Preços, mesa e
  * disponibilidade são decididos aqui; o cliente só envia ids e quantidades.
  */
-export async function submitOrder(input: unknown, ip: string | null, customerId: string | null = null): Promise<OrderApiResult> {
+export const LOGIN_REQUIRED: OrderApiResult = {
+  status: 401,
+  body: { ok: false, loginRequired: true, message: "Para enviar o pedido, entre na sua conta ou crie uma (é rápido). O seu carrinho fica guardado." },
+};
+
+/**
+ * `who`: quem envia. O pedido exige uma conta de cliente com sessão iniciada; a equipa (garçom/gerente com sessão)
+ * também pode registar pedidos de uma mesa em nome dos clientes.
+ */
+export async function submitOrder(input: unknown, ip: string | null, who: { customerId: string | null; staff: boolean }): Promise<OrderApiResult> {
   const parsed = orderSchema.safeParse(input);
   if (!parsed.success) return { status: 400, body: { ok: false, message: parsed.error.issues[0]?.message ?? "Pedido inválido." } };
+  if (!who.customerId && !who.staff) return LOGIN_REQUIRED;
+  const customerId = who.customerId;
 
   // Limite alto: no restaurante TODOS os telemóveis saem pelo mesmo IP do Wi-Fi/rede. O controlo fino
   // é por mesa (20 pedidos/10 min, na base de dados); este só trava abuso em massa.

@@ -11,7 +11,8 @@ import { isLocalServer } from "./node-role";
 /**
  * Conta do CLIENTE (separada da equipa): nome, email, telefone e palavra-passe (scrypt).
  * Sessão própria (cookie "nk_client", guardada no servidor, 30 dias) — nunca dá acesso ao painel.
- * As contas existem só no site central (o servidor local do restaurante não guarda dados pessoais de clientes).
+ * As contas existem no site central e são copiadas para o servidor do restaurante (para entrar e pedir sem internet);
+ * as criadas no restaurante seguem para o central (ver sync/customers-sync.ts).
  */
 const COOKIE = "nk_client";
 const DAYS = 30;
@@ -36,7 +37,6 @@ export const registerSchema = z.object({
 export type RegisterResult = { ok: true; customer: Customer } | { ok: false; error: string };
 
 export async function registerCustomer(input: unknown): Promise<RegisterResult> {
-  if (isLocalServer()) return { ok: false, error: "As contas de cliente são criadas no site do Nô Kau (com internet)." };
   const p = registerSchema.safeParse(input);
   if (!p.success) return { ok: false, error: p.error.issues[0].message };
   await ensureMigrated();
@@ -45,8 +45,9 @@ export async function registerCustomer(input: unknown): Promise<RegisterResult> 
   if (dup.rows[0]) return { ok: false, error: "Já existe uma conta com este email ou telefone. Entre com a sua palavra-passe." };
   try {
     const r = await query<Customer>(
-      "insert into customers (name, email, phone, password_hash) values ($1,$2,$3,$4) returning id, name, email, phone",
-      [p.data.name, p.data.email, p.data.phone, await hashPassword(p.data.password)]);
+      // no servidor do restaurante a conta é criada aqui e enviada ao site central na sincronização
+      "insert into customers (name, email, phone, password_hash, origin, needs_push) values ($1,$2,$3,$4,$5,$6) returning id, name, email, phone",
+      [p.data.name, p.data.email, p.data.phone, await hashPassword(p.data.password), isLocalServer() ? "local" : "central", isLocalServer()]);
     return { ok: true, customer: r.rows[0] };
   } catch (e) {
     if ((e as { code?: string }).code === "23505") return { ok: false, error: "Já existe uma conta com este email ou telefone. Entre com a sua palavra-passe." };
