@@ -79,6 +79,11 @@ export function Header() {
           </Link>
         </nav>
 
+        <div className="flex items-center gap-2 lg:hidden">
+        <Link href="/entrar" data-testid="mobile-top-login" onClick={() => setOpen(false)}
+          className="rounded-full border border-gold/60 px-4 py-2 text-sm text-white">
+          Entrar
+        </Link>
         <button
           type="button"
           className="relative -mr-2 grid h-11 w-11 place-items-center lg:hidden"
@@ -94,6 +99,7 @@ export function Header() {
             className={`absolute h-px w-6 bg-white transition-transform duration-300 ${open ? "-rotate-45" : "translate-y-1.5"}`}
           />
         </button>
+        </div>
       </div>
 
       {/* Menu móvel */}
