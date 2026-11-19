@@ -4,6 +4,7 @@ import { changeStatusAction } from "@/app/admin/actions";
 import { NEXT_STATUS, PREV_STATUS, STATUS_LABEL, formatOrderNumber, type Order, type OrderStatus } from "@/lib/types";
 import { formatXOF } from "@/lib/format";
 import { useLive } from "./LiveOrders";
+import { OrderPay } from "./OrderPay";
 
 export const STATUS_STYLE: Record<OrderStatus, { badge: string; bar: string; icon: string }> = {
   pending: { badge: "bg-[#e0a64a]/15 text-[#e0a64a] ring-[#e0a64a]/50", bar: "bg-[#e0a64a]", icon: "●" },
@@ -67,6 +68,7 @@ export function OrderCard({ order, compact }: { order: Order; compact?: boolean 
           </div>
         </div>
         {order.paid && <p data-testid="order-paid" className="mt-2 mr-2 inline-block rounded-full bg-ok/15 px-2 py-0.5 text-[0.65rem] uppercase tracking-wider text-[#7fc290]">Pago</p>}
+        {!order.paid && !order.isTest && order.status === "done" && <p data-testid="order-unpaid" className="mt-2 mr-2 inline-block rounded-full bg-[#e0a64a]/15 px-2 py-0.5 text-[0.65rem] uppercase tracking-wider text-[#e0a64a]">Por cobrar</p>}
         {order.isTest && <p className="mt-2 inline-block rounded-full border border-dashed border-gold-300/70 px-2 py-0.5 text-[0.65rem] uppercase tracking-wider text-gold-300">Teste (demonstração)</p>}
 
         <ul className="mt-3 space-y-1.5 border-t border-kau-800 pt-3">
@@ -104,6 +106,7 @@ export function OrderCard({ order, compact }: { order: Order; compact?: boolean 
             )}
           </div>
         )}
+        {!compact && <OrderPay order={order} />}
         {err && <p role="alert" className="mt-2 text-sm text-[#e48a7d]">{err}</p>}
       </div>
     </article>

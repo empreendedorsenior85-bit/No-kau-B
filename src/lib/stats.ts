@@ -54,7 +54,7 @@ export function parseRange(sp: Record<string, string | string[] | undefined>, no
 /** Período anterior com a mesma duração (para comparar). */
 export const previousRange = (r: Range): { from: Date; to: Date } => ({ from: new Date(+r.from - (+r.to - +r.from)), to: r.from });
 
-export type Summary = { orders: number; done: number; inProgress: number; revenue: number; avgTicket: number; units: number; tables: number };
+export type Summary = { orders: number; done: number; inProgress: number; revenue: number; avgTicket: number; units: number; tables: number; toCollect: number; toCollectCount: number };
 export type SeriesPoint = { t: string; revenue: number; orders: number };
 export type Dashboard = {
   range: { key: RangeKey; label: string; from: string; to: string; days: number; includeTest: boolean; bucket: "hour" | "day" };
@@ -77,8 +77,10 @@ const SOLD = "(o.status = 'done' or o.payment_id is not null)";
 
 async function summary(from: Date, to: Date, test: boolean): Promise<Summary> {
   const p: P = [from, to, test];
-  const o = await query<{ orders: string; done: string; sold: string; in_progress: string; revenue: string; tables: string }>(
+  const o = await query<{ orders: string; done: string; sold: string; in_progress: string; revenue: string; tables: string; to_collect: string; to_collect_n: string }>(
     `select count(*) orders,
+            coalesce(sum(o.total) filter (where o.status = 'done' and o.payment_id is null), 0) to_collect,
+            count(*) filter (where o.status = 'done' and o.payment_id is null) to_collect_n,
             count(*) filter (where o.status = 'done') done,
             count(*) filter (where ${SOLD}) sold,
             count(*) filter (where o.status <> 'done') in_progress,
@@ -90,7 +92,7 @@ async function summary(from: Date, to: Date, test: boolean): Promise<Summary> {
      where ${SOLD} and ${sel}`, p);
   const r = o.rows[0];
   const done = Number(r.done), sold = Number(r.sold), revenue = Number(r.revenue);
-  return { orders: Number(r.orders), done, inProgress: Number(r.in_progress), revenue, avgTicket: sold ? Math.round(revenue / sold) : 0, units: Number(u.rows[0].units), tables: Number(r.tables) };
+  return { orders: Number(r.orders), done, inProgress: Number(r.in_progress), revenue, avgTicket: sold ? Math.round(revenue / sold) : 0, units: Number(u.rows[0].units), tables: Number(r.tables), toCollect: Number(r.to_collect), toCollectCount: Number(r.to_collect_n) };
 }
 
 async function series(from: Date, to: Date, test: boolean, step: "1 hour" | "1 day"): Promise<SeriesPoint[]> {

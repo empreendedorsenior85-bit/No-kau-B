@@ -49,6 +49,16 @@ export default async function Page({ searchParams }: PageProps<"/admin/dashboard
                 </Link>
               </dd>
             </div>
+            {c.toCollectCount > 0 && (
+              <div className="col-span-2">
+                <dt className="text-mist">Por cobrar <span className="text-xs">(concluídos sem pagamento registado)</span></dt>
+                <dd className="font-sans text-xl font-semibold tabular-nums text-[#e0a64a]">
+                  <Link href="/admin/pedidos" data-testid="hero-tocollect" data-raw={c.toCollect} className="hover:underline">
+                    {formatXOF(c.toCollect)} <span className="text-sm font-normal text-mist">({int(c.toCollectCount)}) · registar em Pedidos</span>
+                  </Link>
+                </dd>
+              </div>
+            )}
           </dl>
         </div>
       </section>

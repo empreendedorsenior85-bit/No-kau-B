@@ -67,6 +67,10 @@ export function Header() {
               </Link>
             );
           })}
+          <Link href="/entrar" data-testid="header-login"
+            className={`rounded-full border border-gold/60 px-5 py-2.5 text-sm transition-colors hover:bg-gold/10 ${pathname.startsWith("/entrar") ? "text-gold-300" : "text-white"}`}>
+            Entrar
+          </Link>
           <Link
             href="/reservas"
             className="rounded-full bg-gold px-5 py-2.5 text-sm font-medium text-kau-950 transition-[background-color,transform] duration-300 hover:bg-gold-300"
@@ -120,6 +124,10 @@ export function Header() {
           className="mt-8 flex h-13 items-center justify-center rounded-full bg-gold font-medium text-kau-950"
         >
           Reservar mesa
+        </Link>
+        <Link href="/entrar" data-testid="mobile-login"
+          className="mt-3 flex h-13 items-center justify-center rounded-full border border-gold/60 font-medium text-white">
+          Entrar · conta, reservas e equipa
         </Link>
       </div>
     </header>
