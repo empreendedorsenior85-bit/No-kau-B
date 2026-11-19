@@ -10,6 +10,8 @@ import { site } from "@/lib/site";
 export type PdfSection = { title: string; sub?: string; rows: ReportRow[]; sum?: string[]; empty: string };
 export type PdfReport = {
   periodLabel: string; generatedBy: string; includeTest: boolean;
+  /** Logótipo do Nô Kau (PNG), no cabeçalho de cada página. */
+  logoPng?: Uint8Array | null;
   kpis: { label: string; value: string }[];
   sections: PdfSection[];
 };
@@ -25,6 +27,7 @@ export async function buildReportPdf(r: PdfReport): Promise<Uint8Array> {
   doc.setAuthor(site.name); doc.setCreator(`${site.name} — painel de gestão`); doc.setProducer("pdf-lib");
   const font = await doc.embedFont(StandardFonts.Helvetica);
   const bold = await doc.embedFont(StandardFonts.HelveticaBold);
+  const logo = r.logoPng ? await doc.embedPng(r.logoPng).catch(() => null) : null;
 
   // texto seguro para WinAnsi (espaços finos do Intl → espaço normal; o resto que não exista → "?")
   const ok = new Map<string, boolean>();
@@ -45,9 +48,16 @@ export async function buildReportPdf(r: PdfReport): Promise<Uint8Array> {
   const newPage = () => {
     page = doc.addPage([A4.w, A4.h]);
     y = A4.h - M;
-    // cabeçalho de cada página
-    text(site.name, M, y - 12, 16, bold, INK);
-    text("Relatório de vendas", M + width(site.name, bold, 16) + 10, y - 12, 11, font, MUTED);
+    // cabeçalho de cada página (com o logótipo do Nô Kau, se existir)
+    let x0 = M;
+    if (logo) {
+      const h = 34, w = (logo.width / logo.height) * h;
+      page.drawImage(logo, { x: M, y: y - h + 6, width: w, height: h });
+      x0 = M + w + 10;
+      y -= 12;
+    }
+    text(site.name, x0, y - 12, 16, bold, INK);
+    text("Relatório de vendas", x0 + width(site.name, bold, 16) + 10, y - 12, 11, font, MUTED);
     const right = `Período: ${r.periodLabel}${r.includeTest ? " (inclui testes)" : ""}`;
     text(right, A4.w - M - width(right, font, 9), y - 10, 9, font, MUTED);
     y -= 22;
@@ -60,7 +70,7 @@ export async function buildReportPdf(r: PdfReport): Promise<Uint8Array> {
   // dados do documento
   const when = new Date().toLocaleString("pt-PT", { dateStyle: "short", timeStyle: "short", timeZone: "Africa/Bissau" });
   text(`${site.address} · ${site.phoneDisplay}`, M, y, 9, font, MUTED); y -= 12;
-  text(`Gerado em ${when} (hora da Guiné-Bissau) por ${r.generatedBy}. Vendas = pedidos concluídos.`, M, y, 9, font, MUTED); y -= 20;
+  text(`Gerado em ${when} (hora da Guiné-Bissau) por ${r.generatedBy}. Vendas = pedidos concluídos ou pagos.`, M, y, 9, font, MUTED); y -= 20;
 
   // indicadores
   if (r.kpis.length) {

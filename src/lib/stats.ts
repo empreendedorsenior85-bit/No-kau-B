@@ -69,27 +69,33 @@ export type Dashboard = {
 
 type P = [Date, Date, boolean];
 const sel = "o.created_at >= $1 and o.created_at < $2 and ($3 or not o.is_test)";
+/**
+ * Venda = pedido CONCLUÍDO ou PAGO (pagamento confirmado e não anulado). Antes só contavam os concluídos: um pedido
+ * cobrado sem ser marcado "Concluído" ficava fora das vendas (painel e relatórios a 0 FCFA com pagamentos recebidos).
+ */
+const SOLD = "(o.status = 'done' or o.payment_id is not null)";
 
 async function summary(from: Date, to: Date, test: boolean): Promise<Summary> {
   const p: P = [from, to, test];
-  const o = await query<{ orders: string; done: string; in_progress: string; revenue: string; tables: string }>(
+  const o = await query<{ orders: string; done: string; sold: string; in_progress: string; revenue: string; tables: string }>(
     `select count(*) orders,
             count(*) filter (where o.status = 'done') done,
+            count(*) filter (where ${SOLD}) sold,
             count(*) filter (where o.status <> 'done') in_progress,
-            coalesce(sum(o.total) filter (where o.status = 'done'), 0) revenue,
+            coalesce(sum(o.total) filter (where ${SOLD}), 0) revenue,
             count(distinct o.table_id) tables
      from orders o where ${sel}`, p);
   const u = await query<{ units: string }>(
     `select coalesce(sum(i.quantity), 0) units from order_items i join orders o on o.id = i.order_id
-     where o.status = 'done' and ${sel}`, p);
+     where ${SOLD} and ${sel}`, p);
   const r = o.rows[0];
-  const done = Number(r.done), revenue = Number(r.revenue);
-  return { orders: Number(r.orders), done, inProgress: Number(r.in_progress), revenue, avgTicket: done ? Math.round(revenue / done) : 0, units: Number(u.rows[0].units), tables: Number(r.tables) };
+  const done = Number(r.done), sold = Number(r.sold), revenue = Number(r.revenue);
+  return { orders: Number(r.orders), done, inProgress: Number(r.in_progress), revenue, avgTicket: sold ? Math.round(revenue / sold) : 0, units: Number(u.rows[0].units), tables: Number(r.tables) };
 }
 
 async function series(from: Date, to: Date, test: boolean, step: "1 hour" | "1 day"): Promise<SeriesPoint[]> {
   const r = await query<{ t: Date; revenue: string; orders: string }>(
-    `select g.t, coalesce(sum(o.total) filter (where o.status = 'done'), 0) revenue, count(o.id) orders
+    `select g.t, coalesce(sum(o.total) filter (where ${SOLD}), 0) revenue, count(o.id) orders
      from generate_series($1::timestamptz, $2::timestamptz - interval '1 second', $4::interval) g(t)
      left join orders o on o.created_at >= g.t and o.created_at < g.t + $4::interval and ($3 or not o.is_test)
      group by g.t order by g.t`, [from, to, test, step]);
@@ -112,15 +118,15 @@ export async function getDashboard(range: Range): Promise<Dashboard> {
       `select extract(hour from o.created_at at time zone '${TZ}')::int h, count(*) n from orders o where ${sel} group by 1`, p),
     query<{ name: string; qty: string; revenue: string }>(
       `select i.name, sum(i.quantity) qty, sum(i.quantity * i.unit_price) revenue
-       from order_items i join orders o on o.id = i.order_id where o.status = 'done' and ${sel}
+       from order_items i join orders o on o.id = i.order_id where ${SOLD} and ${sel}
        group by i.name order by revenue desc, qty desc limit 8`, p),
     query<{ label: string; qty: string; revenue: string }>(
       `select coalesce(c.label, 'Outros') label, sum(i.quantity) qty, sum(i.quantity * i.unit_price) revenue
        from order_items i join orders o on o.id = i.order_id
        left join menu_items m on m.id = i.menu_item_id left join menu_categories c on c.id = m.category_id
-       where o.status = 'done' and ${sel} group by 1 order by revenue desc`, p),
+       where ${SOLD} and ${sel} group by 1 order by revenue desc`, p),
     query<{ label: string; orders: string; revenue: string }>(
-      `select t.label, count(*) orders, coalesce(sum(o.total) filter (where o.status = 'done'), 0) revenue
+      `select t.label, count(*) orders, coalesce(sum(o.total) filter (where ${SOLD}), 0) revenue
        from orders o join dining_tables t on t.id = o.table_id where ${sel}
        group by t.id, t.label, t.number order by revenue desc, orders desc, t.number limit 12`, p),
   ]);
@@ -141,22 +147,23 @@ export async function getDashboard(range: Range): Promise<Dashboard> {
 export type ReportRow = Record<string, string | number>;
 
 export async function reportDays(range: Range): Promise<ReportRow[]> {
-  // vendas = total dos pedidos concluídos (mesma fonte do painel); unidades vêm dos itens
-  const r = await query<{ d: string; orders: string; done: string; revenue: string; units: string }>(
+  // vendas = pedidos concluídos ou pagos (mesma fonte do painel); unidades vêm dos itens
+  const r = await query<{ d: string; orders: string; done: string; sold: string; revenue: string; units: string }>(
     `with od as (
        select to_char(o.created_at at time zone '${TZ}', 'YYYY-MM-DD') d, count(*) orders,
               count(*) filter (where o.status = 'done') done,
-              coalesce(sum(o.total) filter (where o.status = 'done'), 0) revenue
+              count(*) filter (where ${SOLD}) sold,
+              coalesce(sum(o.total) filter (where ${SOLD}), 0) revenue
        from orders o where ${sel} group by 1),
      it as (
        select to_char(o.created_at at time zone '${TZ}', 'YYYY-MM-DD') d, coalesce(sum(i.quantity), 0) units
-       from order_items i join orders o on o.id = i.order_id where o.status = 'done' and ${sel} group by 1)
-     select od.d, od.orders, od.done, od.revenue, coalesce(it.units, 0) units
+       from order_items i join orders o on o.id = i.order_id where ${SOLD} and ${sel} group by 1)
+     select od.d, od.orders, od.done, od.sold, od.revenue, coalesce(it.units, 0) units
      from od left join it on it.d = od.d order by od.d`,
     [range.from, range.to, range.includeTest]);
   return r.rows.map((x) => {
-    const done = Number(x.done), revenue = Number(x.revenue);
-    return { Data: x.d, Pedidos: Number(x.orders), Concluídos: done, "Vendas (FCFA)": revenue, "Ticket médio (FCFA)": done ? Math.round(revenue / done) : 0, Unidades: Number(x.units) };
+    const sold = Number(x.sold), revenue = Number(x.revenue);
+    return { Data: x.d, Pedidos: Number(x.orders), Concluídos: Number(x.done), Vendidos: sold, "Vendas (FCFA)": revenue, "Ticket médio (FCFA)": sold ? Math.round(revenue / sold) : 0, Unidades: Number(x.units) };
   });
 }
 
@@ -165,7 +172,7 @@ export async function reportProducts(range: Range): Promise<ReportRow[]> {
     `select i.name, coalesce(c.label, 'Outros') cat, sum(i.quantity) qty, sum(i.quantity * i.unit_price) revenue
      from order_items i join orders o on o.id = i.order_id
      left join menu_items m on m.id = i.menu_item_id left join menu_categories c on c.id = m.category_id
-     where o.status = 'done' and ${sel} group by i.name, 2 order by revenue desc, qty desc`,
+     where ${SOLD} and ${sel} group by i.name, 2 order by revenue desc, qty desc`,
     [range.from, range.to, range.includeTest]);
   return r.rows.map((x) => ({ Produto: x.name, Categoria: x.cat, Unidades: Number(x.qty), "Vendas (FCFA)": Number(x.revenue) }));
 }
@@ -173,20 +180,20 @@ export async function reportProducts(range: Range): Promise<ReportRow[]> {
 export async function reportTables(range: Range): Promise<ReportRow[]> {
   const r = await query<{ label: string; orders: string; done: string; revenue: string }>(
     `select t.label, count(*) orders, count(*) filter (where o.status = 'done') done,
-            coalesce(sum(o.total) filter (where o.status = 'done'), 0) revenue
+            coalesce(sum(o.total) filter (where ${SOLD}), 0) revenue
      from orders o join dining_tables t on t.id = o.table_id where ${sel} group by t.id, t.label, t.number order by t.number`,
     [range.from, range.to, range.includeTest]);
   return r.rows.map((x) => ({ Mesa: x.label, Pedidos: Number(x.orders), Concluídos: Number(x.done), "Vendas (FCFA)": Number(x.revenue) }));
 }
 
 export async function reportOrders(range: Range): Promise<ReportRow[]> {
-  const r = await query<{ number: number; origin: "central" | "local"; at: string; mesa: string; status: string; total: number; test: boolean; items: string }>(
-    `select o.number, o.origin, to_char(o.created_at at time zone '${TZ}', 'YYYY-MM-DD HH24:MI') "at", t.label mesa, o.status, o.total, o.is_test test,
+  const r = await query<{ number: number; origin: "central" | "local"; at: string; mesa: string; status: string; total: number; test: boolean; paid: boolean; items: string }>(
+    `select o.number, o.origin, to_char(o.created_at at time zone '${TZ}', 'YYYY-MM-DD HH24:MI') "at", t.label mesa, o.status, o.total, o.is_test test, (o.payment_id is not null) paid,
             (select string_agg(i.quantity || 'x ' || i.name || coalesce(' (' || i.note || ')', ''), '; ' order by i.id) from order_items i where i.order_id = o.id) items
      from orders o join dining_tables t on t.id = o.table_id where ${sel} order by o.created_at`,
     [range.from, range.to, range.includeTest]);
   const label = { pending: "Pendente", preparing: "Em preparação", done: "Concluído" } as const;
-  return r.rows.map((x) => ({ Pedido: formatOrderNumber(x.number, x.origin), "Data/hora": x.at, Mesa: x.mesa, Estado: label[x.status as keyof typeof label], "Total (FCFA)": x.total, Teste: x.test ? "sim" : "não", Itens: x.items ?? "" }));
+  return r.rows.map((x) => ({ Pedido: formatOrderNumber(x.number, x.origin), "Data/hora": x.at, Mesa: x.mesa, Estado: label[x.status as keyof typeof label], Pago: x.paid ? "sim" : "não", "Total (FCFA)": x.total, Teste: x.test ? "sim" : "não", Itens: x.items ?? "" }));
 }
 
 /** Vendas por categoria, a partir do relatório de produtos (mesma fonte, mesmos números). */
@@ -200,3 +207,13 @@ export function reportCategories(products: ReportRow[]): ReportRow[] {
   }
   return [...m.entries()].map(([Categoria, v]) => ({ Categoria, ...v })).sort((a, b) => b["Vendas (FCFA)"] - a["Vendas (FCFA)"]);
 }
+
+/** Colunas de cada relatório (para exportar um período sem dados com cabeçalho). */
+export const REPORT_COLUMNS: Record<string, string[]> = {
+  dias: ["Data", "Pedidos", "Concluídos", "Vendidos", "Vendas (FCFA)", "Ticket médio (FCFA)", "Unidades"],
+  produtos: ["Produto", "Categoria", "Unidades", "Vendas (FCFA)"],
+  categorias: ["Categoria", "Unidades", "Vendas (FCFA)"],
+  mesas: ["Mesa", "Pedidos", "Concluídos", "Vendas (FCFA)"],
+  pedidos: ["Pedido", "Data/hora", "Mesa", "Estado", "Pago", "Total (FCFA)", "Teste", "Itens"],
+  pagamentos: ["Recibo", "Data", "Hora", "Mesa", "Método", "Estado", "Valor (FCFA)", "Recebido (FCFA)", "Entregue (FCFA)", "Troco (FCFA)", "Recebido por", "Pedidos", "Anulação"],
+};

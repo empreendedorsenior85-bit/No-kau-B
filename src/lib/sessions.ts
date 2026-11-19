@@ -11,7 +11,7 @@ import { ensureMigrated } from "@/db/init";
  *  - "Terminar sessão" revoga essa sessão (um cookie copiado deixa de servir);
  *  - mudar/redefinir a palavra-passe ou desativar a conta termina as outras sessões dessa pessoa.
  */
-export type SessionKind = "staff" | "client";
+export type SessionKind = "staff" | "client" | "visitor";
 
 function secret(): string {
   const s = process.env.SESSION_SECRET;

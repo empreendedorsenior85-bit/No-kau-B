@@ -43,7 +43,7 @@ export default async function Page({ searchParams }: PageProps<"/admin/reservas"
         <p className="text-xs text-mist">{history.length} reserva(s) de {from.split("-").reverse().join("/")} a {to.split("-").reverse().join("/")}{history.length === 1000 ? " (máximo de 1000 — afine os filtros)" : ""}.</p>
         <ReportTable id="reservas-historico" empty="Sem reservas com estes filtros." sum={["Pessoas"]}
           rows={history.map((r) => ({
-            Data: r.date.split("-").reverse().join("/"), Hora: r.time, Código: r.code, Nome: r.name, Telefone: r.phone, Email: r.email,
+            Data: r.date.split("-").reverse().join("/"), Hora: r.time, Código: r.code, Nome: r.name, Telefone: r.phone, Email: r.email ?? "",
             Pessoas: r.guests, Estado: RESERVATION_LABEL[r.status], "Decidido por": r.decidedBy ?? "—", Mensagem: r.decisionNote ?? "", Observações: r.notes ?? "",
           }))} />
       </section>

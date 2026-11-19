@@ -83,6 +83,7 @@ async function Content({ params, searchParams }: { params: PageProps<"/reserva/[
         )}
         <a href={`tel:${site.phoneE164}`} className="text-sm text-gold-300 underline underline-offset-4">Ligar para o restaurante</a>
         <Link href="/reservas" className="text-sm text-gold-300 underline underline-offset-4">Fazer outra reserva</Link>
+        <Link href="/minhas-reservas" className="text-sm text-gold-300 underline underline-offset-4" data-testid="my-reservations-link">As minhas reservas</Link>
       </div>
       <p className="mt-8 text-xs text-mist">Guarde este link: é a forma de acompanhar a reserva. Não o partilhe.</p>
     </div>

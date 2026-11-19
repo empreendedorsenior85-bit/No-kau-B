@@ -8,8 +8,9 @@ const SAFE = (v: string | number) => {
   return /[";\n\r]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
 };
 
-export function toCsv(rows: Record<string, string | number>[]): string {
-  if (rows.length === 0) return "﻿";
-  const cols = Object.keys(rows[0]);
+/** `columns`: cabeçalho a usar quando não há linhas (um período sem dados dá um ficheiro com cabeçalho, não vazio). */
+export function toCsv(rows: Record<string, string | number>[], columns?: string[]): string {
+  const cols = rows.length ? Object.keys(rows[0]) : columns ?? [];
+  if (!cols.length) return "﻿";
   return "﻿" + [cols.map(SAFE).join(";"), ...rows.map((r) => cols.map((c) => SAFE(r[c] ?? "")).join(";"))].join("\r\n") + "\r\n";
 }

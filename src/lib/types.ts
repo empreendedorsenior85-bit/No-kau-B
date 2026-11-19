@@ -81,7 +81,7 @@ export const PAYMENT_LABEL: Record<PaymentMethod, string> = {
 export type ReservationStatus = "pending" | "approved" | "rejected" | "cancelled";
 export const RESERVATION_LABEL: Record<ReservationStatus, string> = { pending: "Pendente", approved: "Aprovada", rejected: "Rejeitada", cancelled: "Cancelada" };
 export type Reservation = {
-  id: string; code: string; name: string; phone: string; email: string; date: string; time: string; guests: number; notes: string | null;
+  id: string; code: string; name: string; phone: string; email: string | null; date: string; time: string; guests: number; notes: string | null;
   status: ReservationStatus; decidedBy: string | null; decidedAt: string | null; decisionNote: string | null; createdAt: string; rev: number;
   hasAccount: boolean;
 };

@@ -50,7 +50,7 @@ function Inner({ onReset }: { onReset: () => void }) {
         <Input label="Nome completo" name="name" autoComplete="name" required defaultValue={v.name} error={err.name} />
       </div>
       <Input label="Telefone" name="phone" type="tel" inputMode="tel" autoComplete="tel" placeholder="+245 …" required defaultValue={v.phone} error={err.phone} />
-      <Input label="Email" name="email" type="email" autoComplete="email" required defaultValue={v.email} error={err.email} />
+      <Input label="Email (opcional)" name="email" type="email" autoComplete="email" defaultValue={v.email} error={err.email} />
       <Input label="Data" name="date" type="date" min={today} required defaultValue={v.date} error={err.date} />
       <Input label="Hora" name="time" type="time" step={900} required defaultValue={v.time} error={err.time} hint="Horário de funcionamento a confirmar pelo restaurante." />
       <Input label="Número de pessoas" name="guests" type="number" inputMode="numeric" min={1} max={30} required defaultValue={v.guests ?? "2"} error={err.guests} />

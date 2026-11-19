@@ -38,6 +38,7 @@ export default function ReservasPage() {
             <a href={`tel:${site.phoneE164}`} className="mt-1 block font-display text-2xl text-white hover:text-gold-300">
               {site.phoneDisplay}
             </a>
+            <a href="/minhas-reservas" className="mt-4 block text-sm text-gold-300 underline underline-offset-4">Ver as minhas reservas</a>
             <p className="mt-3 text-xs text-mist">Grupos acima de 30 pessoas: veja os <a href="/eventos#privados" className="text-gold-300 underline">eventos privados</a>.</p>
           </div>
         </aside>

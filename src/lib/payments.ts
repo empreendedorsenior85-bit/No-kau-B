@@ -2,7 +2,7 @@ import "server-only";
 import { query, tx } from "./db";
 import { ensureMigrated } from "@/db/init";
 import { isLocalServer } from "./node-role";
-import { PAYMENT_METHODS, type PaymentMethod } from "./types";
+import { PAYMENT_METHODS, formatOrderNumber, formatReceiptNumber, type PaymentMethod } from "./types";
 
 /**
  * Pagamentos feitos EM MÃO no restaurante e confirmados pelo gerente (Admin/Gerente).
@@ -192,4 +192,28 @@ export async function paymentsChangedSince(cursor: number): Promise<{ id: string
      union
      (select id, rev, status, amount from payments where rev <= $1 and updated_at > now() - interval '20 seconds' limit 100)`, [cursor]);
   return r.rows.map((x) => ({ id: x.id, rev: Number(x.rev), status: x.status, amount: x.amount }));
+}
+
+/** Linhas do relatório de pagamentos (CSV e PDF): todos os pagamentos do período, confirmados e anulados. */
+export function paymentReportRows(payments: Payment[]): Record<string, string | number>[] {
+  const TZ = "Africa/Bissau";
+  const LABEL: Record<string, string> = { cash: "Numerário", orange_money: "Orange Money", mtn_momo: "MTN MoMo", card: "Cartão (TPA)", transfer: "Transferência" };
+  return payments.map((p) => {
+    const d = new Date(p.createdAt);
+    return {
+      Recibo: formatReceiptNumber(p.receiptNumber, p.origin),
+      Data: d.toLocaleDateString("pt-PT", { timeZone: TZ }),
+      Hora: d.toLocaleTimeString("pt-PT", { hour: "2-digit", minute: "2-digit", timeZone: TZ }),
+      Mesa: p.tableLabel,
+      "Método": LABEL[p.method] ?? p.method,
+      Estado: p.status === "confirmed" ? "Confirmado" : "Anulado",
+      "Valor (FCFA)": p.amount,
+      "Recebido (FCFA)": p.status === "confirmed" ? p.amount : 0,
+      "Entregue (FCFA)": p.tendered ?? "",
+      "Troco (FCFA)": p.change ?? "",
+      "Recebido por": p.receivedBy,
+      Pedidos: p.orders.map((o) => formatOrderNumber(o.number, o.origin)).join(", "),
+      "Anulação": p.status === "voided" ? `${p.voidedBy ?? ""}: ${p.voidReason ?? ""}` : "",
+    };
+  });
 }

@@ -543,3 +543,38 @@ alter table print_jobs add column if not exists payment_id uuid references payme
 alter table print_jobs drop constraint if exists print_jobs_kind_check;
 alter table print_jobs add constraint print_jobs_kind_check check (kind in ('order','reprint','test','receipt'));
 `;
+
+/**
+ * Perfil de visitante (sem palavra-passe) para acompanhar reservas.
+ *  - o email da reserva passa a opcional (nome completo e telefone continuam obrigatórios);
+ *  - o perfil fica ligado ao aparelho (sessão no servidor) e vê as reservas feitas nesse aparelho;
+ *  - noutro aparelho, cada reserva junta-se com telefone + código dessa reserva (um código abre só a sua reserva):
+ *    sem SMS não se prova a posse do telefone, por isso o telefone sozinho nunca dá acesso a reservas.
+ */
+export const MIGRATE_VISITORS_SQL = /* sql */ `
+select pg_advisory_xact_lock(727012);
+alter table reservations alter column email drop not null;
+alter table reservations drop constraint if exists reservations_email_check;
+alter table reservations add constraint reservations_email_check check (email is null or length(email) between 5 and 160);
+create table if not exists visitors (
+  id uuid primary key default gen_random_uuid(),
+  name text not null check (length(name) between 2 and 80),
+  phone text not null check (phone ~ '^\\+?[0-9]{7,15}$'),
+  email text check (email is null or length(email) between 5 and 160),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+create index if not exists visitors_phone_idx on visitors(phone);
+create table if not exists visitor_reservations (
+  visitor_id uuid not null references visitors(id) on delete cascade,
+  reservation_id uuid not null references reservations(id) on delete cascade,
+  via text not null check (via in ('created','code')),
+  added_at timestamptz not null default now(),
+  primary key (visitor_id, reservation_id)
+);
+create index if not exists visitor_reservations_res_idx on visitor_reservations(reservation_id);
+alter table visitors enable row level security;
+alter table visitor_reservations enable row level security;
+alter table auth_sessions drop constraint if exists auth_sessions_kind_check;
+alter table auth_sessions add constraint auth_sessions_kind_check check (kind in ('staff','client','visitor'));
+`;

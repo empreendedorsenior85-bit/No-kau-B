@@ -9,7 +9,7 @@ import type { ReservationStatus } from "@/lib/types";
  * rejeitada no outro, sem internet): vence a mais recente e o conflito fica registado na Atividade.
  */
 export type WireReservation = {
-  id: string; code: string; accessToken: string; origin: "central" | "local"; name: string; phone: string; email: string;
+  id: string; code: string; accessToken: string; origin: "central" | "local"; name: string; phone: string; email: string | null;
   date: string; time: string; guests: number; notes: string | null; status: ReservationStatus; decidedBy: string | null;
   decidedAt: string | null; decisionNote: string | null; idempotencyKey: string; createdAt: string; statusChangedAt: string;
 };
@@ -22,7 +22,7 @@ export function isWireReservation(o: unknown): o is WireReservation {
   const x = o as WireReservation;
   return !!x && typeof x === "object" && UUID.test(x.id) && /^R-[A-Z0-9]{6}$/.test(x.code) && /^[A-Za-z0-9_-]{20,64}$/.test(x.accessToken)
     && (x.origin === "central" || x.origin === "local") && typeof x.name === "string" && x.name.length >= 2 && x.name.length <= 80
-    && typeof x.phone === "string" && x.phone.length <= 20 && typeof x.email === "string" && x.email.length <= 160
+    && typeof x.phone === "string" && x.phone.length <= 20 && (x.email === null || (typeof x.email === "string" && x.email.length <= 160))
     && /^\d{4}-\d{2}-\d{2}$/.test(x.date) && /^\d{2}:\d{2}$/.test(x.time) && Number.isInteger(x.guests) && x.guests >= 1 && x.guests <= 30
     && okText(x.notes, 600) && ["pending", "approved", "rejected", "cancelled"].includes(x.status) && okText(x.decidedBy, 160)
     && (x.decidedAt === null || okDate(x.decidedAt)) && okText(x.decisionNote, 300)
@@ -30,7 +30,7 @@ export function isWireReservation(o: unknown): o is WireReservation {
 }
 
 type Row = {
-  id: string; code: string; access_token: string; origin: "central" | "local"; name: string; phone: string; email: string; date: string; time: string;
+  id: string; code: string; access_token: string; origin: "central" | "local"; name: string; phone: string; email: string | null; date: string; time: string;
   guests: number; notes: string | null; status: ReservationStatus; decided_by: string | null; decided_at: Date | null; decision_note: string | null;
   idempotency_key: string; created_at: Date; status_changed_at: Date; rev: string;
 };

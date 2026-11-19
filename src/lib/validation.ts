@@ -29,8 +29,9 @@ const base = {
 
 export const reservationSchema = z.object({
   ...base,
-  // reservas: o email é obrigatório (identifica o pedido e permite contactar o cliente)
-  email: z.string().trim().max(160).refine((v) => z.email().safeParse(v).success, "Indique um email válido."),
+  // reservas: nome completo e telefone obrigatórios; email opcional (sem palavra-passe nem confirmação)
+  name: z.string().trim().min(2, "Indique o seu nome completo.").max(80, "Nome demasiado longo.")
+    .refine((v) => /\S+\s+\S+/.test(v), "Indique o nome completo (nome e apelido)."),
   key: z.string().regex(/^[A-Za-z0-9_-]{16,64}$/).optional(),
   date: z
     .string()

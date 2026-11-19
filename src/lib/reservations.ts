@@ -12,7 +12,7 @@ import { RESERVATION_LABEL, type PublicReservation, type Reservation, type Reser
  */
 
 type Row = {
-  id: string; code: string; name: string; phone: string; email: string; date: string; time: string; guests: number; notes: string | null;
+  id: string; code: string; name: string; phone: string; email: string | null; date: string; time: string; guests: number; notes: string | null;
   status: ReservationStatus; decided_by: string | null; decided_at: Date | null; decision_note: string | null; created_at: Date; rev: string;
   has_account: boolean;
 };
@@ -35,7 +35,7 @@ const newCode = () => `R-${Array.from(randomBytes(6), (b) => ALPHA[b % ALPHA.len
 const newToken = () => randomBytes(18).toString("base64url"); // 144 bits: impossível de adivinhar
 export const isResToken = (t: string) => /^[A-Za-z0-9_-]{24}$/.test(t);
 
-export type NewReservation = { name: string; phone: string; email: string; date: string; time: string; guests: number; notes?: string | null; key: string };
+export type NewReservation = { name: string; phone: string; email: string | null; date: string; time: string; guests: number; notes?: string | null; key: string };
 
 /** Data/hora em Bissau (UTC+0, sem hora de verão). */
 const nowBissau = () => new Date().toISOString().slice(0, 16).replace("T", " ");
@@ -48,7 +48,8 @@ export async function createReservation(r: NewReservation, customerId: string | 
   const prev = await query<Row & { access_token: string }>(`${SELECT.replace("from reservations r", ", r.access_token from reservations r")} where r.idempotency_key = $1`, [r.key]);
   if (prev.rows[0]) return { ok: true, reservation: toRes(prev.rows[0]), token: prev.rows[0].access_token, duplicate: true };
   // anti-abuso por contacto (não por IP): no máximo 5 pedidos pendentes por email ou telefone
-  const pend = await query<{ n: string }>("select count(*) n from reservations where status = 'pending' and (lower(email) = lower($1) or phone = $2)", [r.email, r.phone]);
+  const email = r.email?.trim().toLowerCase() || null; // email opcional
+  const pend = await query<{ n: string }>("select count(*) n from reservations where status = 'pending' and ((email is not null and lower(email) = $1) or phone = $2)", [email, r.phone]);
   if (Number(pend.rows[0].n) >= 5) return { ok: false, message: "Já tem 5 pedidos de reserva à espera de resposta. Aguarde a decisão do restaurante ou ligue-nos." };
   const local = isLocalServer();
   for (let attempt = 0; attempt < 5; attempt++) {
@@ -57,11 +58,11 @@ export async function createReservation(r: NewReservation, customerId: string | 
       const ins = await query<{ id: string }>(
         `insert into reservations (code, access_token, customer_id, name, phone, email, date, time, guests, notes, idempotency_key, origin, needs_push)
          values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13) returning id`,
-        [newCode(), token, local ? null : customerId, r.name, r.phone, r.email.toLowerCase(), r.date, r.time, r.guests, r.notes?.trim() || null, r.key,
+        [newCode(), token, local ? null : customerId, r.name, r.phone, email, r.date, r.time, r.guests, r.notes?.trim() || null, r.key,
           local ? "local" : "central", local]);
       const row = (await query<Row>(`${SELECT} where r.id = $1`, [ins.rows[0].id])).rows[0];
       await query(`insert into audit_log (actor, action, entity, entity_id, detail) values ($1,'reservation.create','reservation',$2,$3)`,
-        [r.email.toLowerCase(), row.id, JSON.stringify({ code: row.code, date: r.date, time: r.time, guests: r.guests })]);
+        [email ?? r.phone, row.id, JSON.stringify({ code: row.code, date: r.date, time: r.time, guests: r.guests })]);
       return { ok: true, reservation: toRes(row), token, duplicate: false };
     } catch (e) {
       const err = e as { code?: string; constraint?: string };
@@ -150,7 +151,7 @@ export async function reservationHistory(f: { from: string; to: string; status?:
   const q = f.q?.trim() ? `%${f.q.trim().toLowerCase()}%` : null;
   const r = await query<Row>(
     `${SELECT} where r.date between $1::date and $2::date and ($3::text is null or r.status = $3)
-       and ($4::text is null or lower(r.name) like $4 or r.phone like $4 or lower(r.email) like $4 or lower(r.code) like $4)
+       and ($4::text is null or lower(r.name) like $4 or r.phone like $4 or lower(coalesce(r.email, '')) like $4 or lower(r.code) like $4)
      order by r.date desc, r.time desc limit 1000`, [f.from, f.to, f.status ?? null, q]);
   return r.rows.map(toRes);
 }

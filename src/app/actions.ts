@@ -1,6 +1,8 @@
 "use server";
 
 import { errInfo, log } from "@/lib/log";
+import { attachReservationToVisitor, claimReservation, forgetVisitorDevice } from "@/lib/visitors";
+import { clearFailures, isThrottled, loginKeys, recordFailure } from "@/lib/sessions";
 import { headers } from "next/headers";
 import { privateEventSchema, reservationSchema } from "@/lib/validation";
 import { deliver } from "@/lib/delivery";
@@ -72,13 +74,16 @@ export async function submitReservation(_prev: FormState, fd: FormData): Promise
     let created;
     try {
       created = await createReservation(
-        { name: r.name, phone: r.phone, email: r.email, date: r.date, time: r.time, guests: r.guests, notes: r.notes ?? null, key: r.key ?? newKey() },
+        { name: r.name, phone: r.phone, email: r.email || null, date: r.date, time: r.time, guests: r.guests, notes: r.notes ?? null, key: r.key ?? newKey() },
         customer?.id ?? null);
     } catch (e) {
       log.error("reserva.save_failed", errInfo(e));
       return { status: "error", message: "Não foi possível guardar a reserva agora. Tente de novo dentro de momentos ou ligue-nos.", values: raw };
     }
     if (!created.ok) return { status: "error", message: created.message, fieldErrors: { time: created.message }, values: raw };
+    // perfil de visitante deste aparelho (sem palavra-passe): guarda nome/telefone/email e liga a reserva
+    await attachReservationToVisitor(created.reservation.id, { name: r.name, phone: r.phone, email: r.email || null })
+      .catch((e) => log.warn("visitor.attach_failed", errInfo(e)));
     redirect(`/reserva/${created.token}?nova=1`);
   }
 
@@ -123,4 +128,29 @@ export async function submitPrivateEvent(_prev: FormState, fd: FormData): Promis
     `Data: ${fmtDate(e.date)}\nPessoas: ${e.guests}\n` +
     (e.notes ? `Detalhes: ${e.notes}` : "");
   return { status: "manual", summary: summary.trim() };
+}
+
+
+// ---------- perfil de visitante (reservas sem palavra-passe) ----------
+export type ClaimState = { ok?: string; error?: string; values?: { phone?: string; code?: string } };
+
+/** Juntar a este aparelho uma reserva feita noutro: telefone + código da reserva. Tentativas limitadas. */
+export async function claimReservationAction(_: ClaimState, fd: FormData): Promise<ClaimState> {
+  const phone = String(fd.get("phone") ?? "").trim().slice(0, 30);
+  const code = String(fd.get("code") ?? "").trim().slice(0, 12);
+  const h = await headers();
+  const ip = h.get("x-forwarded-for")?.split(",")[0]?.trim() || h.get("x-real-ip") || "local";
+  const keys = loginKeys("visitante", ip, phone.replace(/\D/g, ""));
+  if (await isThrottled(keys)) return { error: "Demasiadas tentativas. Aguarde 15 minutos.", values: { phone, code } };
+  if (!(await claimReservation(phone, code))) {
+    await recordFailure(keys);
+    return { error: "Não encontrámos uma reserva com esse código e esse telefone.", values: { phone, code } };
+  }
+  await clearFailures(keys);
+  redirect("/minhas-reservas");
+}
+
+export async function forgetVisitorAction() {
+  await forgetVisitorDevice();
+  redirect("/minhas-reservas");
 }

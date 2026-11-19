@@ -28,6 +28,8 @@ const nextConfig: NextConfig = {
     ];
   },
   partialPrefetching: true,
+  // o PDF dos relatórios lê o logótipo oficial do disco: tem de ir dentro da função do servidor (Vercel)
+  outputFileTracingIncludes: { "/admin/relatorios/pdf": ["./public/brand/logo-nokau.png"] },
   turbopack: {
     rules: {
       "*.css": {

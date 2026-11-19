@@ -86,14 +86,14 @@ export function TableHelp({ token, online }: { token: string; online: boolean })
   return (
     <section aria-labelledby="ajuda" data-testid="table-help" className="mt-5 rounded-2xl border border-kau-800 bg-kau-900 p-4">
       <h2 id="ajuda" className="font-display text-xl text-white">Precisa de ajuda?</h2>
-      <div className="mt-3 grid grid-cols-3 gap-2">
+      <div className="mt-3 grid grid-cols-3 gap-2.5">
         {BUTTONS.map((b) => {
           const isActive = active.some((c) => c.kind === b.kind);
           return (
             <button key={b.kind} onClick={() => call(b.kind)} disabled={busy !== null || isActive}
               data-testid={`call-${b.kind}`}
-              className="flex min-h-16 flex-col items-center justify-center gap-1 rounded-xl border border-gold/50 bg-kau-950 px-2 py-2 text-center text-xs font-medium leading-tight text-gold-300 transition-transform active:scale-95 disabled:opacity-50">
-              <span aria-hidden className="text-lg">{b.icon}</span>
+              className="flex min-h-20 flex-col items-center justify-center gap-1.5 rounded-2xl border border-gold/70 bg-gold/10 px-2 py-3 text-center text-sm font-semibold leading-tight text-gold-300 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] transition-transform hover:bg-gold/15 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold-300 active:scale-95 disabled:opacity-50">
+              <span aria-hidden className="text-2xl">{b.icon}</span>
               {busy === b.kind ? "A chamar…" : b.label}
             </button>
           );

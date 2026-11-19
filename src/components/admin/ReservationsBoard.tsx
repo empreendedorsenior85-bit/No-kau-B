@@ -44,7 +44,7 @@ function Card({ r }: { r: Reservation }) {
       <dl className="mt-3 space-y-1 border-t border-kau-800 pt-3 text-sm">
         <div className="flex gap-2"><dt className="w-20 shrink-0 text-mist">Nome</dt><dd className="text-white">{r.name}{r.hasAccount && <span className="ml-2 text-xs text-gold-300">(cliente com conta)</span>}</dd></div>
         <div className="flex gap-2"><dt className="w-20 shrink-0 text-mist">Telefone</dt><dd><a href={`tel:${r.phone}`} className="text-white underline-offset-4 hover:underline">{r.phone}</a></dd></div>
-        <div className="flex gap-2"><dt className="w-20 shrink-0 text-mist">Email</dt><dd className="break-all text-white">{r.email}</dd></div>
+        <div className="flex gap-2"><dt className="w-20 shrink-0 text-mist">Email</dt><dd className="break-all text-white">{r.email ?? "—"}</dd></div>
         {r.notes && <div className="flex gap-2"><dt className="w-20 shrink-0 text-mist">Notas</dt><dd className="text-[#e0a64a]">{r.notes}</dd></div>}
         <div className="flex gap-2"><dt className="w-20 shrink-0 text-mist">Pedido</dt><dd className="text-mist">{when(r.createdAt)}</dd></div>
       </dl>
