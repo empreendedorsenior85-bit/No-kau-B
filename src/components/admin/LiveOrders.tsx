@@ -2,6 +2,7 @@
 import { useRouter } from "next/navigation";
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import type { Order, Reservation, ServiceCall } from "@/lib/types";
+import type { StockLevel } from "@/lib/stock";
 import { formatOrderNumber } from "@/lib/types";
 
 export type Conn = "connecting" | "live" | "reconnecting" | "offline";
@@ -20,6 +21,11 @@ type Ctx = {
   pendingReservations: number;
   /** Último pagamento confirmado/anulado recebido em tempo real (rev) — as páginas de pagamentos atualizam-se. */
   paymentsRev: number;
+  /** Stock (só Admin/Gerente), em tempo real; `stockAlerts` = produtos esgotados ou a acabar. */
+  stock: StockLevel[];
+  stockAlerts: number;
+  upsertStock: (l: StockLevel) => void;
+  removeStock: (menuItemId: number) => void;
   loaded: boolean;
   conn: Conn;
   unseen: Set<string>; // pedidos novos ainda não vistos
@@ -74,6 +80,7 @@ export function LiveOrdersProvider({ children, me }: { children: ReactNode; me: 
     me.role !== "garcom" || (c.kind !== "manager" && (!c.waiterId || c.waiterId === me.id)), [me.id, me.role]);
   const [loaded, setLoaded] = useState(false);
   const [paymentsRev, setPaymentsRev] = useState(0);
+  const [stockMap, setStockMap] = useState<Map<number, StockLevel>>(new Map());
   const [conn, setConn] = useState<Conn>("connecting");
   const [unseen, setUnseen] = useState<Set<string>>(new Set());
   const [alertsOn, setAlertsOn] = useState(false);
@@ -109,6 +116,28 @@ export function LiveOrdersProvider({ children, me }: { children: ReactNode; me: 
   const notifyCall = useCallback(() => {
     if (alertsRef.current && audio.current) { beep(audio.current); setTimeout(() => audio.current && beep(audio.current), 700); }
     vibrate([300, 100, 300, 100, 300]);
+  }, []);
+
+  /** Nível de stock recebido: ignora versões antigas; alerta (som) quando um produto passa a "a acabar" ou "esgotado". */
+  const stockSeen = useRef<Map<number, { rev: number; status: StockLevel["status"] }>>(new Map());
+  const upsertStock = useCallback((l: StockLevel) => {
+    const prev = stockSeen.current.get(l.menuItemId);
+    if (prev && prev.rev >= l.rev) return;
+    stockSeen.current.set(l.menuItemId, { rev: l.rev, status: l.status });
+    const rank = { ok: 0, low: 1, out: 2 } as const;
+    if (prev && rank[l.status] > rank[prev.status] && !firstLoad.current) notifyCall();
+    setStockMap((m) => {
+      const cur = m.get(l.menuItemId);
+      if (cur && cur.rev >= l.rev) return m;
+      const n = new Map(m);
+      n.set(l.menuItemId, l);
+      return n;
+    });
+  }, [notifyCall]);
+
+  const removeStock = useCallback((id: number) => {
+    stockSeen.current.delete(id);
+    setStockMap((m) => { if (!m.has(id)) return m; const n = new Map(m); n.delete(id); return n; });
   }, []);
 
   /** Chamada recebida: ignora versões antigas; alerta só chamadas NOVAS e à espera. */
@@ -153,7 +182,17 @@ export function LiveOrdersProvider({ children, me }: { children: ReactNode; me: 
       const r = await fetch("/api/admin/orders", { cache: "no-store" });
       if (r.status === 401) { router.replace("/admin/login"); throw new Error("auth"); }
       if (!r.ok) throw new Error(`http ${r.status}`);
-      const data: { orders: Order[]; rev: number; calls?: ServiceCall[]; reservations?: Reservation[] } = await r.json();
+      const data: { orders: Order[]; rev: number; calls?: ServiceCall[]; reservations?: Reservation[]; stock?: StockLevel[] } = await r.json();
+      for (const l of data.stock ?? []) {
+        const prev = stockSeen.current.get(l.menuItemId);
+        if (!prev || l.rev > prev.rev) stockSeen.current.set(l.menuItemId, { rev: l.rev, status: l.status });
+      }
+      setStockMap((m) => {
+        const n = new Map<number, StockLevel>();
+        for (const l of data.stock ?? []) n.set(l.menuItemId, l);
+        for (const [id, l] of m) { const s = n.get(id); if (s && l.rev > s.rev) n.set(id, l); }
+        return n;
+      });
       setCallMap((m) => {
         const n = new Map<string, ServiceCall>();
         for (const c of data.calls ?? []) n.set(c.id, c);
@@ -225,6 +264,9 @@ export function LiveOrdersProvider({ children, me }: { children: ReactNode; me: 
       es.addEventListener("reservation", (e) => {
         try { upsertReservation(JSON.parse((e as MessageEvent).data)); } catch {}
       });
+      es.addEventListener("stock", (e) => {
+        try { upsertStock(JSON.parse((e as MessageEvent).data)); } catch {}
+      });
       es.addEventListener("payment", (e) => {
         try { const p = JSON.parse((e as MessageEvent).data) as { rev: number }; setPaymentsRev((v) => Math.max(v, p.rev)); } catch {}
       });
@@ -252,7 +294,7 @@ export function LiveOrdersProvider({ children, me }: { children: ReactNode; me: 
       window.removeEventListener("online", goOnline);
       document.removeEventListener("visibilitychange", onVisible);
     };
-  }, [upsert, upsertCall, upsertReservation, notifyNew, notifyCall, concernsMe, router]);
+  }, [upsert, upsertCall, upsertReservation, upsertStock, notifyNew, notifyCall, concernsMe, router]);
 
   // Plano B: enquanto o canal em tempo real não está ligado (rede móvel instável, proxies que retêm
   // a ligação), consulta o servidor de 5 em 5 segundos — os pedidos nunca ficam retidos.
@@ -290,7 +332,9 @@ export function LiveOrdersProvider({ children, me }: { children: ReactNode; me: 
   const orders = useMemo(() => [...map.values()].sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt)), [map]);
   const reservations = useMemo(() => [...resMap.values()].sort((a, b) => `${a.date} ${a.time}`.localeCompare(`${b.date} ${b.time}`)), [resMap]);
   const pendingReservations = reservations.filter((r) => r.status === "pending").length;
-  const value: Ctx = { orders, calls, upsertCall, openCalls, me, reservations, upsertReservation, pendingReservations, paymentsRev, loaded, conn, unseen, acknowledge, upsert, alertsOn, enableAlerts, refresh: () => bootRef.current() };
+  const stock = useMemo(() => [...stockMap.values()].sort((a, b) => ({ out: 0, low: 1, ok: 2 }[a.status] - { out: 0, low: 1, ok: 2 }[b.status]) || a.name.localeCompare(b.name, "pt")), [stockMap]);
+  const stockAlerts = stock.filter((l) => l.status !== "ok").length;
+  const value: Ctx = { orders, calls, upsertCall, openCalls, me, reservations, upsertReservation, pendingReservations, paymentsRev, stock, stockAlerts, upsertStock, removeStock, loaded, conn, unseen, acknowledge, upsert, alertsOn, enableAlerts, refresh: () => bootRef.current() };
   return <LiveCtx.Provider value={value}>{children}</LiveCtx.Provider>;
 }
 

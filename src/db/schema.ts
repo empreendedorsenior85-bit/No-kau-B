@@ -578,3 +578,130 @@ alter table visitor_reservations enable row level security;
 alter table auth_sessions drop constraint if exists auth_sessions_kind_check;
 alter table auth_sessions add constraint auth_sessions_kind_check check (kind in ('staff','client','visitor'));
 `;
+
+/**
+ * Gestão de stock (por produto do menu, 1 vendido = 1 a menos).
+ *  - stock_levels: produtos com stock controlado (quantidade atual, mínimo, esgotado automático);
+ *  - stock_movements: histórico IMUTÁVEL de cada entrada, saída, contagem, venda e estorno;
+ *  - stock_move(): única forma de mudar a quantidade (atualiza, regista o movimento e o esgotado automático);
+ *  - gatilhos em orders/order_items: o pedido CONCLUÍDO desconta; se deixar de estar concluído, repõe.
+ *    O cálculo é por diferença (o que já foi descontado vs. o que deve estar), por isso é idempotente
+ *    (sincronização repetida, ida e volta de estado) e funciona para pedidos vindos do servidor local.
+ *    Pedidos de teste não mexem no stock.
+ */
+export const MIGRATE_STOCK_SQL = /* sql */ `
+select pg_advisory_xact_lock(727013);
+create table if not exists stock_levels (
+  menu_item_id int primary key references menu_items(id) on delete cascade,
+  quantity int not null default 0 check (quantity between -100000 and 1000000),
+  min_quantity int not null default 0 check (min_quantity between 0 and 100000),
+  auto_soldout boolean not null default true,
+  soldout_by_stock boolean not null default false,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  updated_by text,
+  rev bigint not null default nextval('orders_rev_seq')
+);
+create index if not exists stock_levels_rev_idx on stock_levels(rev);
+create table if not exists stock_movements (
+  id bigserial primary key,
+  menu_item_id int not null references menu_items(id) on delete cascade,
+  kind text not null check (kind in ('inicial','entrada','saida','ajuste','venda','estorno')),
+  delta int not null,
+  quantity_after int not null,
+  reason text check (reason is null or length(reason) <= 200),
+  order_id uuid,
+  actor text not null check (length(actor) between 1 and 160),
+  created_at timestamptz not null default now()
+);
+create index if not exists stock_movements_item_idx on stock_movements(menu_item_id, created_at desc);
+create index if not exists stock_movements_created_idx on stock_movements(created_at desc);
+create index if not exists stock_movements_order_idx on stock_movements(order_id) where order_id is not null;
+alter table stock_levels enable row level security;
+alter table stock_movements enable row level security;
+
+create or replace function stock_levels_touch() returns trigger as $$
+begin
+  new.rev := nextval('orders_rev_seq');
+  new.updated_at := now();
+  return new;
+end $$ language plpgsql;
+drop trigger if exists stock_levels_touch_trg on stock_levels;
+create trigger stock_levels_touch_trg before update on stock_levels for each row execute function stock_levels_touch();
+
+-- histórico imutável (só desaparece se o próprio produto do menu for apagado)
+create or replace function stock_movements_guard() returns trigger as $$
+begin
+  if tg_op = 'DELETE' and not exists (select 1 from menu_items where id = old.menu_item_id) then return old; end if;
+  raise exception 'Movimentos de stock não podem ser alterados nem apagados';
+end $$ language plpgsql;
+drop trigger if exists stock_movements_guard_trg on stock_movements;
+create trigger stock_movements_guard_trg before update or delete on stock_movements for each row execute function stock_movements_guard();
+
+-- esgotado automático: a zero (ou menos) tira o produto do menu; com stock volta a pô-lo,
+-- mas só se foi o stock que o tirou (um produto desligado à mão pelo gerente fica como está)
+create or replace function stock_sync_availability(p_item int) returns void as $$
+declare l stock_levels;
+begin
+  select * into l from stock_levels where menu_item_id = p_item;
+  if not found then return; end if;
+  if l.auto_soldout and l.quantity <= 0 then
+    if not l.soldout_by_stock then
+      update menu_items set available = false, updated_at = now() where id = p_item and available;
+      if found then update stock_levels set soldout_by_stock = true where menu_item_id = p_item; end if;
+    end if;
+  elsif l.soldout_by_stock then
+    update menu_items set available = true, updated_at = now() where id = p_item;
+    update stock_levels set soldout_by_stock = false where menu_item_id = p_item;
+  end if;
+end $$ language plpgsql;
+
+create or replace function stock_move(p_item int, p_delta int, p_kind text, p_reason text, p_order uuid, p_actor text) returns int as $$
+declare q int;
+begin
+  update stock_levels set quantity = quantity + p_delta, updated_by = p_actor where menu_item_id = p_item returning quantity into q;
+  if not found then return null; end if;
+  insert into stock_movements (menu_item_id, kind, delta, quantity_after, reason, order_id, actor)
+    values (p_item, p_kind, p_delta, q, p_reason, p_order, p_actor);
+  perform stock_sync_availability(p_item);
+  return q;
+end $$ language plpgsql;
+
+create or replace function stock_apply_order(p_order uuid) returns void as $$
+declare o record; it record; want int; have int;
+begin
+  select id, status, is_test, origin, number into o from orders where id = p_order;
+  if not found then return; end if;
+  for it in
+    select oi.menu_item_id, sum(oi.quantity)::int q
+    from order_items oi join stock_levels s on s.menu_item_id = oi.menu_item_id
+    where oi.order_id = p_order group by oi.menu_item_id
+  loop
+    want := case when o.status = 'done' and not o.is_test then -it.q else 0 end;
+    select coalesce(sum(delta), 0) into have from stock_movements
+      where order_id = p_order and menu_item_id = it.menu_item_id and kind in ('venda','estorno');
+    if want <> have then
+      perform stock_move(it.menu_item_id, want - have, case when want < have then 'venda' else 'estorno' end,
+        'Pedido ' || case when o.origin = 'local' then 'L' else '#' end || lpad(o.number::text, 4, '0'), p_order, 'Sistema (pedidos)');
+    end if;
+  end loop;
+end $$ language plpgsql;
+
+create or replace function orders_stock() returns trigger as $$
+begin
+  if tg_op = 'UPDATE' and new.status is not distinct from old.status and new.is_test is not distinct from old.is_test then return null; end if;
+  perform stock_apply_order(new.id);
+  return null;
+end $$ language plpgsql;
+drop trigger if exists orders_stock_trg on orders;
+create trigger orders_stock_trg after insert or update of status, is_test on orders for each row execute function orders_stock();
+
+-- pedidos sincronizados chegam primeiro sem produtos (os produtos entram logo a seguir)
+create or replace function order_items_stock() returns trigger as $$
+begin
+  perform stock_apply_order(new.order_id);
+  return null;
+end $$ language plpgsql;
+drop trigger if exists order_items_stock_trg on order_items;
+create trigger order_items_stock_trg after insert on order_items for each row execute function order_items_stock();
+`;

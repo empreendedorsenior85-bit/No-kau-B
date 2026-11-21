@@ -25,6 +25,7 @@ const GROUPS: { title: string; items: Item[] }[] = [
   ] },
   { title: "Gestão", items: [
     { href: "/admin/menu", label: "Menu", who: "manager", icon: ic("M4 4h16v4H4zM4 12h16M4 16h16M4 20h10") },
+    { href: "/admin/estoque", label: "Estoque", who: "manager", icon: ic("M21 8l-9-5-9 5v8l9 5 9-5V8zM3 8l9 5 9-5M12 13v8") },
     { href: "/admin/relatorios", label: "Relatórios", who: "manager", icon: ic("M4 20V10M10 20V4M16 20v-8M22 20H2") },
     { href: "/admin/recibos", label: "Recibos", who: "admin", icon: ic("M6 2h12v20l-3-2-3 2-3-2-3 2zM9 7h6M9 11h6M9 15h4") },
     { href: "/admin/impressoras", label: "Impressoras", who: "manager", icon: ic("M6 9V3h12v6M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2M6 14h12v7H6z") },
@@ -84,7 +85,7 @@ function SidebarContent({ email, role, groups, active, badge, onNavigate }: {
 /** Estrutura do painel: barra lateral fixa (computador ≥1024px) ou menu lateral ☰ (telemóvel e tablet), barra superior e conteúdo. */
 export function PanelFrame({ email, role, children }: { email: string; role: Role; children: ReactNode }) {
   const path = usePathname();
-  const { conn, unseen, alertsOn, enableAlerts, pendingReservations } = useLive();
+  const { conn, unseen, alertsOn, enableAlerts, pendingReservations, stockAlerts } = useLive();
   // o menu fica associado à página em que foi aberto: ao navegar, fecha sozinho
   const [openAt, setOpenAt] = useState<string | null>(null);
   const open = openAt === path;
@@ -94,8 +95,8 @@ export function PanelFrame({ email, role, children }: { email: string; role: Rol
   const groups = GROUPS.map((g) => ({ ...g, items: g.items.filter(sees) })).filter((g) => g.items.length);
   const active = (h: string) => path === h || path.startsWith(h + "/");
   const current = groups.flatMap((g) => g.items).find((i) => active(i.href));
-  const badgeCount = (href: string) => (href === "/admin/pedidos" ? unseen.size : href === "/admin/reservas" ? pendingReservations : 0);
-  const totalBadges = badgeCount("/admin/pedidos") + (role !== "garcom" ? badgeCount("/admin/reservas") : 0);
+  const badgeCount = (href: string) => (href === "/admin/pedidos" ? unseen.size : href === "/admin/reservas" ? pendingReservations : href === "/admin/estoque" ? stockAlerts : 0);
+  const totalBadges = badgeCount("/admin/pedidos") + (role !== "garcom" ? badgeCount("/admin/reservas") + badgeCount("/admin/estoque") : 0);
   const badge = (href: string) => badgeCount(href) > 0 && (
     <span data-testid={`badge-${href.split("/").pop()}`} className="ml-auto inline-grid h-5 min-w-5 shrink-0 place-items-center rounded-full bg-[#e0a64a] px-1.5 text-xs font-bold text-kau-950">{badgeCount(href)}</span>
   );

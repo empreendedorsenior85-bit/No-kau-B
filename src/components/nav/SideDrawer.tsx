@@ -1,18 +1,27 @@
 "use client";
-import { useEffect, useRef, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 
 /**
  * Menu lateral (gaveta) usado em telemóvel e tablet — o mesmo comportamento em todas as áreas da plataforma:
  *  - abre a partir do lado indicado, com fundo escurecido;
  *  - fecha com o botão ✕, com Esc, ao tocar fora e (no componente que o usa) ao navegar;
  *  - bloqueia o scroll da página por trás e mantém o foco do teclado dentro do menu;
- *  - quando fechado fica `inert` (não recebe foco nem toques) mas continua no DOM para a animação.
+ *  - o conteúdo só existe no DOM enquanto está aberto (e durante a animação de fecho): fechado, a navegação
+ *    não fica duplicada (a barra lateral do computador já a tem) nem é lida por leitores de ecrã.
  * A largura adapta-se ao ecrã (até 20rem, nunca mais de 86% da largura) e o conteúdo tem scroll próprio.
  */
 export function SideDrawer({ id, open, onClose, label, side = "left", children, className = "" }: {
   id: string; open: boolean; onClose: () => void; label: string; side?: "left" | "right"; children: ReactNode; className?: string;
 }) {
   const panel = useRef<HTMLDivElement>(null);
+  // conteúdo montado ao abrir; desmontado 320 ms depois de fechar (fim da animação)
+  const [mounted, setMounted] = useState(open);
+  if (open && !mounted) setMounted(true);
+  useEffect(() => {
+    if (open || !mounted) return;
+    const t = setTimeout(() => setMounted(false), 320);
+    return () => clearTimeout(t);
+  }, [open, mounted]);
   const opener = useRef<Element | null>(null);
   const close = useRef(onClose);
   useEffect(() => { close.current = onClose; }, [onClose]);
@@ -54,7 +63,7 @@ export function SideDrawer({ id, open, onClose, label, side = "left", children, 
           className={`absolute top-3 ${side === "left" ? "right-3" : "left-3"} z-10 grid h-10 w-10 place-items-center rounded-full text-mist hover:bg-kau-900 hover:text-white`}>
           <svg aria-hidden width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><path d="M6 6l12 12M18 6L6 18" /></svg>
         </button>
-        {children}
+        {mounted && children}
         </div>
       </div>
     </div>

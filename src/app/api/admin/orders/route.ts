@@ -4,6 +4,7 @@ import { snapshot, tableHistory } from "@/lib/orders";
 import { callsSnapshot } from "@/lib/calls";
 import { reservationsSnapshot } from "@/lib/reservations";
 import { isManagerRole } from "@/lib/auth-types";
+import { listStock } from "@/lib/stock";
 
 
 /** Instantâneo dos pedidos (ou histórico de uma mesa). Só para o gerente autenticado. */
@@ -24,7 +25,9 @@ export async function GET(req: Request) {
     const calls = await callsSnapshot();
     // reservas têm dados pessoais (telefone, email): só para Admin e Gerente
     const reservations = isManagerRole(me.role) ? await reservationsSnapshot() : [];
-    return Response.json({ ...snap, calls, reservations }, { headers: { "Cache-Control": "no-store" } });
+    // stock (alertas de produtos a acabar): só Admin e Gerente
+    const stock = isManagerRole(me.role) ? await listStock() : [];
+    return Response.json({ ...snap, calls, reservations, stock }, { headers: { "Cache-Control": "no-store" } });
   } catch (e) {
     log.error("admin.orders_failed", errInfo(e));
     return Response.json({ error: "server" }, { status: 500 });

@@ -5,6 +5,7 @@ import { callsChangedSince } from "@/lib/calls";
 import { reservationsChangedSince } from "@/lib/reservations";
 import { paymentsChangedSince } from "@/lib/payments";
 import { isManagerRole } from "@/lib/auth-types";
+import { stockChangedSince } from "@/lib/stock";
 
 export const maxDuration = 300;
 
@@ -48,6 +49,7 @@ export async function GET(req: Request) {
           const calls = await callsChangedSince(cursor); // mesma sequência de rev: o mesmo cursor serve os dois
           const reservations = seesReservations ? await reservationsChangedSince(cursor) : [];
           const payments = seesReservations ? await paymentsChangedSince(cursor) : []; // pagamentos: só Admin e Gerente
+          const stock = seesReservations ? await stockChangedSince(cursor) : []; // stock: só Admin e Gerente
           let next = cursor;
           for (const o of rows) {
             if (sent.get(o.id) === o.rev) continue;
@@ -72,6 +74,13 @@ export async function GET(req: Request) {
             sent.set(p.id, p.rev);
             next = Math.max(next, p.rev);
             send(`id: ${p.rev}\nevent: payment\ndata: ${JSON.stringify(p)}\n\n`);
+          }
+          for (const l of stock) {
+            const k = `stock:${l.menuItemId}`;
+            if (sent.get(k) === l.rev) continue;
+            sent.set(k, l.rev);
+            next = Math.max(next, l.rev);
+            send(`id: ${l.rev}\nevent: stock\ndata: ${JSON.stringify(l)}\n\n`);
           }
           cursor = next;
           if (sent.size > 500) sent.clear();

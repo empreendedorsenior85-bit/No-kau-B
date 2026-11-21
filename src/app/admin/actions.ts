@@ -127,7 +127,10 @@ export async function changeStatusAction(orderId: string, from: OrderStatus, to:
   if (!["pending", "preparing", "done"].includes(from) || !["pending", "preparing", "done"].includes(to)) {
     return { ok: false, message: "Estado inválido." };
   }
-  return changeStatus(orderId, from, to, m.email);
+  const r = await changeStatus(orderId, from, to, m.email);
+  // concluir (ou desfazer) desconta/repõe stock na base de dados e pode esgotar um produto: atualiza o menu público
+  if (r.ok && (from === "done" || to === "done")) updateTag("menu");
+  return r;
 }
 
 // ---------- chamadas dos clientes (toda a equipa, incluindo Garçom) ----------

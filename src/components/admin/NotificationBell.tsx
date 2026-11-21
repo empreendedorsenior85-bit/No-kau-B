@@ -13,7 +13,7 @@ const readAtSnapshot = () => { try { return localStorage.getItem(KEY) ?? "0"; } 
 
 /** Centro de notificações: pedidos novos desde a última vez que abriu + pedidos à espera há demasiado tempo. */
 export function NotificationBell() {
-  const { orders, loaded, openCalls, pendingReservations } = useLive();
+  const { orders, loaded, openCalls, pendingReservations, stock, stockAlerts } = useLive();
   const readAt = Number(useSyncExternalStore(subscribe, readAtSnapshot, () => "0"));
   const now = useNow(30_000);
   const [open, setOpen] = useState(false);
@@ -22,7 +22,7 @@ export function NotificationBell() {
   const fresh = orders.filter((o) => +new Date(o.createdAt) > readAt);
   const late = orders.filter((o) => o.status === "pending" && now && now - +new Date(o.createdAt) > 10 * 60_000);
   const waitingCalls = openCalls.filter((c) => c.status === "open");
-  const count = loaded ? new Set([...fresh.map((o) => o.id), ...late.map((o) => o.id), ...waitingCalls.map((c) => c.id)]).size + pendingReservations : 0;
+  const count = loaded ? new Set([...fresh.map((o) => o.id), ...late.map((o) => o.id), ...waitingCalls.map((c) => c.id)]).size + pendingReservations + stockAlerts : 0;
 
   useEffect(() => {
     if (!open) return;
@@ -53,6 +53,15 @@ export function NotificationBell() {
           {pendingReservations > 0 && (
             <Link href="/admin/reservas" onClick={() => setOpen(false)} data-testid="bell-reservations"
               className="mb-2 block rounded-xl bg-gold/10 px-2 py-2 text-sm text-gold-300">📅 {pendingReservations} reserva(s) à espera de decisão</Link>
+          )}
+          {stockAlerts > 0 && (
+            <Link href="/admin/estoque" onClick={() => setOpen(false)} data-testid="bell-stock"
+              className="mb-2 block rounded-xl bg-[#e48a7d]/15 px-2 py-2 text-sm text-[#f0b2a8]">
+              📦 Stock: {stock.filter((l) => l.status === "out").length > 0 && `${stock.filter((l) => l.status === "out").length} esgotado(s)`}
+              {stock.filter((l) => l.status === "out").length > 0 && stock.filter((l) => l.status === "low").length > 0 && " · "}
+              {stock.filter((l) => l.status === "low").length > 0 && `${stock.filter((l) => l.status === "low").length} a acabar`}
+              <span className="mt-0.5 block truncate text-xs text-mist">{stock.filter((l) => l.status !== "ok").slice(0, 4).map((l) => `${l.name} (${l.quantity})`).join(" · ")}</span>
+            </Link>
           )}
           {openCalls.length > 0 && (
             <ul className="mb-2 space-y-1" data-testid="bell-calls">
