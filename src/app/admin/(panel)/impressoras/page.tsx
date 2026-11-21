@@ -5,6 +5,7 @@ import { ensureMigrated } from "@/db/init";
 import { isPrintAgent, type PrinterRow } from "@/lib/print/agent";
 import { PrintersManager, type JobView } from "@/components/admin/PrintersManager";
 import { formatOrderNumber } from "@/lib/types";
+import Link from "next/link";
 
 export const metadata: Metadata = { title: "Impressoras" };
 
@@ -15,6 +16,15 @@ export default async function Page() {
     return (
       <div className="max-w-3xl space-y-4" data-testid="print-central-notice">
         <h1 className="font-display text-3xl text-white">Impressoras</h1>
+      <Link href="/admin/ajuda/impressora" data-testid="printer-tutorial-link"
+        className="flex items-center gap-4 rounded-2xl border border-gold/60 bg-gold/10 p-4 hover:bg-gold/15">
+        <span aria-hidden className="grid h-12 w-12 shrink-0 place-items-center rounded-full bg-gold text-2xl">🖨</span>
+        <span className="min-w-0 flex-1">
+          <span className="block font-display text-xl text-white">Primeira vez? Tutorial passo a passo</span>
+          <span className="block text-sm text-mist">Como ligar a impressora (cabo, Wi-Fi, USB ou Bluetooth), escolher o papel, imprimir um teste e resolver problemas.</span>
+        </span>
+        <span aria-hidden className="text-gold-300">→</span>
+      </Link>
         <p className="rounded-2xl border border-gold/40 bg-gold/5 p-5 text-sm leading-relaxed text-gold-300">
           A impressão automática dos talões é feita pelo <strong>servidor local do restaurante</strong> (o computador ligado ao router):
           só ele chega às impressoras da rede Wi-Fi/Ethernet ou USB — o site na internet não as alcança.
@@ -38,7 +48,18 @@ export default async function Page() {
   return (
     <>
       <h1 className="mb-1 font-display text-3xl text-white">Impressoras</h1>
-      <p className="mb-6 text-sm text-mist">Talões automáticos para a cozinha e o balcão (impressoras térmicas ESC/POS, 58 ou 80 mm, em rede ou USB).</p>
+      <p className="mb-4 text-sm text-mist">Talões automáticos para a cozinha e o balcão (impressoras térmicas ESC/POS, 58 ou 80 mm, em rede ou USB).</p>
+      <div className="mb-6">
+      <Link href="/admin/ajuda/impressora" data-testid="printer-tutorial-link"
+        className="flex items-center gap-4 rounded-2xl border border-gold/60 bg-gold/10 p-4 hover:bg-gold/15">
+        <span aria-hidden className="grid h-12 w-12 shrink-0 place-items-center rounded-full bg-gold text-2xl">🖨</span>
+        <span className="min-w-0 flex-1">
+          <span className="block font-display text-xl text-white">Primeira vez? Tutorial passo a passo</span>
+          <span className="block text-sm text-mist">Como ligar a impressora (cabo, Wi-Fi, USB ou Bluetooth), escolher o papel, imprimir um teste e resolver problemas.</span>
+        </span>
+        <span aria-hidden className="text-gold-300">→</span>
+      </Link>
+      </div>
       <PrintersManager
         categories={cats.rows}
         printers={printers.rows.map((p) => ({

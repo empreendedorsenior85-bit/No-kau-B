@@ -182,7 +182,7 @@ export function PrintersManager({ printers, categories, jobs }: { printers: Prin
       <section aria-labelledby="imp" className="space-y-3">
         <h2 id="imp" className="font-display text-2xl text-white">Impressoras ({printers.length})</h2>
         {printers.length === 0
-          ? <p className="rounded-2xl border border-dashed border-kau-800 p-6 text-center text-sm text-mist">Ainda não há impressoras. Adicione a da cozinha e a do balcão abaixo.</p>
+          ? <p className="rounded-2xl border border-dashed border-kau-800 p-6 text-center text-sm text-mist">Ainda não há impressoras. Adicione a da cozinha e a do balcão abaixo — ou siga o <a href="/admin/ajuda/impressora" className="text-gold-300 underline underline-offset-4">tutorial passo a passo</a>.</p>
           : <ul className="grid gap-3 lg:grid-cols-2">{printers.map((p) => <PrinterCard key={p.id} p={p} categories={categories} />)}</ul>}
       </section>
       <section aria-labelledby="nova" className="space-y-3">

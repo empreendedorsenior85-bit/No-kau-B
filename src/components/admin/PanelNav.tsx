@@ -37,6 +37,9 @@ const GROUPS: { title: string; items: Item[] }[] = [
     { href: "/admin/atividade", label: "Atividade", who: "admin", icon: ic("M22 12h-4l-3 9L9 3l-3 9H2") },
     { href: "/admin/conta", label: "A minha conta", who: "staff", icon: ic("M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2M12 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8z") },
   ] },
+  { title: "Ajuda", items: [
+    { href: "/admin/ajuda/impressora", label: "Ligar impressora", who: "manager", icon: ic("M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20zM9.1 9a3 3 0 0 1 5.8 1c0 2-3 3-3 3M12 17h.01") },
+  ] },
 ];
 
 const CONN: Record<Conn, { label: string; dot: string }> = {
