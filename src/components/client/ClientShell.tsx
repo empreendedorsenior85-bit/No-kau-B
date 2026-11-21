@@ -1,9 +1,26 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { Logo } from "@/components/brand/Logo";
+import { ClientNav } from "./ClientNav";
 
 /** Moldura das páginas do cliente (mesmo visual do menu da mesa). */
-export function ClientShell({ title, intro, back, children }: { title: string; intro?: string; back?: { href: string; label: string }; children: ReactNode }) {
+export function ClientShell({ title, intro, back, account, children }: {
+  title: string; intro?: string; back?: { href: string; label: string };
+  /** Cliente com sessão iniciada → barra lateral (computador) / menu lateral ☰ (telemóvel e tablet). */
+  account?: { name: string; email: string }; children: ReactNode;
+}) {
+  if (account) {
+    return (
+      <div className="nums-lining min-h-svh bg-kau-950 lg:pl-64 print:pl-0">
+        <ClientNav name={account.name} email={account.email} />
+        <main className="mx-auto max-w-3xl px-5 py-8">
+          <h1 className="font-display text-3xl text-white">{title}</h1>
+          {intro && <p className="mt-2 text-sm leading-relaxed text-mist">{intro}</p>}
+          <div className="mt-6">{children}</div>
+        </main>
+      </div>
+    );
+  }
   return (
     <div className="nums-lining min-h-svh bg-kau-950">
       <header className="border-b border-kau-800">

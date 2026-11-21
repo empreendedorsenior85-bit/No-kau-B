@@ -25,7 +25,7 @@ async function Content() {
   const [orders, reservations, payments] = await Promise.all([customerOrders(c.id), customerReservations(c.id), customerPayments(c.id)]);
   const unpaid = orders.filter((o) => !o.paid).reduce((n, o) => n + o.total, 0);
   return (
-    <ClientShell title={`Olá, ${c.name.split(" ")[0]}`} intro="Os seus pedidos no Nô Kau. O pagamento é feito no restaurante e confirmado pelo gerente.">
+    <ClientShell account={{ name: c.name, email: c.email }} title={`Olá, ${c.name.split(" ")[0]}`} intro="Os seus pedidos no Nô Kau. O pagamento é feito no restaurante e confirmado pelo gerente.">
       <section className="rounded-2xl border border-kau-800 bg-kau-900 p-4 text-sm" data-testid="client-profile">
         <p className="text-white">{c.name}</p>
         <p className="text-mist">{c.email} · {c.phone}</p>
@@ -34,7 +34,7 @@ async function Content() {
       <RememberMany items={reservations.map((r) => ({ token: r.token, code: r.code, date: r.date, status: r.status }))} />
       <section className="mt-6" aria-labelledby="minhas-reservas" data-testid="client-reservations">
         <div className="flex items-baseline justify-between">
-          <h2 id="minhas-reservas" className="font-display text-2xl text-white">As minhas reservas</h2>
+          <h2 id="minhas-reservas" className="scroll-mt-20 font-display text-2xl text-white">As minhas reservas</h2>
           <Link href="/reservas" className="text-sm text-gold-300 underline underline-offset-4">Reservar mesa</Link>
         </div>
         {reservations.length === 0 ? (
@@ -56,7 +56,7 @@ async function Content() {
         )}
       </section>
       <section className="mt-8" aria-labelledby="meus-pagamentos" data-testid="client-payments">
-        <h2 id="meus-pagamentos" className="font-display text-2xl text-white">Pagamentos e recibos</h2>
+        <h2 id="meus-pagamentos" className="scroll-mt-20 font-display text-2xl text-white">Pagamentos e recibos</h2>
         {payments.length === 0 ? (
           <p className="mt-3 text-sm text-mist">Ainda não há pagamentos confirmados. Depois de pagar no restaurante, o recibo aparece aqui.</p>
         ) : (
@@ -77,7 +77,7 @@ async function Content() {
           </ul>
         )}
       </section>
-      <h2 className="mt-8 font-display text-2xl text-white">Os meus pedidos</h2>
+      <h2 id="meus-pedidos" className="mt-8 scroll-mt-20 font-display text-2xl text-white">Os meus pedidos</h2>
       {orders.length === 0 ? (
         <p className="mt-6 rounded-2xl border border-dashed border-kau-800 p-8 text-center text-mist">Ainda não tem pedidos. Leia o QR Code da sua mesa para pedir — com a sessão iniciada, os pedidos aparecem aqui.</p>
       ) : (

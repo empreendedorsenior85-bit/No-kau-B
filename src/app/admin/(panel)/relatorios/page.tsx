@@ -38,7 +38,7 @@ export default async function Page({ searchParams }: PageProps<"/admin/relatorio
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="font-display text-3xl text-white">Relatórios</h1>
-          <p className="mt-1 text-sm text-mist">{range.label}{range.includeTest && " · inclui pedidos de teste"} · Vendas = pedidos concluídos ou pagos ou pagos. Os ficheiros CSV abrem no Excel.</p>
+          <p className="mt-1 text-sm text-mist">{range.label}{range.includeTest && " · inclui pedidos de teste"} · Vendas = pedidos concluídos ou pagos. Os ficheiros CSV abrem no Excel.</p>
         </div>
         <a href={`/admin/relatorios/pdf?${q}`} data-testid="report-pdf" className="rounded-full bg-gold px-5 py-2.5 text-sm font-medium text-kau-950 hover:bg-gold-300 print:hidden">
           Descarregar PDF

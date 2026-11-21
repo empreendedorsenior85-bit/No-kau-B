@@ -25,7 +25,7 @@ export default async function Page({ searchParams }: PageProps<"/admin/dashboard
       <AutoRefresh />
       <div>
         <h1 className="font-display text-3xl text-white">Visão geral</h1>
-        <p className="mt-1 text-sm text-mist">Todos os números vêm da base de dados do restaurante. Vendas = pedidos concluídos ou pagos ou pagos.</p>
+        <p className="mt-1 text-sm text-mist">Todos os números vêm da base de dados do restaurante. Vendas = pedidos concluídos ou pagos.</p>
       </div>
       <RangeFilter base="/admin/dashboard" range={range} />
 

@@ -1,9 +1,10 @@
 "use client";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Logo } from "@/components/brand/Logo";
 import { nav } from "@/lib/site";
+import { SideDrawer } from "@/components/nav/SideDrawer";
 
 export function Header() {
   const pathname = usePathname();
@@ -16,6 +17,7 @@ export function Header() {
       const next = typeof v === "function" ? v(cur === pathname) : v;
       return next ? pathname : null;
     });
+  const close = useCallback(() => setOpenPath(null), []);
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 24);
@@ -24,18 +26,8 @@ export function Header() {
     return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
-  // bloqueia o scroll do fundo enquanto o menu está aberto
-  useEffect(() => {
-    document.body.style.overflow = open ? "hidden" : "";
-    const onKey = (e: KeyboardEvent) => e.key === "Escape" && setOpenPath(null);
-    window.addEventListener("keydown", onKey);
-    return () => {
-      document.body.style.overflow = "";
-      window.removeEventListener("keydown", onKey);
-    };
-  }, [open]);
-
   return (
+    <>
     <header
       className={`fixed inset-x-0 top-0 z-50 transition-[background-color,backdrop-filter,border-color] duration-500 ${
         scrolled || open
@@ -86,7 +78,7 @@ export function Header() {
         </Link>
         <button
           type="button"
-          className="relative -mr-2 grid h-11 w-11 place-items-center lg:hidden"
+          className="relative -mr-2 grid h-11 w-11 place-items-center lg:hidden" data-testid="menu-button"
           aria-expanded={open}
           aria-controls="menu-movel"
           aria-label={open ? "Fechar menu" : "Abrir menu"}
@@ -102,40 +94,38 @@ export function Header() {
         </div>
       </div>
 
-      {/* Menu móvel */}
-      <div
-        id="menu-movel"
-        hidden={!open}
-        className="h-[calc(100svh-4rem)] overflow-y-auto border-t border-kau-800 bg-kau-950 px-6 pb-28 pt-8 lg:hidden"
-      >
-        <nav aria-label="Menu móvel">
-          <ul className="space-y-1">
-            {[{ href: "/", label: "Início" }, ...nav].map((item, i) => (
-              <li key={item.href} style={{ animationDelay: `${i * 50}ms` }} className="animate-[nk-in_.5s_var(--ease-luxe)_both]">
-                <Link
-                  href={item.href}
-                  className={`flex items-center justify-between border-b border-kau-800 py-4 font-display text-3xl ${
-                    (item.href === "/" ? pathname === "/" : pathname.startsWith(item.href)) ? "text-gold-300" : "text-white"
-                  }`}
-                >
-                  {item.label}
-                  <span aria-hidden className="text-base text-gold-300">→</span>
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </nav>
-        <Link
-          href="/reservas"
-          className="mt-8 flex h-13 items-center justify-center rounded-full bg-gold font-medium text-kau-950"
-        >
+    </header>
+    <SideDrawer id="menu-movel" open={open} onClose={close} label="Menu" side="right" className="px-6 pb-8 pt-16 lg:hidden">
+      <nav aria-label="Menu móvel" className="-mx-1 flex-1 overflow-y-auto overscroll-contain px-1">
+        <ul className="space-y-1">
+          {[{ href: "/", label: "Início" }, ...nav].map((item) => (
+            <li key={item.href}>
+              <Link
+                href={item.href}
+                onClick={close}
+                aria-current={(item.href === "/" ? pathname === "/" : pathname.startsWith(item.href)) ? "page" : undefined}
+                className={`flex items-center justify-between border-b border-kau-800 py-3.5 font-display text-2xl ${
+                  (item.href === "/" ? pathname === "/" : pathname.startsWith(item.href)) ? "text-gold-300" : "text-white"
+                }`}
+              >
+                {item.label}
+                <span aria-hidden className="text-base text-gold-300">→</span>
+              </Link>
+            </li>
+          ))}
+        </ul>
+      </nav>
+      <div className="mt-6 shrink-0 space-y-3">
+        <Link href="/reservas" onClick={close} className="flex h-13 items-center justify-center rounded-full bg-gold font-medium text-kau-950">
           Reservar mesa
         </Link>
-        <Link href="/entrar" data-testid="mobile-login"
-          className="mt-3 flex h-13 items-center justify-center rounded-full border border-gold/60 font-medium text-white">
-          Entrar · conta, reservas e equipa
+        <Link href="/entrar" onClick={close} data-testid="mobile-login"
+          className="flex min-h-13 flex-col items-center justify-center rounded-full border border-gold/60 px-4 py-2 text-center font-medium leading-tight text-white">
+          Entrar
+          <span className="text-xs font-normal text-mist">Conta · reservas · equipa</span>
         </Link>
       </div>
-    </header>
+    </SideDrawer>
+    </>
   );
 }

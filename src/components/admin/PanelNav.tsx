@@ -2,7 +2,8 @@
 import { LocalOfflineBanner, SyncStatus } from "./SyncStatus";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import type { ReactNode } from "react";
+import { useCallback, useState, type ReactNode } from "react";
+import { MenuButton, SideDrawer } from "@/components/nav/SideDrawer";
 import { logoutAction } from "@/app/admin/actions";
 import { Logo } from "@/components/brand/Logo";
 import { useLive, type Conn } from "./LiveOrders";
@@ -44,80 +45,93 @@ const CONN: Record<Conn, { label: string; dot: string }> = {
   offline: { label: "Sem rede", dot: "bg-[#e48a7d] animate-pulse" },
 };
 
-/** Estrutura do painel: menu lateral (computador), separadores deslizantes (telemóvel), barra superior e conteúdo. */
+/** Conteúdo da barra lateral — o MESMO no computador (fixa) e no telemóvel/tablet (menu lateral). */
+function SidebarContent({ email, role, groups, active, badge, onNavigate }: {
+  email: string; role: Role; groups: { title: string; items: Item[] }[]; active: (h: string) => boolean; badge: (h: string) => ReactNode; onNavigate?: () => void;
+}) {
+  return (
+    <>
+      <Link href={role === "garcom" ? "/admin/mesas" : "/admin/dashboard"} onClick={onNavigate} className="mr-12 flex shrink-0 items-center gap-3 self-start px-2 py-2" aria-label="Painel Nô Kau">
+        <Logo size={40} className="h-10 w-10" />
+        <span><span className="block font-display text-lg leading-tight text-white">Nô Kau</span><span className="text-xs text-mist">Painel de gestão</span></span>
+      </Link>
+      <nav aria-label="Painel" className="-mx-1 mt-5 flex-1 space-y-6 overflow-y-auto overscroll-contain px-1">
+        {groups.map((g) => (
+          <div key={g.title}>
+            <p className="px-3 pb-2 text-[0.68rem] uppercase tracking-[0.18em] text-mist">{g.title}</p>
+            <ul className="space-y-1">
+              {g.items.map((i) => (
+                <li key={i.href}>
+                  <Link href={i.href} onClick={onNavigate} aria-current={active(i.href) ? "page" : undefined} data-testid={`nav-${i.href.split("/").pop()}`}
+                    className={`flex min-h-11 items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition-colors ${active(i.href) ? "bg-gold text-kau-950" : "text-mist hover:bg-kau-900 hover:text-white"}`}>
+                    {i.icon}<span className="min-w-0 flex-1 truncate">{i.label}</span>{badge(i.href)}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ))}
+      </nav>
+      <div className="mt-4 shrink-0 rounded-xl border border-kau-800 p-3 text-sm" data-testid="nav-account">
+        <p className="truncate text-white" title={email}>{email}</p>
+        <p className="mt-0.5 text-xs text-gold-300">{ROLE_LABEL[role]}</p>
+        <form action={logoutAction} className="mt-2"><button className="min-h-9 text-xs text-mist underline underline-offset-4 hover:text-white" data-testid="nav-logout">Terminar sessão</button></form>
+      </div>
+    </>
+  );
+}
+
+/** Estrutura do painel: barra lateral fixa (computador ≥1024px) ou menu lateral ☰ (telemóvel e tablet), barra superior e conteúdo. */
 export function PanelFrame({ email, role, children }: { email: string; role: Role; children: ReactNode }) {
   const path = usePathname();
   const { conn, unseen, alertsOn, enableAlerts, pendingReservations } = useLive();
+  // o menu fica associado à página em que foi aberto: ao navegar, fecha sozinho
+  const [openAt, setOpenAt] = useState<string | null>(null);
+  const open = openAt === path;
+  const close = useCallback(() => setOpenAt(null), []);
   const c = CONN[conn];
   const sees = (i: Item) => i.who === "staff" || (i.who === "manager" && role !== "garcom") || role === "admin";
   const groups = GROUPS.map((g) => ({ ...g, items: g.items.filter(sees) })).filter((g) => g.items.length);
-  const flat = groups.flatMap((g) => g.items);
   const active = (h: string) => path === h || path.startsWith(h + "/");
+  const current = groups.flatMap((g) => g.items).find((i) => active(i.href));
   const badgeCount = (href: string) => (href === "/admin/pedidos" ? unseen.size : href === "/admin/reservas" ? pendingReservations : 0);
+  const totalBadges = badgeCount("/admin/pedidos") + (role !== "garcom" ? badgeCount("/admin/reservas") : 0);
   const badge = (href: string) => badgeCount(href) > 0 && (
-    <span data-testid={`badge-${href.split("/").pop()}`} className="ml-auto inline-grid h-5 min-w-5 place-items-center rounded-full bg-[#e0a64a] px-1.5 text-xs font-bold text-kau-950">{badgeCount(href)}</span>
+    <span data-testid={`badge-${href.split("/").pop()}`} className="ml-auto inline-grid h-5 min-w-5 shrink-0 place-items-center rounded-full bg-[#e0a64a] px-1.5 text-xs font-bold text-kau-950">{badgeCount(href)}</span>
   );
 
   return (
     <div className="min-h-svh bg-kau-950 lg:pl-64 print:pl-0">
-      {/* menu lateral */}
-      <aside className="fixed inset-y-0 left-0 z-40 hidden w-64 flex-col border-r border-kau-800 bg-kau-900/60 p-4 lg:flex print:hidden">
-        <Link href={role === "garcom" ? "/admin/mesas" : "/admin/dashboard"} className="flex items-center gap-3 px-2 py-2" aria-label="Painel Nô Kau">
-          <Logo size={40} className="h-10 w-10" />
-          <span><span className="block font-display text-lg leading-tight text-white">Nô Kau</span><span className="text-xs text-mist">Painel de gestão</span></span>
-        </Link>
-        <nav aria-label="Painel" className="mt-6 flex-1 space-y-6 overflow-y-auto">
-          {groups.map((g) => (
-            <div key={g.title}>
-              <p className="px-3 pb-2 text-[0.68rem] uppercase tracking-[0.18em] text-mist">{g.title}</p>
-              <ul className="space-y-1">
-                {g.items.map((i) => (
-                  <li key={i.href}>
-                    <Link href={i.href} aria-current={active(i.href) ? "page" : undefined}
-                      className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition-colors ${active(i.href) ? "bg-gold text-kau-950" : "text-mist hover:bg-kau-900 hover:text-white"}`}>
-                      {i.icon}{i.label}{badge(i.href)}
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ))}
-        </nav>
-        <div className="mt-4 rounded-xl border border-kau-800 p-3 text-sm">
-          <p className="truncate text-white" title={email}>{email}</p>
-          <p className="mt-0.5 text-xs text-gold-300">{ROLE_LABEL[role]}</p>
-          <form action={logoutAction} className="mt-2"><button className="text-xs text-mist underline underline-offset-4 hover:text-white">Terminar sessão</button></form>
-        </div>
+      {/* barra lateral fixa (computador) */}
+      <aside className="fixed inset-y-0 left-0 z-40 hidden w-64 flex-col border-r border-kau-800 bg-kau-900/60 p-4 lg:flex print:hidden" data-testid="panel-sidebar">
+        <SidebarContent email={email} role={role} groups={groups} active={active} badge={badge} />
       </aside>
+
+      {/* menu lateral (telemóvel e tablet) */}
+      <SideDrawer id="painel-menu" open={open} onClose={close} label="Menu do painel" className="p-4 lg:hidden">
+        <SidebarContent email={email} role={role} groups={groups} active={active} badge={badge} onNavigate={close} />
+      </SideDrawer>
 
       {/* barra superior */}
       <header className="sticky top-0 z-30 border-b border-kau-800 bg-kau-950/95 backdrop-blur print:hidden">
-        <div className="flex items-center gap-3 px-4 py-3 lg:px-8">
-          <Link href={role === "garcom" ? "/admin/mesas" : "/admin/dashboard"} className="flex items-center gap-2 lg:hidden" aria-label="Painel Nô Kau">
-            <Logo size={32} className="h-8 w-8" /><span className="font-display text-lg text-white">Painel</span>
+        <div className="flex items-center gap-2 px-2 py-2 sm:gap-3 sm:px-4 lg:px-8 lg:py-3">
+          <div className="relative lg:hidden">
+            <MenuButton open={open} onClick={() => setOpenAt(open ? null : path)} controls="painel-menu" />
+            {totalBadges > 0 && <span aria-hidden className="pointer-events-none absolute right-0.5 top-0.5 h-2.5 w-2.5 rounded-full bg-[#e0a64a] ring-2 ring-kau-950" />}
+          </div>
+          <Link href={role === "garcom" ? "/admin/mesas" : "/admin/dashboard"} className="flex min-w-0 items-center gap-2 lg:hidden" aria-label="Painel Nô Kau">
+            <Logo size={32} className="h-8 w-8 shrink-0" />
+            <span className="truncate font-display text-lg text-white" data-testid="panel-current">{current?.label ?? "Painel"}</span>
           </Link>
-          <div className="ml-auto flex items-center gap-3 text-xs text-mist">
-            <span className="flex items-center gap-2" role="status" aria-live="polite"><span className={`h-2.5 w-2.5 rounded-full ${c.dot}`} aria-hidden />{c.label}</span>
+          <div className="ml-auto flex shrink-0 items-center gap-2 text-xs text-mist sm:gap-3">
+            <span className="flex items-center gap-2" role="status" aria-live="polite" title={c.label}><span className={`h-2.5 w-2.5 rounded-full ${c.dot}`} aria-hidden /><span className="sr-only sm:not-sr-only">{c.label}</span></span>
             <SyncStatus />
             {!alertsOn ? (
-              <button onClick={enableAlerts} className="rounded-full border border-gold/60 px-3 py-1.5 text-gold-300 hover:bg-gold/10">🔔 Ativar alertas</button>
-            ) : <span className="rounded-full bg-ok/15 px-3 py-1.5 text-[#7fc290]">🔔 Alertas ativos</span>}
+              <button onClick={enableAlerts} className="rounded-full border border-gold/60 px-3 py-1.5 text-gold-300 hover:bg-gold/10" aria-label="Ativar alertas">🔔<span className="hidden sm:inline"> Ativar alertas</span></button>
+            ) : <span className="hidden rounded-full bg-ok/15 px-3 py-1.5 text-[#7fc290] sm:inline">🔔 Alertas ativos</span>}
             <NotificationBell />
-            <Link href="/admin/conta" className="hidden items-center gap-2 hover:text-white sm:flex lg:hidden" title="A minha conta">
-              <span className="max-w-[10rem] truncate">{email}</span>
-              <span className="rounded-full bg-gold/15 px-2 py-0.5 text-[0.65rem] uppercase tracking-wider text-gold-300 ring-1 ring-gold/50">{ROLE_LABEL[role]}</span>
-            </Link>
-            <form action={logoutAction} className="lg:hidden"><button className="hover:text-white">Sair</button></form>
           </div>
         </div>
-        <nav aria-label="Painel (telemóvel)" className="flex gap-1 overflow-x-auto px-3 pb-2 lg:hidden [scrollbar-width:none]">
-          {flat.map((i) => (
-            <Link key={i.href} href={i.href} aria-current={active(i.href) ? "page" : undefined}
-              className={`flex shrink-0 items-center gap-2 whitespace-nowrap rounded-full px-4 py-2 text-sm ${active(i.href) ? "bg-gold text-kau-950" : "text-mist hover:text-white"}`}>
-              {i.label}{badgeCount(i.href) > 0 && <span className="inline-grid h-5 min-w-5 place-items-center rounded-full bg-[#e0a64a] px-1.5 text-xs font-bold text-kau-950">{badgeCount(i.href)}</span>}
-            </Link>
-          ))}
-        </nav>
         <LocalOfflineBanner />
         {conn !== "live" && conn !== "connecting" && (
           <p role="alert" className="bg-[#e0a64a]/15 px-4 py-2 text-center text-sm text-[#e0a64a]">
