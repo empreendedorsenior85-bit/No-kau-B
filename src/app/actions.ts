@@ -142,12 +142,13 @@ export async function claimReservationAction(_: ClaimState, fd: FormData): Promi
   const ip = h.get("x-forwarded-for")?.split(",")[0]?.trim() || h.get("x-real-ip") || "local";
   const keys = loginKeys("visitante", ip, phone.replace(/\D/g, ""));
   if (await isThrottled(keys)) return { error: "Demasiadas tentativas. Aguarde 15 minutos.", values: { phone, code } };
-  if (!(await claimReservation(phone, code))) {
+  const customer = fd.get("conta") === "1" ? await getCustomer().catch(() => null) : null;
+  if (!(await claimReservation(phone, code, customer?.id ?? null))) {
     await recordFailure(keys);
     return { error: "Não encontrámos uma reserva com esse código e esse telefone.", values: { phone, code } };
   }
   await clearFailures(keys);
-  redirect("/minhas-reservas");
+  redirect(customer ? "/cliente/reservas?juntada=1" : "/minhas-reservas");
 }
 
 export async function forgetVisitorAction() {

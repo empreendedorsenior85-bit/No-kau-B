@@ -1,7 +1,6 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { Logo } from "@/components/brand/Logo";
-import { ClientNav } from "./ClientNav";
 
 /** Moldura das páginas do cliente (mesmo visual do menu da mesa). */
 export function ClientShell({ title, intro, back, account, children }: {
@@ -9,16 +8,14 @@ export function ClientShell({ title, intro, back, account, children }: {
   /** Cliente com sessão iniciada → barra lateral (computador) / menu lateral ☰ (telemóvel e tablet). */
   account?: { name: string; email: string }; children: ReactNode;
 }) {
+  // área da conta: o menu e a moldura vêm do layout partilhado (app/cliente/(conta)/layout.tsx)
   if (account) {
     return (
-      <div className="nums-lining min-h-svh bg-kau-950 lg:pl-64 print:pl-0">
-        <ClientNav name={account.name} email={account.email} />
-        <main className="mx-auto max-w-3xl px-5 py-8">
-          <h1 className="font-display text-3xl text-white">{title}</h1>
-          {intro && <p className="mt-2 text-sm leading-relaxed text-mist">{intro}</p>}
-          <div className="mt-6">{children}</div>
-        </main>
-      </div>
+      <main className="mx-auto max-w-3xl px-5 py-8 print:max-w-none print:p-0">
+        <h1 className="font-display text-3xl text-white print:hidden">{title}</h1>
+        {intro && <p className="mt-2 text-sm leading-relaxed text-mist print:hidden">{intro}</p>}
+        <div className="mt-6 print:mt-0">{children}</div>
+      </main>
     );
   }
   return (
@@ -38,6 +35,4 @@ export function ClientShell({ title, intro, back, account, children }: {
   );
 }
 
-/** Regresso seguro (só para o menu de uma mesa ou para a área do cliente). */
-export const safeVolta = (v: unknown) =>
-  typeof v === "string" && (/^\/m\/[A-Za-z0-9_-]{22}(\?carrinho=1)?$/.test(v) || /^\/cliente\/recibos\/[0-9a-f-]{36}$/.test(v)) ? v : "/cliente";
+export { safeVolta } from "@/lib/client-return";

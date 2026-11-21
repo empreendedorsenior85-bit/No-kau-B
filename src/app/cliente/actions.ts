@@ -1,5 +1,5 @@
 "use server";
-
+import { safeVolta } from "@/lib/client-return";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { authenticateCustomer, endCustomerSession, normalizePhone, registerCustomer, startCustomerSession } from "@/lib/customers";
@@ -10,9 +10,9 @@ import { query } from "@/lib/db";
 export type ClientFormState = { error?: string; values?: Record<string, string> };
 
 /** Só regressa a páginas do próprio site (sem redirecionamentos abertos para fora). */
+/** Regresso depois do login/registo: a mesma lista de destinos seguros que as páginas usam (sem redirecionamentos abertos). */
 function safeReturn(v: FormDataEntryValue | null): string {
-  const s = typeof v === "string" ? v : "";
-  return /^\/m\/[A-Za-z0-9_-]{22}(\?carrinho=1)?$/.test(s) || /^\/cliente\/recibos\/[0-9a-f-]{36}$/.test(s) || s === "/cliente" ? s : "/cliente";
+  return safeVolta(typeof v === "string" ? v : "");
 }
 async function ip() {
   const h = await headers();

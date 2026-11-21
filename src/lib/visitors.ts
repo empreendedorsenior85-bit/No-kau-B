@@ -90,8 +90,9 @@ export async function visitorReservations(visitorId: string): Promise<(PublicRes
 /**
  * Juntar uma reserva feita noutro aparelho: telefone + código (R-XXXXXX). Só essa reserva fica neste aparelho.
  * Devolve false se não houver uma reserva com esse código E esse telefone (a mesma resposta nos dois casos).
+ * Com `customerId` (cliente com sessão iniciada) liga a reserva à conta em vez de ao aparelho.
  */
-export async function claimReservation(phoneRaw: string, codeRaw: string): Promise<boolean> {
+export async function claimReservation(phoneRaw: string, codeRaw: string, customerId: string | null = null): Promise<boolean> {
   await ensureMigrated();
   const code = codeRaw.trim().toUpperCase().replace(/^R(?!-)/, "R-");
   if (!/^R-[A-Z0-9]{6}$/.test(code)) return false;
@@ -100,6 +101,11 @@ export async function claimReservation(phoneRaw: string, codeRaw: string): Promi
     "select id, name, phone, email from reservations where code = $1", [code]);
   const res = r.rows[0];
   if (!res || normalizePhone(res.phone) !== phone) return false;
+  // cliente com conta: a reserva passa a estar na conta (só se ainda não pertencer a outra conta)
+  if (customerId) {
+    await query("update reservations set customer_id = $2 where id = $1 and customer_id is null", [res.id, customerId]);
+    return true;
+  }
   let v = await getVisitor();
   if (!v) {
     const ins = await query<{ id: string }>("insert into visitors (name, phone, email) values ($1,$2,$3) returning id", [res.name, phone, res.email]);

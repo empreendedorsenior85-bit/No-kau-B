@@ -11,9 +11,9 @@ type Item = { href: string; label: string; icon: ReactNode; id: string };
 const GROUPS: { title: string; items: Item[] }[] = [
   { title: "A minha conta", items: [
     { href: "/cliente", id: "resumo", label: "Resumo", icon: ic("M3 12l9-8 9 8M5 10v10h5v-6h4v6h5V10") },
-    { href: "/cliente#minhas-reservas", id: "reservas", label: "As minhas reservas", icon: ic("M3 5h18v16H3zM3 9h18M8 3v4M16 3v4M8 14h3") },
-    { href: "/cliente#meus-pagamentos", id: "pagamentos", label: "Pagamentos e recibos", icon: ic("M2 7h20v12H2zM2 11h20M6 15h4") },
-    { href: "/cliente#meus-pedidos", id: "pedidos", label: "Os meus pedidos", icon: ic("M6 2h12l2 5v13a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V7l2-5zM4 7h16M9 11h6") },
+    { href: "/cliente/reservas", id: "reservas", label: "As minhas reservas", icon: ic("M3 5h18v16H3zM3 9h18M8 3v4M16 3v4M8 14h3") },
+    { href: "/cliente/pagamentos", id: "pagamentos", label: "Pagamentos e recibos", icon: ic("M2 7h20v12H2zM2 11h20M6 15h4") },
+    { href: "/cliente/pedidos", id: "pedidos", label: "Os meus pedidos", icon: ic("M6 2h12l2 5v13a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V7l2-5zM4 7h16M9 11h6") },
   ] },
   { title: "Nô Kau", items: [
     { href: "/reservas", id: "reservar", label: "Reservar mesa", icon: ic("M12 5v14M5 12h14") },
@@ -36,7 +36,10 @@ function Content({ name, email, onNavigate }: { name: string; email: string; onN
             <p className="px-3 pb-2 text-[0.68rem] uppercase tracking-[0.18em] text-mist">{g.title}</p>
             <ul className="space-y-1">
               {g.items.map((i) => {
-                const on = i.href === "/cliente" && path === "/cliente";
+                // só as opções da conta ficam destacadas (os atalhos para o site nunca são "a página atual" desta área)
+                const on = i.href === "/cliente" ? path === "/cliente"
+                  : i.id === "pagamentos" ? path.startsWith("/cliente/pagamentos") || path.startsWith("/cliente/recibos")
+                  : i.href.startsWith("/cliente/") && path.startsWith(i.href);
                 return (
                   <li key={i.href}>
                     <Link href={i.href} onClick={onNavigate} aria-current={on ? "page" : undefined} data-testid={`cnav-${i.id}`}

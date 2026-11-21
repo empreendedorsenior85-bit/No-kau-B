@@ -10,6 +10,7 @@ import { cancelReservationAction } from "@/app/actions";
 import { dbConfigured } from "@/lib/db";
 import { isResToken, reservationByToken } from "@/lib/reservations";
 import { site } from "@/lib/site";
+import { getCustomer } from "@/lib/customers";
 import { RESERVATION_LABEL, fmtResDate } from "@/lib/types";
 
 export const metadata: Metadata = { title: "A sua reserva", robots: { index: false, follow: false } };
@@ -48,6 +49,8 @@ const EXPLAIN = {
 async function Content({ params, searchParams }: { params: PageProps<"/reserva/[token]">["params"]; searchParams: PageProps<"/reserva/[token]">["searchParams"] }) {
   const { token } = await params;
   const nova = (await searchParams).nova === "1";
+  // cliente com sessão iniciada: "As minhas reservas" leva à área da conta; sem sessão, ao perfil deste aparelho
+  const customer = await getCustomer().catch(() => null);
   if (!isResToken(token) || !dbConfigured()) notFound();
   const r = await reservationByToken(token);
   if (!r) notFound();
@@ -83,7 +86,7 @@ async function Content({ params, searchParams }: { params: PageProps<"/reserva/[
         )}
         <a href={`tel:${site.phoneE164}`} className="text-sm text-gold-300 underline underline-offset-4">Ligar para o restaurante</a>
         <Link href="/reservas" className="text-sm text-gold-300 underline underline-offset-4">Fazer outra reserva</Link>
-        <Link href="/minhas-reservas" className="text-sm text-gold-300 underline underline-offset-4" data-testid="my-reservations-link">As minhas reservas</Link>
+        <Link href={customer ? "/cliente/reservas" : "/minhas-reservas"} className="text-sm text-gold-300 underline underline-offset-4" data-testid="my-reservations-link">As minhas reservas</Link>
       </div>
       <p className="mt-8 text-xs text-mist">Guarde este link: é a forma de acompanhar a reserva. Não o partilhe.</p>
     </div>
