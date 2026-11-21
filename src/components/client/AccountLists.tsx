@@ -1,7 +1,7 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { formatXOF } from "@/lib/format";
-import { PAYMENT_LABEL, RESERVATION_LABEL, STATUS_CLIENT, fmtResDate, formatOrderNumber, formatReceiptNumber, type PaymentMethod, type PublicReservation } from "@/lib/types";
+import { PAYMENT_LABEL, PAYMENT_SHORT, RESERVATION_LABEL, STATUS_CLIENT, fmtResDate, formatOrderNumber, formatReceiptNumber, type PaymentMethod, type PublicReservation } from "@/lib/types";
 import type { customerOrders } from "@/lib/customers";
 import type { Payment } from "@/lib/payments";
 
@@ -63,7 +63,7 @@ export function PaymentList({ items, limit }: { items: Payment[]; limit?: number
           {shown.map((p) => (
             <li key={p.id}>
               <Link href={`/cliente/recibos/${p.id}`} className="flex items-center justify-between gap-3 rounded-2xl border border-kau-800 bg-kau-900 p-4 hover:border-gold/60" data-testid="client-payment" data-status={p.status}>
-                <span className="text-sm">
+                <span className="min-w-0 text-sm">
                   <span className="block font-display text-lg text-white">{formatXOF(p.amount)} · {PAYMENT_LABEL[p.method]}</span>
                   <span className="text-mist">{new Date(p.createdAt).toLocaleString("pt-PT", { dateStyle: "medium", timeStyle: "short", timeZone: "Africa/Bissau" })} · {formatReceiptNumber(p.receiptNumber, p.origin)}</span>
                 </span>
@@ -95,12 +95,12 @@ export function OrderList({ items, limit }: { items: ClientOrder[]; limit?: numb
             {shown.map((o) => (
               <li key={o.id} className="rounded-2xl border border-kau-800 bg-kau-900 p-4" data-testid="client-order" data-paid={o.paid ? "1" : "0"}>
                 <div className="flex items-start justify-between gap-3">
-                  <div>
+                  <div className="min-w-0">
                     <p className="font-display text-xl text-white">{formatOrderNumber(o.number, o.origin)} · {o.tableLabel}</p>
                     <p className="text-xs text-mist">{new Date(o.createdAt).toLocaleString("pt-PT", { dateStyle: "medium", timeStyle: "short", timeZone: "Africa/Bissau" })} · {STATUS_CLIENT[o.status].title}</p>
                   </div>
-                  <span className={`shrink-0 rounded-full px-3 py-1 text-xs uppercase tracking-wider ${o.paid ? "bg-[#7fc290]/15 text-[#7fc290]" : "bg-[#e0a64a]/15 text-[#e0a64a]"}`}>
-                    {o.paid ? `Pago${o.paymentMethod ? ` · ${PAYMENT_LABEL[o.paymentMethod as PaymentMethod] ?? ""}` : ""}` : "Por pagar"}
+                  <span className={`max-w-[50%] shrink-0 rounded-2xl px-3 py-1 text-right text-xs uppercase leading-snug tracking-wider ${o.paid ? "bg-[#7fc290]/15 text-[#7fc290]" : "bg-[#e0a64a]/15 text-[#e0a64a]"}`}>
+                    {o.paid ? `Pago${o.paymentMethod ? ` · ${PAYMENT_SHORT[o.paymentMethod as PaymentMethod] ?? ""}` : ""}` : "Por pagar"}
                   </span>
                 </div>
                 <p className="mt-2 text-sm text-mist">{o.items.map((i) => `${i.quantity}× ${i.name}`).join(", ")}</p>

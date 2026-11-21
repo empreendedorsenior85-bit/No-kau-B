@@ -70,7 +70,7 @@ export default async function Page({ searchParams }: PageProps<"/admin/dashboard
         <StatTile testId="tile-tables" label="Mesas com pedidos" value={int(c.tables)} cur={c.tables} prev={p.tables} sub="mesas distintas no período" />
       </div>
 
-      <div className="grid gap-6 xl:grid-cols-[2fr_1fr]">
+      <div className="grid grid-cols-1 gap-6 xl:grid-cols-[2fr_1fr]">
         <div className="space-y-6">
           <SalesChart d={d} />
           <OrdersChart d={d} />
@@ -78,7 +78,7 @@ export default async function Page({ searchParams }: PageProps<"/admin/dashboard
         <LiveNow />
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         <ProductsChart d={d} />
         <CategoriesChart d={d} />
         <HoursChart d={d} />

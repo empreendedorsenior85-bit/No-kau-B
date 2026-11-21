@@ -13,7 +13,7 @@ const fHour = new Intl.DateTimeFormat("pt-PT", { hour: "2-digit", minute: "2-dig
 
 function Card({ title, sub, children, id }: { title: string; sub?: string; children: React.ReactNode; id?: string }) {
   return (
-    <section className="rounded-2xl border border-kau-800 bg-kau-900 p-5" data-testid={id}>
+    <section className="min-w-0 rounded-2xl border border-kau-800 bg-kau-900 p-5" data-testid={id}>
       <h2 className="font-display text-xl text-white">{title}</h2>
       {sub && <p className="mt-0.5 text-xs text-mist">{sub}</p>}
       <div className="mt-4">{children}</div>
@@ -30,7 +30,7 @@ export function SalesChart({ d }: { d: Dashboard }) {
   };
   const prevName = d.range.key === "hoje" ? "Ontem" : d.range.key === "ontem" ? "Dia anterior" : "Período anterior";
   return (
-    <Card title="Vendas ao longo do tempo" sub={`Vendas concluídas em FCFA · ${d.range.label}`} id="chart-sales">
+    <Card title="Vendas ao longo do tempo" sub={`Vendas (pedidos concluídos ou pagos) em FCFA · ${d.range.label}`} id="chart-sales">
       <LineChart
         unit="vendas em FCFA"
         labels={d.series.map((p) => fmtX(p.t))}
@@ -82,7 +82,7 @@ export function ProductsChart({ d }: { d: Dashboard }) {
 
 export function CategoriesChart({ d }: { d: Dashboard }) {
   return (
-    <Card title="Vendas por categoria" sub="Vendas concluídas (FCFA)" id="chart-categories">
+    <Card title="Vendas por categoria" sub="Vendas (concluídos ou pagos), em FCFA" id="chart-categories">
       <RankedBars empty="Sem vendas concluídas neste período." rows={d.categories.map((c) => ({ label: c.label, value: c.revenue, display: formatXOF(c.revenue), hint: `${int(c.qty)} unidades` }))} />
     </Card>
   );
@@ -90,7 +90,7 @@ export function CategoriesChart({ d }: { d: Dashboard }) {
 
 export function TablesChart({ d }: { d: Dashboard }) {
   return (
-    <Card title="Mesas" sub="Vendas concluídas por mesa (FCFA)" id="chart-tables">
+    <Card title="Mesas" sub="Vendas por mesa (concluídos ou pagos), em FCFA" id="chart-tables">
       <RankedBars empty="Sem pedidos neste período." rows={d.tables.map((t) => ({ label: t.label, value: t.revenue, display: formatXOF(t.revenue), hint: `${int(t.orders)} pedidos` }))} />
     </Card>
   );
