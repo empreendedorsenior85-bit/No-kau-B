@@ -4,7 +4,7 @@ import { newKey, isValidKey, useCart } from "@/lib/cart";
 import { sendOrder } from "@/lib/send-order";
 import { formatXOF } from "@/lib/format";
 import { isIllustrative } from "@/lib/illustrative";
-import { formatOrderNumber } from "@/lib/types";
+import { PAYMENT_ACCEPTED_TEXT, formatOrderNumber } from "@/lib/types";
 import { deleteRecord, flushOutbox, outboxAvailable, putRecord, recordsFor, requestBackgroundSync, type OutboxRecord } from "@/lib/outbox";
 import { useOffline } from "@/components/pwa/useOffline";
 import { TableHelp } from "./TableHelp";
@@ -392,7 +392,7 @@ export function TableMenu({ token, table, categories, customer = null, staff = f
               ) : (
                 <button onClick={() => setGate(false)} className="mt-4 w-full text-center text-sm text-mist underline underline-offset-4 hover:text-white">Voltar ao pedido</button>
               )}
-              <p className="mt-2 text-center text-xs text-mist">O pagamento é feito no restaurante. O valor final é confirmado pelo servidor.</p>
+              <p className="mt-2 text-center text-xs text-mist" data-testid="cart-payment-methods">O pagamento é feito no restaurante: {PAYMENT_ACCEPTED_TEXT}. O valor final é confirmado pelo servidor.</p>
             </div>
           </div>
         </div>

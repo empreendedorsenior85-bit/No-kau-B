@@ -2,7 +2,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import type { OrderItem, OrderStatus } from "@/lib/types";
-import { STATUS_CLIENT, formatOrderNumber } from "@/lib/types";
+import { PAYMENT_ACCEPTED_TEXT, STATUS_CLIENT, formatOrderNumber } from "@/lib/types";
 import { formatXOF } from "@/lib/format";
 import { Logo } from "@/components/brand/Logo";
 import { ButtonLink } from "@/components/ui/Button";
@@ -86,7 +86,7 @@ export function OrderTracker({ token, orderId, initial }: { token: string; order
             <span className="text-gold-300">{formatXOF(o.total)}</span>
           </li>
         </ul>
-        <p className="mt-2 text-center text-xs text-mist">O pagamento é feito no restaurante.</p>
+        <p className="mt-2 text-center text-xs text-mist" data-testid="payment-methods">O pagamento é feito no restaurante: {PAYMENT_ACCEPTED_TEXT}.</p>
       </section>
 
       <div className="mt-8 flex flex-col gap-3">

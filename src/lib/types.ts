@@ -71,10 +71,28 @@ export type ServiceCall = {
 };
 
 /** Pagamentos (Etapa 4): feitos EM MÃO no restaurante e confirmados pelo gerente. */
-export type PaymentMethod = "cash" | "orange_money" | "mtn_momo" | "card" | "transfer";
-export const PAYMENT_METHODS: PaymentMethod[] = ["cash", "orange_money", "mtn_momo", "card", "transfer"];
+export type PaymentMethod = "orange_money" | "telecel" | "cash" | "mtn_momo" | "card" | "transfer";
+/**
+ * Métodos ACEITES (os únicos que se podem escolher num pagamento novo): Orange Money, Telecel e pagamento à mão.
+ * Os outros (MTN MoMo, cartão, transferência) estão desativados: só existem em pagamentos antigos, que se mantêm
+ * no histórico, nos recibos e nos relatórios tal como foram registados (os pagamentos são imutáveis).
+ */
+export const PAYMENT_METHODS: PaymentMethod[] = ["orange_money", "telecel", "cash"];
+/** Todos os métodos conhecidos, incluindo os desativados — para ler o histórico e sincronizar pagamentos antigos. */
+export const ALL_PAYMENT_METHODS: PaymentMethod[] = ["orange_money", "telecel", "cash", "mtn_momo", "card", "transfer"];
 export const PAYMENT_LABEL: Record<PaymentMethod, string> = {
-  cash: "Numerário", orange_money: "Orange Money", mtn_momo: "MTN MoMo", card: "Cartão (TPA)", transfer: "Transferência",
+  orange_money: "Orange Money", telecel: "Telecel", cash: "Pagamento à mão (dinheiro)",
+  mtn_momo: "MTN MoMo", card: "Cartão (TPA)", transfer: "Transferência",
+};
+/** "Orange Money, Telecel ou pagamento à mão (dinheiro)" — texto para o cliente, sempre igual à lista aceite. */
+export const PAYMENT_ACCEPTED_TEXT = (() => {
+  const l = PAYMENT_METHODS.map((m) => PAYMENT_LABEL[m].replace(/^Pagamento à mão/, "pagamento à mão"));
+  return l.length > 1 ? `${l.slice(0, -1).join(", ")} ou ${l[l.length - 1]}` : l[0];
+})();
+/** Nome curto para o talão térmico (58 mm = 32 colunas: "Método" + valor têm de caber numa linha). */
+export const PAYMENT_SHORT: Record<PaymentMethod, string> = {
+  orange_money: "Orange Money", telecel: "Telecel", cash: "Dinheiro (à mão)",
+  mtn_momo: "MTN MoMo", card: "Cartão (TPA)", transfer: "Transferência",
 };
 
 /** Reservas. */

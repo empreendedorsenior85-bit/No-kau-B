@@ -2,6 +2,7 @@
 import { useCallback, useEffect, useState } from "react";
 import type { PublicCall } from "@/lib/calls";
 import type { CallKind } from "@/lib/types";
+import { PAYMENT_ACCEPTED_TEXT } from "@/lib/types";
 import { newKey } from "@/lib/cart";
 import { formatXOF } from "@/lib/format";
 
@@ -107,6 +108,7 @@ export function TableHelp({ token, online }: { token: string; online: boolean })
               className={`rounded-xl px-3 py-2 text-sm ${c.status === "ack" ? "bg-[#7fc290]/10 text-[#a9dbb4]" : "bg-[#e0a64a]/10 text-[#f3d29b]"}`}>
               {c.status === "ack" ? `✓ ${COMING[c.kind]}` : `⏳ ${WAITING[c.kind]}`}
               {c.kind === "bill" && c.amount != null && c.amount > 0 && <span className="block text-xs text-mist">Total estimado dos seus pedidos: {formatXOF(c.amount)}</span>}
+              {c.kind === "bill" && <span className="block text-xs text-mist" data-testid="bill-payment-methods">Pode pagar com {PAYMENT_ACCEPTED_TEXT}.</span>}
               {c.status === "open" && (
                 <button onClick={() => cancel(c.id)} className="ml-2 text-xs text-mist underline underline-offset-4 hover:text-white">Cancelar</button>
               )}

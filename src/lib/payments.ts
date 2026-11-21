@@ -2,7 +2,7 @@ import "server-only";
 import { query, tx } from "./db";
 import { ensureMigrated } from "@/db/init";
 import { isLocalServer } from "./node-role";
-import { PAYMENT_METHODS, formatOrderNumber, formatReceiptNumber, type PaymentMethod } from "./types";
+import { PAYMENT_LABEL, PAYMENT_METHODS, formatOrderNumber, formatReceiptNumber, type PaymentMethod } from "./types";
 
 /**
  * Pagamentos feitos EM MÃO no restaurante e confirmados pelo gerente (Admin/Gerente).
@@ -10,7 +10,7 @@ import { PAYMENT_METHODS, formatOrderNumber, formatReceiptNumber, type PaymentMe
  *  - o valor é SEMPRE a soma dos pedidos escolhidos, calculada aqui — o navegador não decide valores;
  *  - um pedido só pode ser pago uma vez (bloqueio das linhas + verificação na mesma transação);
  *  - um pagamento confirmado nunca se altera nem se apaga: só se anula, com motivo (trigger na base de dados);
- *  - fica registado quem recebeu, quando, como, quanto e (em numerário) o valor entregue e o troco.
+ *  - fica registado quem recebeu, quando, como, quanto e (no pagamento à mão) o valor entregue e o troco.
  */
 
 export type Payment = {
@@ -48,7 +48,7 @@ export async function confirmPayment(input: ConfirmInput, actor: string): Promis
   const { tableId, method, key } = input;
   const orderIds = [...new Set(input.orderIds)];
   if (!Number.isInteger(tableId)) return { ok: false, message: "Mesa inválida." };
-  if (!PAYMENT_METHODS.includes(method as PaymentMethod)) return { ok: false, message: "Escolha o método de pagamento." };
+  if (!PAYMENT_METHODS.includes(method as PaymentMethod)) return { ok: false, message: "Escolha o método de pagamento: Orange Money, Telecel ou pagamento à mão." };
   if (!/^[A-Za-z0-9_-]{16,64}$/.test(key)) return { ok: false, message: "Pedido inválido. Atualize a página." };
   if (orderIds.length === 0 || orderIds.length > 100 || !orderIds.every((id) => /^[0-9a-f-]{36}$/i.test(id))) return { ok: false, message: "Escolha os pedidos a pagar." };
   const note = input.note?.trim().slice(0, 200) || null;
@@ -67,7 +67,7 @@ export async function confirmPayment(input: ConfirmInput, actor: string): Promis
       if (amount <= 0) return { ok: false, message: "Valor a pagar inválido." };
       let tendered: number | null = null;
       if (method === "cash" && input.tendered != null && input.tendered !== 0) {
-        if (!Number.isInteger(input.tendered) || input.tendered < amount) return { ok: false, message: "O valor recebido em numerário é menor do que o total." };
+        if (!Number.isInteger(input.tendered) || input.tendered < amount) return { ok: false, message: "O valor recebido em dinheiro é menor do que o total." };
         if (input.tendered > amount * 20 + 100_000) return { ok: false, message: "Valor recebido improvável — confirme o montante." };
         tendered = input.tendered;
       }
@@ -197,7 +197,7 @@ export async function paymentsChangedSince(cursor: number): Promise<{ id: string
 /** Linhas do relatório de pagamentos (CSV e PDF): todos os pagamentos do período, confirmados e anulados. */
 export function paymentReportRows(payments: Payment[]): Record<string, string | number>[] {
   const TZ = "Africa/Bissau";
-  const LABEL: Record<string, string> = { cash: "Numerário", orange_money: "Orange Money", mtn_momo: "MTN MoMo", card: "Cartão (TPA)", transfer: "Transferência" };
+  const LABEL: Record<string, string> = PAYMENT_LABEL;
   return payments.map((p) => {
     const d = new Date(p.createdAt);
     return {

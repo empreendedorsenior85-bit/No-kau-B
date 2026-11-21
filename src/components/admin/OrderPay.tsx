@@ -49,7 +49,7 @@ export function OrderPay({ order }: { order: Order }) {
       <p className="text-sm text-white">Pagamento de {formatXOF(order.total)}</p>
       <div className="grid grid-cols-2 gap-1.5">
         {PAYMENT_METHODS.map((m) => (
-          <label key={m} className={`flex cursor-pointer items-center gap-2 rounded-xl border px-2.5 py-2 text-sm ${method === m ? "border-gold bg-gold/10 text-white" : "border-kau-800 text-mist"}`}>
+          <label key={m} className={`flex min-h-11 cursor-pointer items-center gap-2 rounded-xl border px-2.5 py-2 text-sm ${method === m ? "border-gold bg-gold/10 text-white" : "border-kau-800 text-mist"}`}>
             <input type="radio" name={`pay-${order.id}`} value={m} checked={method === m} onChange={() => setMethod(m)} className="accent-[#c9a24a]" />
             {PAYMENT_LABEL[m]}
           </label>

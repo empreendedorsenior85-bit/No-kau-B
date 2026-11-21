@@ -1,4 +1,5 @@
 import { columnsFor, type PaperWidth, type ReceiptSettings, type TextSize } from "./settings";
+import { PAYMENT_SHORT } from "@/lib/types";
 
 /**
  * Descrição de um recibo/talão em blocos. A MESMA descrição gera os bytes ESC/POS (impressão real),
@@ -23,9 +24,8 @@ const TZ = "Africa/Bissau";
 export const fmtDate = (iso: string) => new Date(iso).toLocaleDateString("pt-PT", { day: "2-digit", month: "2-digit", year: "numeric", timeZone: TZ });
 export const fmtTime = (iso: string) => new Date(iso).toLocaleTimeString("pt-PT", { hour: "2-digit", minute: "2-digit", timeZone: TZ });
 
-export const METHOD_LABEL: Record<string, string> = {
-  cash: "Numerário", orange_money: "Orange Money", mtn_momo: "MTN MoMo", card: "Cartão (TPA)", transfer: "Transferência",
-};
+/** Nome do método no recibo (curto: cabe ao lado de "Método" no papel de 58 mm). Mesma fonte que o resto do sistema. */
+export const METHOD_LABEL: Record<string, string> = PAYMENT_SHORT;
 
 /** Divide um texto em linhas que cabem na largura (por palavras). */
 export function wrapText(s: string, cols: number): string[] {

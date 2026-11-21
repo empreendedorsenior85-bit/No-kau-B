@@ -242,7 +242,7 @@ create table if not exists payments (
   id uuid primary key default gen_random_uuid(),
   table_id int not null references dining_tables(id),
   amount int not null check (amount > 0 and amount <= 100000000),
-  method text not null check (method in ('cash','orange_money','mtn_momo','card','transfer')),
+  method text not null check (method in ('cash','orange_money','telecel','mtn_momo','card','transfer')),
   tendered int check (tendered is null or tendered >= amount),
   received_by text not null check (length(received_by) between 1 and 160),
   note text check (note is null or length(note) <= 200),
@@ -704,4 +704,14 @@ begin
 end $$ language plpgsql;
 drop trigger if exists order_items_stock_trg on order_items;
 create trigger order_items_stock_trg after insert on order_items for each row execute function order_items_stock();
+`;
+
+/**
+ * Métodos de pagamento: entra "telecel". Os desativados (mtn_momo, card, transfer) continuam permitidos na base de dados
+ * porque há pagamentos antigos com eles (imutáveis); a aplicação só deixa escolher Orange Money, Telecel e dinheiro.
+ */
+export const MIGRATE_PAYMENT_METHODS_SQL = /* sql */ `
+select pg_advisory_xact_lock(727014);
+alter table payments drop constraint if exists payments_method_check;
+alter table payments add constraint payments_method_check check (method in ('cash','orange_money','telecel','mtn_momo','card','transfer'));
 `;

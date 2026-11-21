@@ -137,8 +137,8 @@ export function ReceiptSettingsEditor({ initial, logo, readOnly, updated }: {
           <Switch id="finSubtotal" label="Subtotal" checked={s.finance.subtotal} onChange={(v) => set("finance", "subtotal", v)} />
           <Switch id="finTotal" label="Total final" checked={s.finance.total} onChange={(v) => set("finance", "total", v)} />
           <Switch id="finMethod" label="Método de pagamento" checked={s.finance.method} onChange={(v) => set("finance", "method", v)} />
-          <Switch id="finTendered" label="Valor recebido" hint="Só em numerário." checked={s.finance.tendered} onChange={(v) => set("finance", "tendered", v)} />
-          <Switch id="finChange" label="Troco devolvido" hint="Só em numerário." checked={s.finance.change} onChange={(v) => set("finance", "change", v)} />
+          <Switch id="finTendered" label="Valor recebido" hint="Só no pagamento à mão (dinheiro)." checked={s.finance.tendered} onChange={(v) => set("finance", "tendered", v)} />
+          <Switch id="finChange" label="Troco devolvido" hint="Só no pagamento à mão (dinheiro)." checked={s.finance.change} onChange={(v) => set("finance", "change", v)} />
           <Switch id="finCurrency" label="Moeda utilizada (FCFA / XOF)" checked={s.finance.currency} onChange={(v) => set("finance", "currency", v)} />
           <p className="py-2.5 text-xs text-mist">Descontos, impostos/taxas e taxa de entrega: o sistema ainda não os regista — não são mostrados valores inventados.</p>
         </Section>

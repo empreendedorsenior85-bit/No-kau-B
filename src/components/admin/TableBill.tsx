@@ -73,7 +73,7 @@ export function TableBill({ tableId, tableLabel, orders }: { tableId: number; ta
             <legend className="text-xs uppercase tracking-wider text-mist">Método (recebido em mão)</legend>
             <div className="mt-2 flex flex-wrap gap-2">
               {PAYMENT_METHODS.map((m) => (
-                <label key={m} className={`cursor-pointer rounded-full border px-3 py-1.5 text-sm ${method === m ? "border-gold bg-gold text-kau-950" : "border-kau-800 text-mist"}`}>
+                <label key={m} className={`inline-flex min-h-11 cursor-pointer items-center rounded-full border px-4 py-1.5 text-sm ${method === m ? "border-gold bg-gold text-kau-950" : "border-kau-800 text-mist"}`}>
                   <input type="radio" name={`method-${tableId}`} value={m} checked={method === m} onChange={() => setMethod(m)} className="sr-only" />
                   {PAYMENT_LABEL[m]}
                 </label>

@@ -1,7 +1,7 @@
 import "server-only";
 import type { PoolClient } from "pg";
 import { query, tx } from "@/lib/db";
-import { PAYMENT_METHODS, type PaymentMethod } from "@/lib/types";
+import { ALL_PAYMENT_METHODS, type PaymentMethod } from "@/lib/types";
 
 /**
  * Pagamentos na sincronização servidor local ↔ central.
@@ -25,7 +25,7 @@ const okDate = (v: unknown) => typeof v === "string" && !Number.isNaN(Date.parse
 export function isWirePayment(o: unknown): o is WirePayment {
   const x = o as WirePayment;
   return !!x && typeof x === "object" && UUID.test(x.id) && (x.origin === "central" || x.origin === "local") && Number.isInteger(x.tableId)
-    && Number.isInteger(x.amount) && x.amount > 0 && PAYMENT_METHODS.includes(x.method)
+    && Number.isInteger(x.amount) && x.amount > 0 && ALL_PAYMENT_METHODS.includes(x.method) /* inclui métodos desativados: pagamentos antigos ainda por sincronizar */
     && (x.tendered === null || (Number.isInteger(x.tendered) && x.tendered >= x.amount))
     && typeof x.receivedBy === "string" && x.receivedBy.length >= 1 && x.receivedBy.length <= 160
     && (x.note === null || (typeof x.note === "string" && x.note.length <= 200))
