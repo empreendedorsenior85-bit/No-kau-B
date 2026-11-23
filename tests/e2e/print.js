@@ -26,7 +26,7 @@ async function order(base, tok, lines) {
   // ---------- 0. impressoras virtuais ESC/POS (TCP, como impressoras de rede reais) ----------
   const kitchen = await startFakePrinter(19100);
   const counter = await startFakePrinter(19101);
-  const usbFile = `${S}/usb-lp0.bin`; fs.writeFileSync(usbFile, '');
+  const usbFile = require('node:path').join(require('node:os').tmpdir(), `nokau-usb-lp0-${process.pid}.bin`); // o servidor de teste só aceita dispositivos falsos em /tmp fs.writeFileSync(usbFile, '');
   srv('both');
   await waitFor(() => lq("select count(*) from information_schema.tables where table_name = 'print_jobs'") === '1', 30000);
   await waitFor(() => lq("select count(*) from admin_users where email = 'gerente@nokau.test'") === '1', 60000);

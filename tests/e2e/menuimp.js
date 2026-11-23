@@ -108,7 +108,8 @@ async function login(ctx, email, pw) {
   await c.getByRole('button', { name: /Ver pedido/ }).click();
   check(await c.locator('text=50 000 FCFA').first().isVisible(), '5.1 total do carrinho: 2×5 000 + 40 000 = 50 000 FCFA');
   await c.getByRole('button', { name: /Confirmar e enviar pedido/ }).click(); await c.waitForURL(/\/pedido\//);
-  const row = sql("select o.total||'|'||o.is_test from orders o join dining_tables t on t.id=o.table_id where t.number=1 order by o.created_at desc limit 1");
+  const oid = (c.url().match(/\/pedido\/([0-9a-f-]{36})/) || [])[1]; // o pedido que ESTE teste acabou de criar
+  const row = sql(`select o.total||'|'||o.is_test from orders o where o.id = '${oid}'`);
   check(row === '50000|false', `5.2 pedido real gravado: total e "não é teste" (${row})`);
 
   // ---------- 6. permissões ----------

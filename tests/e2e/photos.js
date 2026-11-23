@@ -69,7 +69,10 @@ const check = (c, m) => (c ? ok : bad).push(m);
   await a.reload({ waitUntil: 'networkidle' });
   const li = a.locator('li').filter({ hasText: 'Salada Noçoise' }).filter({ has: a.locator('input[type=checkbox]') }).first();
   await li.getByRole('button', { name: 'Editar' }).click();
-  await li.locator('input[type=file]').setInputFiles(`${S}/hf/salada-nicoise.png`);
+  // fotografia de teste gerada na hora (1600×1200, como uma foto de telemóvel), com a mesma biblioteca de imagens do site
+  const photo = require('node:path').join(OUTDIR, 'foto-teste.png');
+  await require(ROOT + '/node_modules/sharp')({ create: { width: 1600, height: 1200, channels: 3, background: { r: 196, g: 128, b: 64 }, noise: { type: 'gaussian', mean: 128, sigma: 40 } } }).png().toFile(photo);
+  await li.locator('input[type=file]').setInputFiles(photo);
   await li.getByRole('button', { name: 'Guardar alterações' }).click();
   for (let i = 0; i < 40 && sql("select coalesce(image_path,'null') from menu_items where name='Salada Noçoise'") !== 'null'; i++) await a.waitForTimeout(500);
   const row = sql("select coalesce(image_path,'null')||'|'||(image is not null) from menu_items where name='Salada Noçoise'");
