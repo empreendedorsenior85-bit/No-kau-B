@@ -14,6 +14,9 @@ export const site = {
   phoneE164: "+245957616701",
   instagram: "https://www.instagram.com/nokau.gb/",
   instagramHandle: "@nokau.gb",
+  facebook: "https://www.facebook.com/share/1T3LR5ewv7/",
+  tiktok: "https://www.tiktok.com/@no_kau",
+  tiktokHandle: "@no_kau",
   email: null as string | null, // a confirmar
   // Botão flutuante e contacto por WhatsApp. ⚠ CONFIRMAR com o restaurante que este número tem WhatsApp
   // (se não tiver, o WhatsApp mostra "este número não está no WhatsApp"). Para esconder o botão: null.
@@ -40,3 +43,10 @@ export const nav = [
 export function smsLink(body: string) {
   return `sms:${site.phoneE164}?&body=${encodeURIComponent(body)}`;
 }
+
+/** Redes sociais do restaurante (rodapé, página Contacto e dados para o Google). */
+export const socials: { name: string; handle: string; url: string }[] = [
+  { name: "Instagram", handle: site.instagramHandle, url: site.instagram },
+  { name: "Facebook", handle: "Nô Kau", url: site.facebook },
+  { name: "TikTok", handle: site.tiktokHandle, url: site.tiktok },
+];

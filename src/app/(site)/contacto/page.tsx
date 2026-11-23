@@ -4,7 +4,7 @@ import { PageHero } from "@/components/layout/PageHero";
 import { MapEmbed } from "@/components/sections/MapEmbed";
 import { Eyebrow } from "@/components/ui/Eyebrow";
 import { ButtonLink } from "@/components/ui/Button";
-import { mapsLinks, site } from "@/lib/site";
+import { mapsLinks, site, socials } from "@/lib/site";
 
 export const metadata: Metadata = {
   title: "Contacto",
@@ -18,7 +18,7 @@ export default function ContactoPage() {
     ...(site.whatsappE164 ? [{ label: "WhatsApp", value: <a href={`https://wa.me/${site.whatsappE164.replace("+", "")}`} className="hover:text-gold-300">Enviar mensagem</a> }] : []),
     ...(site.email ? [{ label: "Email", value: <a href={`mailto:${site.email}`} className="hover:text-gold-300">{site.email}</a> }] : []),
     { label: "Horário", value: site.hours ? site.hours.map((h) => <span key={h.days} className="block">{h.days} · {h.time}</span>) : <span className="text-mist">A confirmar — ligue-nos antes de vir.</span> },
-    { label: "Redes sociais", value: <a href={site.instagram} target="_blank" rel="noopener noreferrer" className="hover:text-gold-300">Instagram {site.instagramHandle}</a> },
+    { label: "Redes sociais", value: socials.map((s) => <a key={s.name} href={s.url} target="_blank" rel="noopener noreferrer" className="block hover:text-gold-300" data-testid={`social-${s.name.toLowerCase()}`}>{s.name} {s.handle}</a>) },
   ];
   return (
     <main>

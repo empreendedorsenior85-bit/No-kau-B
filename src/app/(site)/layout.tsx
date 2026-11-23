@@ -4,7 +4,7 @@ import { Footer } from "@/components/layout/Footer";
 import { MobileActionBar } from "@/components/layout/MobileActionBar";
 import { WhatsAppFloat } from "@/components/layout/WhatsAppFloat";
 import { ReservationNotifier } from "@/components/reservations/ReservationNotifier";
-import { site } from "@/lib/site";
+import { site, socials } from "@/lib/site";
 import { MotionProvider } from "@/components/motion/MotionProvider";
 
 /** Dados estruturados apenas com factos confirmados (sem horário, sem avaliações). */
@@ -16,7 +16,7 @@ const jsonLd = {
   telephone: site.phoneE164,
   url: site.siteUrl,
   image: `${site.siteUrl}/brand/logo-nokau.png`,
-  sameAs: [site.instagram],
+  sameAs: socials.map((s) => s.url),
   address: { "@type": "PostalAddress", streetAddress: site.street, addressLocality: site.city, addressCountry: site.country },
   acceptsReservations: true,
 };

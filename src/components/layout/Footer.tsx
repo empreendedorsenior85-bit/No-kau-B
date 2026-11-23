@@ -2,7 +2,7 @@ import Link from "next/link";
 import { Logo } from "@/components/brand/Logo";
 import { DiamondBand } from "@/components/brand/DiamondPattern";
 import { Year } from "./Year";
-import { mapsLinks, nav, site } from "@/lib/site";
+import { mapsLinks, nav, site, socials } from "@/lib/site";
 
 export function Footer() {
   return (
@@ -33,9 +33,15 @@ export function Footer() {
               {site.email}
             </a>
           )}
-          <a href={site.instagram} target="_blank" rel="noopener noreferrer" className="mt-1 block text-mist hover:text-gold-300">
-            Instagram {site.instagramHandle}
-          </a>
+          <ul className="mt-1 space-y-0.5" aria-label="Redes sociais" data-testid="footer-socials">
+            {socials.map((s) => (
+              <li key={s.name}>
+                <a href={s.url} target="_blank" rel="noopener noreferrer" className="block text-mist hover:text-gold-300">
+                  {s.name} {s.handle}
+                </a>
+              </li>
+            ))}
+          </ul>
           <p className="mt-4 text-sm text-mist">
             Horário: {site.hours ? site.hours.map((h) => `${h.days} ${h.time}`).join(" · ") : "a confirmar — ligue-nos"}
           </p>

@@ -39,4 +39,5 @@ reset_throttle; timeout 900 node estoque.js > $S/f-estoque.out 2>&1; echo "estoq
 reset_throttle; timeout 900 node tutorial.js > $S/f-tutorial.out 2>&1; echo "tutorial: $(grep -E '^(OK|FALHAS|ERROS DE CONSOLA|FATAL)' $S/f-tutorial.out | tr '\n' ' ')" >> $S/final.out
 reset_throttle; timeout 900 node cliente.js > $S/f-cliente.out 2>&1; echo "cliente: $(grep -E '^(OK|FALHAS|ERROS DE CONSOLA|FATAL)' $S/f-cliente.out | tr '\n' ' ')" >> $S/final.out
 reset_throttle; timeout 900 node metodos.js > $S/f-metodos.out 2>&1; echo "metodos: $(grep -E '^(OK|FALHAS|ERROS DE CONSOLA|FATAL)' $S/f-metodos.out | tr '\n' ' ')" >> $S/final.out
+reset_throttle; timeout 900 node sociais.js > $S/f-sociais.out 2>&1; echo "sociais: $(grep -E '^(OK|FALHAS|ERROS DE CONSOLA|FATAL)' $S/f-sociais.out | tr '\n' ' ')" >> $S/final.out
 echo FIM >> $S/final.out
