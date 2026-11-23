@@ -129,7 +129,9 @@ Documentação mais detalhada: `docs/producao.md` (monitorização, recuperaçã
 
 O projeto foi verificado com cerca de **1 790 verificações automáticas** (28 conjuntos: pedidos, pagamentos, recibos, estoque, reservas, área do cliente, navegação em 8 tamanhos de ecrã, servidor local, impressão, etc.), todas a passar na versão `e776a55`.
 
-> ⚠️ **Pendente:** esses testes estão no computador de trabalho do programador e **ainda não estão guardados no repositório**. Devem ser copiados para uma pasta `tests/` antes da entrega (ver secção 9), senão perdem-se.
+Os testes estão em **`tests/e2e/`** e correm-se com **`npm run test:e2e`** (≈ 1 hora). Como preparar o computador (PostgreSQL de teste, navegador) e o que cada conjunto verifica: **`tests/e2e/README.md`**.
+
+> Os testes usam **bases de dados de TESTE** locais. Nunca os apontar para a base de dados de produção.
 
 ---
 
@@ -152,7 +154,7 @@ O projeto foi verificado com cerca de **1 790 verificações automáticas** (28 
 2. **Ativar a verificação em 2 passos (2FA)** na Vercel e no GitHub.
 3. **Confirmar o plano Vercel** (Hobby não é para uso comercial).
 4. **Cópias de segurança**: confirmar no Neon quantos dias de "recuperação no tempo" o plano inclui e fazer também uma cópia semanal (`pg_dump`) guardada fora da Neon.
-5. **Guardar os testes no repositório** (`tests/`) e substituir o `README.md` (ainda é o texto genérico do Next.js) por um resumo deste guia.
+5. ~~Guardar os testes no repositório~~ ✅ feito (`tests/e2e/`). Falta substituir o `README.md` (ainda é o texto genérico do Next.js) por um resumo deste guia.
 6. **Contas da equipa**: o dono cria o seu próprio administrador; a conta do programador é **desativada** (Utilizadores → Desativar).
 7. **Revisão dos dados**: confirmar que não ficaram produtos de demonstração no menu nem contas de teste.
 8. Confirmar que a **renovação automática** do domínio está ligada.

@@ -1,0 +1,11 @@
+# gerado pelos testes (não guardar no Git)
+node_modules/
+out/
+nav/
+*.out
+*.log
+*.png
+*.pdf
+*.bin
+*.pid
+final*.out

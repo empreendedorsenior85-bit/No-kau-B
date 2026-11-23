@@ -13,6 +13,8 @@ const eslintConfig = defineConfig([
     "build/**",
     "next-env.d.ts",
     ".vercel/**",
+    // testes ponta a ponta: scripts Node (CommonJS) à parte do site — ver tests/e2e/README.md
+    "tests/**",
   ]),
 ]);
 

@@ -1,0 +1,13 @@
+{
+  "name": "nokau-testes-e2e",
+  "private": true,
+  "description": "Testes automáticos ponta a ponta do Nô Kau (navegador real + base de dados de teste). Ver README.md.",
+  "scripts": {
+    "test": "bash runall.sh"
+  },
+  "devDependencies": {
+    "jsqr": "1.4.0",
+    "playwright": "1.63.0",
+    "pngjs": "7.0.0"
+  }
+}
