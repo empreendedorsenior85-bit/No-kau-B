@@ -129,22 +129,43 @@ const watch = (p, name) => {
     await ctx.close();
   }
 
-  // ── 4. Menu da mesa no computador (POS da equipa): o rato não vira o cartão; clique adiciona ──
+  // ── 4. Menu da mesa no computador: cliente vira com o rato e adiciona no verso; equipa (POS) não vira com o rato ──
   {
     const ctx = await b.newContext({ viewport: { width: 1366, height: 900 } });
     const p = await ctx.newPage(); watch(p, 'mesa-pc');
     await p.goto(`${B}/m/${token}`, { waitUntil: 'networkidle' });
-    const card = p.locator('[data-testid^="item-"].flip-card').first();
-    await card.hover(); await sleep(800);
-    check(await angle(card) === 0, '4.1 POS/computador: passar o rato NÃO vira (o botão "Adicionar" não foge)');
-    const btn = card.locator('.flip-front').getByRole('button', { name: /^Adicionar / });
+    let card = null;
+    const cards = p.locator('[data-testid^="item-"].flip-card');
+    for (let i = 0; i < await cards.count(); i++) {
+      const c = cards.nth(i);
+      if (await c.locator('.flip-back button[aria-label^="Adicionar "]').count()) { card = c; break; } // verso ainda escondido: procura por CSS
+    }
+    await card.scrollIntoViewIfNeeded();
+    await card.hover({ position: { x: 40, y: 40 } }); await sleep(900);
+    check(await angle(card) === 180 && await vis(card, 'back') === 'visible', '4.1 cliente no computador: rato por cima vira o cartão');
+    await card.locator('.flip-back').getByRole('button', { name: /^Adicionar / }).click(); await sleep(400);
+    check(await p.getByRole('button', { name: /Ver pedido/ }).count() === 1 && await angle(card) === 180, '4.2 cliente: "Adicionar" no verso funciona e o cartão continua virado');
+    await p.mouse.move(2, 2); await sleep(900);
+    check(await angle(card) === 0, '4.3 cliente: rato sai, volta à frente');
+    await ctx.close();
+    // equipa com sessão = POS
+    const sctx = await b.newContext({ viewport: { width: 1366, height: 900 } });
+    const sp = await sctx.newPage(); watch(sp, 'pos');
+    await sp.goto(B + '/admin/login', { waitUntil: 'networkidle' });
+    await sp.fill('input[name=email]', 'gerente@nokau.test'); await sp.fill('input[name=password]', 'senha-forte-123'); await sp.click('button[type=submit]');
+    await sp.waitForURL((u) => u.pathname.startsWith("/admin/") && u.pathname !== "/admin/login", { timeout: 20000 });
+    await sp.goto(`${B}/m/${token}`, { waitUntil: 'networkidle' });
+    const pc = sp.locator('[data-testid^="item-"].flip-card').first();
+    await pc.hover(); await sleep(800);
+    check(await angle(pc) === 0, '4.4 POS (equipa): passar o rato NÃO vira (o botão "Adicionar" não foge)');
+    const btn = pc.locator('.flip-front').getByRole('button', { name: /^Adicionar / });
     if (await btn.count()) {
       await btn.click(); await sleep(400);
-      check(await card.getAttribute('data-flipped') === 'false' && await p.getByRole('button', { name: /Ver pedido/ }).count() === 1, '4.2 POS: clique em "Adicionar" adiciona sem virar');
+      check(await pc.getAttribute('data-flipped') === 'false' && await sp.getByRole('button', { name: /Ver pedido/ }).count() === 1, '4.5 POS: clique em "Adicionar" adiciona sem virar');
     }
-    await card.locator('.flip-front h3').click(); await sleep(800);
-    check(await angle(card) === 180, '4.3 POS: clique no cartão mostra o verso');
-    await ctx.close();
+    await pc.locator('.flip-front h3').click(); await sleep(800);
+    check(await angle(pc) === 180, '4.6 POS: clique no cartão mostra o verso');
+    await sctx.close();
   }
 
   // ── 5. "Reduzir movimento": troca de lado sem animação ──

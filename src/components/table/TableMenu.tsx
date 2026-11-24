@@ -270,6 +270,7 @@ export function TableMenu({ token, table, categories, customer = null, staff = f
                     qty={q}
                     available={available}
                     imagesOn={imagesOn}
+                    hover={!staff}
                     onAdd={() => cart.add(it)}
                     onQty={(n) => cart.setQty(it.id, n)}
                   />
@@ -373,10 +374,11 @@ export function TableMenu({ token, table, categories, customer = null, staff = f
 
 /**
  * Cartão do produto. Com descrição, vira (toque/clique ou botão "Detalhes"): frente com foto, nome, preço e
- * "Adicionar"; verso com a descrição, o preço e "Adicionar". Sem hover de propósito — no POS e no telemóvel o
- * botão "Adicionar" nunca se mexe debaixo do dedo/rato. O lado escondido não recebe cliques (ver FlipCard).
+ * "Adicionar"; verso com a descrição, o preço e "Adicionar". Clientes com rato: vira também ao passar por cima
+ * (o "Adicionar" do verso fica à mão). Equipa (POS): sem hover — o "Adicionar" nunca se mexe debaixo do rato.
+ * O lado escondido não recebe cliques (ver FlipCard).
  */
-function ItemCard({ it, qty, available, imagesOn, onAdd, onQty }: { it: MenuItemView; qty: number; available: boolean; imagesOn: boolean; onAdd: () => void; onQty: (n: number) => void }) {
+function ItemCard({ it, qty, available, imagesOn, hover, onAdd, onQty }: { it: MenuItemView; qty: number; available: boolean; imagesOn: boolean; hover: boolean; onAdd: () => void; onQty: (n: number) => void }) {
   const face = `overflow-hidden rounded-2xl border bg-kau-900 ${qty ? "border-gold/60" : "border-kau-800"} ${available ? "" : "opacity-60"}`;
   const control = !available ? (
     <span className="rounded-full bg-kau-800 px-3 py-1.5 text-xs uppercase tracking-wider text-mist">Indisponível</span>
@@ -427,6 +429,7 @@ function ItemCard({ it, qty, available, imagesOn, onAdd, onQty }: { it: MenuItem
   return (
     <FlipCard
       label={it.name}
+      hover={hover}
       faceClassName={face}
       testId={`item-${it.id}`}
       front={(toggle) => front(toggle)}
