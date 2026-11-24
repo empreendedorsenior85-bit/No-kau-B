@@ -154,7 +154,7 @@ Os testes estão em **`tests/e2e/`** e correm-se com **`npm run test:e2e`** (≈
 2. **Ativar a verificação em 2 passos (2FA)** na Vercel e no GitHub.
 3. **Confirmar o plano Vercel** (Hobby não é para uso comercial).
 4. **Cópias de segurança**: confirmar no Neon quantos dias de "recuperação no tempo" o plano inclui e fazer também uma cópia semanal (`pg_dump`) guardada fora da Neon.
-5. ~~Guardar os testes no repositório~~ ✅ feito (`tests/e2e/`). Falta substituir o `README.md` (ainda é o texto genérico do Next.js) por um resumo deste guia.
+5. ~~Guardar os testes no repositório~~ ✅ feito (`tests/e2e/`). ~~Escrever o `README.md`~~ ✅ feito.
 6. **Contas da equipa**: o dono cria o seu próprio administrador; a conta do programador é **desativada** (Utilizadores → Desativar).
 7. **Revisão dos dados**: confirmar que não ficaram produtos de demonstração no menu nem contas de teste.
 8. Confirmar que a **renovação automática** do domínio está ligada.
