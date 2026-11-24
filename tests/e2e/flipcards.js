@@ -41,11 +41,16 @@ const watch = (p, name) => {
     check(await angle(card) === 0 && await vis(card, 'front') === 'visible' && await vis(card, 'back') === 'hidden', '1.2 começa de frente; verso escondido');
     await p.screenshot({ path: `${OUT}/flip-menu-1-frente.png`, clip: await card.boundingBox() });
     await card.hover({ position: { x: 40, y: 40 } });
-    await sleep(260);
+    await sleep(200);
+    const v1 = [await vis(card, 'front'), await vis(card, 'back')];
+    await sleep(60);
     const mid = await angle(card);
     const ov = await p.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
     await p.screenshot({ path: `${OUT}/flip-menu-2-a-rodar.png`, clip: await card.boundingBox() });
     check(mid > 15 && mid < 175, `1.3 rotação 3D real a meio (ângulo ${mid}°, não é troca de imagem)`);
+    await sleep(250); // já passou o meio da volta
+    const v2 = [await vis(card, 'front'), await vis(card, 'back')];
+    check(v1.join() === 'visible,hidden' && v2.join() === 'hidden,visible', `1.3b só um lado ativo em cada instante (1.ª metade: ${v1}; 2.ª metade: ${v2})`);
     check(ov <= 0, `1.4 sem deslocamento horizontal durante a rotação (${ov}px)`);
     await sleep(700);
     check(await angle(card) === 180 && await vis(card, 'back') === 'visible' && await vis(card, 'front') === 'hidden', '1.5 com o rato por cima: verso visível (180°)');

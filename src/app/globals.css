@@ -125,14 +125,15 @@ html { scroll-padding-top: 6rem; scroll-padding-bottom: 5.5rem; }
 
 /* Cartões dos pratos que viram (frente/verso) — ver FlipCard.tsx.
    Só transform (GPU). Os dois lados ocupam a mesma célula de grelha: a altura é a do lado mais alto, sem saltos.
-   O lado escondido fica também `visibility: hidden` a meio da volta: não recebe cliques nem foco, os leitores de ecrã
-   não o leem, e não aparece em navegadores com falhas de backface-visibility (Safari antigo). */
+   Os lados trocam de `visibility` exatamente a meio da volta (90°, aos 0,35 s): em cada instante só um lado
+   recebe cliques e foco e é lido pelos leitores de ecrã — e nada aparece ao contrário em navegadores com falhas
+   de backface-visibility (Safari antigo). */
 .flip-card { perspective: 1600px; }
 .flip-card:not([data-hover]) { cursor: pointer; } /* sem hover, toca-se/clica-se no cartão para virar */
 .flip-inner {
   display: grid;
   transform-style: preserve-3d;
-  /* curva simétrica: chega aos 90° exatamente a meio (0,35 s), quando os lados trocam de visibilidade */
+  /* curva simétrica: chega aos 90° exatamente a meio (0,35 s), quando os lados trocam */
   transition: transform 0.7s cubic-bezier(0.65, 0, 0.35, 1);
 }
 .flip-face {
@@ -140,18 +141,18 @@ html { scroll-padding-top: 6rem; scroll-padding-bottom: 5.5rem; }
   position: relative;
   -webkit-backface-visibility: hidden;
   backface-visibility: hidden;
-  transition: visibility 0s linear 0s;
+  transition: visibility 0s linear 0.35s;
 }
-.flip-back { transform: rotateY(180deg); visibility: hidden; transition-delay: 0.35s; }
+.flip-back { transform: rotateY(180deg); visibility: hidden; }
 .flip-card[data-flipped="true"] .flip-inner { transform: rotateY(180deg); }
-.flip-card[data-flipped="true"] .flip-front { visibility: hidden; transition-delay: 0.35s; }
-.flip-card[data-flipped="true"] .flip-back { visibility: visible; transition-delay: 0s; }
+.flip-card[data-flipped="true"] .flip-front { visibility: hidden; }
+.flip-card[data-flipped="true"] .flip-back { visibility: visible; }
 @media (hover: hover) and (pointer: fine) {
   /* o hover é lido no contentor (que não roda): o cartão não "foge" do rato a meio da volta */
   .flip-card[data-hover="true"]:hover .flip-inner { transform: rotateY(180deg); }
-  .flip-card[data-hover="true"]:hover .flip-front { visibility: hidden; transition-delay: 0.35s; }
-  .flip-card[data-hover="true"]:hover .flip-back { visibility: visible; transition-delay: 0s; }
+  .flip-card[data-hover="true"]:hover .flip-front { visibility: hidden; }
+  .flip-card[data-hover="true"]:hover .flip-back { visibility: visible; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .flip-inner, .flip-face, .flip-card .flip-front, .flip-card .flip-back { transition: none !important; }
+  .flip-inner, .flip-face { transition: none !important; }
 }

@@ -50,7 +50,12 @@ export function FlipCard({
   useEffect(() => {
     if (!moveFocus.current) return;
     moveFocus.current = false;
-    (flipped ? backBtn : frontBtn).current?.focus({ preventScroll: true });
+    const target = (flipped ? backBtn : frontBtn).current;
+    // o outro lado só fica focável a meio da volta (0,35 s); sem animação (reduzir movimento) é logo
+    target?.focus({ preventScroll: true });
+    if (document.activeElement === target) return;
+    const t = setTimeout(() => target?.focus({ preventScroll: true }), 380);
+    return () => clearTimeout(t);
   }, [flipped]);
 
   const toggleFromButton = () => {
