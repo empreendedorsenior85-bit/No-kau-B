@@ -3,7 +3,7 @@ const OUTDIR = require('node:path').join(__dirname, 'out'); // capturas e fichei
 require('node:fs').mkdirSync(OUTDIR, { recursive: true });
 const { chromium, devices } = require('playwright');
 const B = 'http://localhost:3100';
-const pages = ['/', '/menu', '/reservas', '/cultura', '/eventos', '/sobre', '/contacto', '/design-system'];
+const pages = ['/', '/menu', '/reservas', '/cultura', '/eventos', '/sobre', '/contacto'];
 const out = require('node:path').join(OUTDIR, 'shots', 'f3');
 const errs = [], ok = [];
 const check = (c, msg) => (c ? ok : errs).push(msg);
@@ -59,6 +59,9 @@ const check = (c, msg) => (c ? ok : errs).push(msg);
   }
   console.log('links internos verificados:', [...hrefs].join(' '));
   check((await p.request.get(B + '/xyz')).status() === 404, '404 page');
+  // /design-system é interno: sem sessão da equipa vai para o login
+  await p.goto(B + '/design-system', { waitUntil: 'load' });
+  check(new URL(p.url()).pathname === '/admin/login', `/design-system sem sessão → login (${p.url()})`);
 
   // Reserva: vazio
   await p.goto(B + '/reservas', { waitUntil: 'networkidle' });

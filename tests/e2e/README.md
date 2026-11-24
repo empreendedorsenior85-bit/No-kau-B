@@ -2,7 +2,7 @@
 
 Estes testes abrem o site num **navegador real** (Chromium), fazem o que uma pessoa faria — pedir à mesa, confirmar pagamentos, reservar, gerir o estoque, imprimir — e confirmam o resultado no ecrã **e** na base de dados.
 
-São cerca de **1 790 verificações** em 28 conjuntos. Na versão `e776a55` passaram todas.
+São cerca de **1 790 verificações** em 29 conjuntos. Antes de cada publicação devem passar todas (resultado em `final.out`).
 
 > ⚠️ Usam **bases de dados de TESTE** num PostgreSQL local. **Nunca** apontar para a base de dados de produção (Neon): os testes criam e apagam dados.
 
@@ -48,7 +48,7 @@ node tests/e2e/metodos.js          # por exemplo
 | Ficheiro | O quê |
 |---|---|
 | `upgrade.js` | Atualização da base de dados de uma versão antiga, sem perder dados |
-| `e2e.js`, `orderfix.js`, `test3.js` | Menu QR, carrinho, pedidos, painel em tempo real, vários telemóveis |
+| `e2e.js`, `orderfix.js`, `test3.js` | Menu QR, carrinho, pedidos, painel em tempo real, vários telemóveis; `/design-system` só com sessão |
 | `roles.js` | Permissões: Administrador, Gerente, Garçom |
 | `dash.js` | Visão geral, gráficos, relatórios e CSV = valores da base de dados |
 | `menuimp.js`, `photos.js` | Gestão do menu e fotografias |
@@ -68,5 +68,6 @@ node tests/e2e/metodos.js          # por exemplo
 | `tutorial.js` | Tutorial da impressora (conteúdo igual ao sistema real) |
 | `cliente.js` | Área do cliente: cada opção do menu, reservas, pagamentos, privacidade |
 | `metodos.js` | Métodos de pagamento: só Orange Money, Telecel e pagamento à mão |
+| `sociais.js` | Instagram, Facebook e TikTok no rodapé, no Contacto e nos dados para o Google |
 
 Ficheiros de apoio: `auth-helper.js` (sessão de cliente de teste), `fake-printer.js` / `fake-bt.py` (impressoras virtuais), `servers.sh` (arranca os servidores de teste), `catalog.json` (menu de referência), `runall.sh` (corre tudo).
