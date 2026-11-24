@@ -715,3 +715,12 @@ select pg_advisory_xact_lock(727014);
 alter table payments drop constraint if exists payments_method_check;
 alter table payments add constraint payments_method_check check (method in ('cash','orange_money','telecel','mtn_momo','card','transfer'));
 `;
+
+/**
+ * Desempenho dos relatórios e da Visão geral: filtram os pedidos por data (created_at). Com anos de dados,
+ * sem este índice a base de dados teria de ler a tabela inteira em cada relatório.
+ */
+export const MIGRATE_PERF_SQL = /* sql */ `
+select pg_advisory_xact_lock(727015);
+create index if not exists orders_created_idx on orders(created_at);
+`;

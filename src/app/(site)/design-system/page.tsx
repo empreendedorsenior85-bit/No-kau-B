@@ -1,4 +1,7 @@
+import { Suspense } from "react";
 import type { Metadata } from "next";
+import { redirect } from "next/navigation";
+import { getManager } from "@/lib/auth";
 import { Logo } from "@/components/brand/Logo";
 import { DiamondBand, DiamondMark } from "@/components/brand/DiamondPattern";
 import { ZincDivider } from "@/components/brand/ZincDivider";
@@ -48,7 +51,21 @@ function Section({ title, eyebrow, children }: { title: string; eyebrow: string;
   );
 }
 
-export default function DesignSystem() {
+/** Página interna (cores, tipos, componentes): só para a equipa com sessão iniciada. */
+export default function Page() {
+  return (
+    <Suspense fallback={<div className="grid min-h-[60vh] place-items-center"><BrandLoader /></div>}>
+      <Gate />
+    </Suspense>
+  );
+}
+
+async function Gate() {
+  if (!(await getManager())) redirect("/admin/login");
+  return <DesignSystem />;
+}
+
+function DesignSystem() {
   return (
     <main className="mx-auto max-w-6xl px-6 pb-24 sm:px-10">
       <header className="flex flex-col gap-8 pb-16 pt-32 sm:flex-row sm:items-center">

@@ -162,11 +162,18 @@ Os testes estão em **`tests/e2e/`** e correm-se com **`npm run test:e2e`** (≈
 ### Pode esperar (melhorias)
 - Ligar um alerta gratuito (UptimeRobot / Better Stack) a `https://nokaubissau.com/api/health`.
 - Instalar o servidor local e configurar `NOKAU_SYNC_TOKEN` (quando houver impressoras).
-- Reduzir o custo do "tempo real" do painel (consulta a base de dados a cada 1,5 s por cada painel aberto).
-- Apagar o ficheiro antigo `nokau-site.zip` e os ramos antigos do GitHub já integrados.
-- ~~Renomear a página "Personalização de Ingressos" para "Personalização de Recibos"~~ ✅ feito.
-- Atualizações pequenas de bibliotecas (React 19.3.1, Tailwind 4.3.5) — com testes.
+- **Apagar os ramos antigos do GitHub** (já estão todos dentro do `main`, nada se perde): `etapa-1-2-offline`, `etapa-3-atendimento`, `etapa-4-clientes-pagamentos`, `etapa-5-impressao`, `reservas`, `vaca-bruta` — em GitHub → Branches → 🗑️. (Não foi possível fazê-lo a partir do ambiente de trabalho do programador.) Manter `main`, `revisao-producao` e `backup/antes-correcoes-auditoria`.
 - Comprar e ligar o `nokau.gw` (através da ARN / nic.gw — a Vercel não vende `.gw`).
+- Recibo de outro cliente: mostra "Página não encontrada" sem revelar dados, mas responde com o código 200 em vez de 404 (efeito do carregamento progressivo). Sem risco; pode ficar como está.
+
+### Já feito depois da auditoria
+- ✅ "Tempo real" do painel: ~⅔ menos trabalho na base de dados (medido: 399 → 134 operações por minuto com um painel parado).
+- ✅ Índice nos pedidos por data: relatórios ~40× mais rápidos com anos de dados (medido: 156 ms → 3,6 ms com 300 000 pedidos).
+- ✅ Página interna `/design-system` só com sessão da equipa.
+- ✅ Logótipo mais leve (364 KB → 53 KB, mesmo aspeto).
+- ✅ Ficheiro antigo `nokau-site.zip` removido.
+- ✅ "Personalização de Ingressos" → "Personalização de Recibos".
+- ✅ Atualizações pequenas de bibliotecas (React 19.3.1, Tailwind 4.3.5) e correção das vulnerabilidades das ferramentas de desenvolvimento — com todos os testes a passar.
 
 ---
 
