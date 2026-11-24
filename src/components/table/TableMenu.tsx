@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { newKey, isValidKey, useCart } from "@/lib/cart";
 import { sendOrder } from "@/lib/send-order";
 import { formatXOF } from "@/lib/format";
@@ -12,6 +12,7 @@ import { AccountGate } from "./AccountGate";
 import { Logo } from "@/components/brand/Logo";
 import { DiamondMark } from "@/components/brand/DiamondPattern";
 import { Button } from "@/components/ui/Button";
+import { FlipCard } from "@/components/menu/FlipCard";
 
 export type MenuItemView = {
   id: number; categoryId: string; name: string; description: string; price: number;
@@ -263,46 +264,15 @@ export function TableMenu({ token, table, categories, customer = null, staff = f
                 const q = qtyOf(it.id);
                 const available = it.available && !gone.has(it.id);
                 return (
-                  <li key={it.id} className={`overflow-hidden rounded-2xl border bg-kau-900 ${q ? "border-gold/60" : "border-kau-800"} ${available ? "" : "opacity-60"}`}>
-                    {it.imageUrl && (
-                      <figure className="relative">
-                        {imagesOn ? (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img src={it.imageUrl} alt={it.name} loading="lazy" decoding="async" fetchPriority="low" className="aspect-[16/10] w-full object-cover" />
-                        ) : (
-                          <div aria-hidden className="aspect-[16/10] w-full bg-kau-800/40" />
-                        )}
-                        {isIllustrative(it.imageUrl) && (
-                          <figcaption data-testid="illustrative" className="absolute bottom-2 left-2 rounded-full bg-kau-950/75 px-2.5 py-1 text-[0.65rem] uppercase tracking-[0.12em] text-white/90 backdrop-blur-sm">Imagem ilustrativa</figcaption>
-                        )}
-                      </figure>
-                    )}
-                    <div className="flex items-start gap-4 p-4">
-                      <div className="min-w-0 flex-1">
-                        {it.isDemo && (
-                          <span className="mb-2 inline-flex rounded-full border border-dashed border-gold-300/70 px-2 py-0.5 text-[0.65rem] uppercase tracking-[0.12em] text-gold-300">Demonstração</span>
-                        )}
-                        <h3 className="font-display text-xl text-white">{it.name}</h3>
-                        {it.description && <p className="mt-1 text-sm leading-relaxed text-mist">{it.description}</p>}
-                        <p className="mt-2 font-display text-lg text-gold-300">{formatXOF(it.price)}</p>
-                      </div>
-                      <div className="shrink-0 pt-1">
-                        {!available ? (
-                          <span className="rounded-full bg-kau-800 px-3 py-1.5 text-xs uppercase tracking-wider text-mist">Indisponível</span>
-                        ) : q === 0 ? (
-                          <button
-                            onClick={() => cart.add(it)}
-                            className="h-11 rounded-full bg-gold px-5 text-sm font-medium text-kau-950 transition-transform active:scale-95"
-                            aria-label={`Adicionar ${it.name}`}
-                          >
-                            Adicionar
-                          </button>
-                        ) : (
-                          <Stepper qty={q} name={it.name} onChange={(n) => cart.setQty(it.id, n)} />
-                        )}
-                      </div>
-                    </div>
-                  </li>
+                  <ItemCard
+                    key={it.id}
+                    it={it}
+                    qty={q}
+                    available={available}
+                    imagesOn={imagesOn}
+                    onAdd={() => cart.add(it)}
+                    onQty={(n) => cart.setQty(it.id, n)}
+                  />
                 );
               })}
             </ul>
@@ -398,6 +368,89 @@ export function TableMenu({ token, table, categories, customer = null, staff = f
         </div>
       )}
     </div>
+  );
+}
+
+/**
+ * Cartão do produto. Com descrição, vira (toque/clique ou botão "Detalhes"): frente com foto, nome, preço e
+ * "Adicionar"; verso com a descrição, o preço e "Adicionar". Sem hover de propósito — no POS e no telemóvel o
+ * botão "Adicionar" nunca se mexe debaixo do dedo/rato. O lado escondido não recebe cliques (ver FlipCard).
+ */
+function ItemCard({ it, qty, available, imagesOn, onAdd, onQty }: { it: MenuItemView; qty: number; available: boolean; imagesOn: boolean; onAdd: () => void; onQty: (n: number) => void }) {
+  const face = `overflow-hidden rounded-2xl border bg-kau-900 ${qty ? "border-gold/60" : "border-kau-800"} ${available ? "" : "opacity-60"}`;
+  const control = !available ? (
+    <span className="rounded-full bg-kau-800 px-3 py-1.5 text-xs uppercase tracking-wider text-mist">Indisponível</span>
+  ) : qty === 0 ? (
+    <button
+      onClick={onAdd}
+      className="h-11 rounded-full bg-gold px-5 text-sm font-medium text-kau-950 transition-transform active:scale-95"
+      aria-label={`Adicionar ${it.name}`}
+    >
+      Adicionar
+    </button>
+  ) : (
+    <Stepper qty={qty} name={it.name} onChange={onQty} />
+  );
+  const price = <p className="mt-2 font-display text-lg text-gold-300">{formatXOF(it.price)}</p>;
+  const front = (toggle?: ReactNode) => (
+    <>
+      {it.imageUrl && (
+        <figure className="relative">
+          {imagesOn ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={it.imageUrl} alt={it.name} loading="lazy" decoding="async" fetchPriority="low" className="aspect-[16/10] w-full object-cover" />
+          ) : (
+            <div aria-hidden className="aspect-[16/10] w-full bg-kau-800/40" />
+          )}
+          {isIllustrative(it.imageUrl) && (
+            <figcaption data-testid="illustrative" className="absolute bottom-2 left-2 rounded-full bg-kau-950/75 px-2.5 py-1 text-[0.65rem] uppercase tracking-[0.12em] text-white/90 backdrop-blur-sm">Imagem ilustrativa</figcaption>
+          )}
+          {toggle && <div className="absolute right-3 top-3 z-10">{toggle}</div>}
+        </figure>
+      )}
+      <div className="flex items-start gap-4 p-4">
+        <div className="min-w-0 flex-1">
+          {it.isDemo && (
+            <span className="mb-2 inline-flex rounded-full border border-dashed border-gold-300/70 px-2 py-0.5 text-[0.65rem] uppercase tracking-[0.12em] text-gold-300">Demonstração</span>
+          )}
+          <h3 className="font-display text-xl text-white">{it.name}</h3>
+          {!toggle && it.description && <p className="mt-1 text-sm leading-relaxed text-mist">{it.description}</p>}
+          {price}
+          {/* sem fotografia, o botão de virar fica por baixo do preço */}
+          {toggle && !it.imageUrl && <div className="mt-3">{toggle}</div>}
+        </div>
+        <div className="shrink-0 pt-1">{control}</div>
+      </div>
+    </>
+  );
+  if (!it.description) return <li className={face}>{front()}</li>;
+  return (
+    <FlipCard
+      label={it.name}
+      faceClassName={face}
+      testId={`item-${it.id}`}
+      front={(toggle) => front(toggle)}
+      back={(toggle) => (
+        <div className="flex h-full flex-col p-4">
+          <div className="flex items-start justify-between gap-3">
+            <p className="min-w-0 font-display text-xl text-white">{it.name}</p>
+            {toggle}
+          </div>
+          <div className="mt-3 flex items-start gap-4">
+            {it.imageUrl && imagesOn && (
+              // a mesma fotografia da frente (já em cache), em miniatura "a flutuar" sobre o cartão
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={it.imageUrl} alt="" loading="lazy" decoding="async" className="h-20 w-20 shrink-0 rounded-2xl object-cover shadow-[0_14px_28px_-12px_rgba(0,0,0,0.7)] ring-1 ring-gold/30" />
+            )}
+            <p className="min-w-0 text-sm leading-relaxed text-mist">{it.description}</p>
+          </div>
+          <div className="mt-auto flex items-end justify-between gap-4 pt-4">
+            {price}
+            <div className="shrink-0">{control}</div>
+          </div>
+        </div>
+      )}
+    />
   );
 }
 

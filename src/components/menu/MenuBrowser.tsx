@@ -1,5 +1,5 @@
 "use client";
-import { useMemo, useState } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import { useClientValue } from "@/lib/use-client-value";
 import { Reveal } from "@/components/motion/Reveal";
 import { AnimatePresence } from "motion/react";
@@ -8,6 +8,7 @@ import type { MenuCategory, MenuItem } from "@/content/menu";
 import { isIllustrative } from "@/lib/illustrative";
 import { formatXOF } from "@/lib/format";
 import { DiamondMark } from "@/components/brand/DiamondPattern";
+import { FlipCard } from "./FlipCard";
 
 function normalize(s: string) {
   return s.normalize("NFD").replace(/\p{Diacritic}/gu, "").toLowerCase();
@@ -140,13 +141,22 @@ export function MenuBrowser({ categories, items }: { categories: MenuCategory[];
   );
 }
 
+const FACE = "overflow-hidden rounded-[1.5rem] border border-gold-100 bg-gold-50 p-6 transition-shadow duration-500 group-hover:shadow-[0_18px_40px_-24px_rgba(95,73,35,0.45)]";
+
 function MenuCard({ item, index }: { item: MenuItem; index: number }) {
-  return (
-    <Reveal
-      as="li"
-      delay={(index % 2) * 0.06}
-      className="group relative overflow-hidden rounded-[1.5rem] border border-gold-100 bg-gold-50 p-6 transition-[box-shadow,transform] duration-500 hover:-translate-y-0.5 hover:shadow-[0_18px_40px_-24px_rgba(95,73,35,0.45)]"
-    >
+  const price = (
+    <p className="shrink-0 text-right font-display text-lg text-umber">
+      {item.price != null ? formatXOF(item.price) : <span className="text-sm italic text-stone">Preço a confirmar</span>}
+    </p>
+  );
+  const availability = (
+    <p className="text-xs uppercase tracking-[0.16em] text-stone">
+      {item.available === true ? "Disponível" : item.available === false ? "Indisponível" : "Disponibilidade a confirmar"}
+    </p>
+  );
+  // sem fotografia, o botão de virar fica na linha da disponibilidade (no canto de cima ficaria por cima do preço)
+  const front = (toggle?: ReactNode) => (
+    <>
       {item.image && (
         <figure className="relative -mx-6 -mt-6 mb-5">
           {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -154,6 +164,7 @@ function MenuCard({ item, index }: { item: MenuItem; index: number }) {
           {isIllustrative(item.image) && (
             <figcaption className="absolute bottom-2 left-2 rounded-full bg-kau-950/75 px-2.5 py-1 text-[0.65rem] uppercase tracking-[0.12em] text-white/90 backdrop-blur-sm">Imagem ilustrativa</figcaption>
           )}
+          {toggle && <div className="absolute right-3 top-3 z-10">{toggle}</div>}
         </figure>
       )}
       {!item.image && <DiamondMark className="absolute -right-5 -top-5 text-gold/15 transition-transform duration-700 group-hover:rotate-45" size={96} />}
@@ -165,16 +176,56 @@ function MenuCard({ item, index }: { item: MenuItem; index: number }) {
             </span>
           )}
           <h3 className="mt-3 font-display text-xl sm:text-2xl">{item.name}</h3>
-          <p className="mt-2 text-sm leading-relaxed text-stone">{item.description}</p>
-          {item.ingredients?.length ? <p className="mt-2 text-xs text-stone">{item.ingredients.join(" · ")}</p> : null}
         </div>
-        <p className="shrink-0 text-right font-display text-lg text-umber">
-          {item.price != null ? formatXOF(item.price) : <span className="text-sm italic text-stone">Preço a confirmar</span>}
-        </p>
+        {price}
       </div>
-      <p className="relative mt-5 text-xs uppercase tracking-[0.16em] text-stone">
-        {item.available === true ? "Disponível" : item.available === false ? "Indisponível" : "Disponibilidade a confirmar"}
-      </p>
+      <div className={`relative mt-5 flex items-center justify-between gap-4 ${!item.image && toggle ? "min-h-9" : ""}`}>
+        {availability}
+        {!item.image && toggle}
+      </div>
+    </>
+  );
+  const hasBack = !!item.description || !!item.ingredients?.length;
+  return (
+    <Reveal as="li" delay={(index % 2) * 0.06} className="group relative transition-transform duration-500 hover:-translate-y-0.5">
+      {hasBack ? (
+        <FlipCard
+          as="div"
+          hover
+          label={item.name}
+          faceClassName={FACE}
+          testId={`menu-card-${item.id}`}
+          front={(toggle) => front(toggle)}
+          back={
+            <div className="flex h-full flex-col">
+              <DiamondMark className="absolute -right-5 -bottom-5 text-gold/15" size={96} />
+              <div className="relative flex items-start justify-between gap-6 pr-24">
+                <p className="font-display text-xl sm:text-2xl">{item.name}</p>
+              </div>
+              <div className="relative mt-4 flex items-start gap-5">
+                {item.image && (
+                  // a mesma fotografia da frente (já em cache), em miniatura "a flutuar" sobre o cartão
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={item.image} alt="" loading="lazy" decoding="async" className="h-24 w-24 shrink-0 rounded-2xl object-cover shadow-[0_18px_32px_-16px_rgba(95,73,35,0.6)] ring-1 ring-gold-100" />
+                )}
+                {item.description && <p className="min-w-0 text-sm leading-relaxed text-stone">{item.description}</p>}
+              </div>
+              {item.ingredients?.length ? (
+                <div className="relative mt-4">
+                  <p className="text-[0.65rem] uppercase tracking-[0.16em] text-umber">Ingredientes</p>
+                  <p className="mt-1 text-sm text-stone">{item.ingredients.join(" · ")}</p>
+                </div>
+              ) : null}
+              <div className="relative mt-auto flex items-end justify-between gap-6 pt-5">
+                {availability}
+                {price}
+              </div>
+            </div>
+          }
+        />
+      ) : (
+        <div className={`relative ${FACE}`}>{front()}</div>
+      )}
     </Reveal>
   );
 }
