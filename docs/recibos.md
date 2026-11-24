@@ -1,4 +1,4 @@
-# Personalização de Ingressos (recibos e talões)
+# Personalização de Recibos (recibos e talões)
 
 **Onde:** Painel → **Recibos** (`/admin/recibos`). Só Admin. Edita-se no site central; o servidor do restaurante recebe a configuração sozinho em cerca de 1 minuto. O logótipo só é descarregado quando muda.
 

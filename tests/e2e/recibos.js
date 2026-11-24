@@ -1,4 +1,4 @@
-/* Personalização de Ingressos — configuração, persistência, permissões, pré-visualização, recibo no ecrã,
+/* Personalização de Recibos — configuração, persistência, permissões, pré-visualização, recibo no ecrã,
    sincronização para o restaurante e impressão REAL (ESC/POS) em 58/80 mm, tamanhos, logótipo e QR Code. */
 const ROOT = require('node:path').resolve(__dirname, '../..'); // raiz do projeto
 const OUTDIR = require('node:path').join(__dirname, 'out'); // capturas e ficheiros gerados (fora do Git)
@@ -57,7 +57,7 @@ function decodeQr(job) {
   // ---------- 1. Carregar a página e os valores padrão ----------
   const a = await login(b, C, 'gerente@nokau.test', 'senha-forte-123');
   await a.goto(C + '/admin/recibos', { waitUntil: 'networkidle' });
-  check(await a.locator('h1', { hasText: 'Personalização de Ingressos' }).isVisible() && await a.locator('text=Configure a aparência dos seus recibos e pedidos de POS.').isVisible(), '1.1 página "Personalização de Ingressos" com a descrição');
+  check(await a.locator('h1', { hasText: 'Personalização de Recibos' }).isVisible() && await a.locator('text=Configure a aparência dos seus recibos e pedidos de POS.').isVisible(), '1.1 página "Personalização de Recibos" com a descrição');
   const paper = a.locator('[data-testid="preview-paper"]');
   check(await paper.getAttribute('data-paper') === '80' && await paper.getAttribute('data-text-size') === 'medium' && await paper.getAttribute('data-cols') === '48', '1.2 valores padrão: 80 mm, texto médio (48 colunas)');
   check(/DEMONSTRAÇÃO - NÃO É UMA VENDA/.test(await paper.innerText()), '1.3 pré-visualização com dados de demonstração claramente identificados');

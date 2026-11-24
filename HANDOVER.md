@@ -164,7 +164,7 @@ Os testes estão em **`tests/e2e/`** e correm-se com **`npm run test:e2e`** (≈
 - Instalar o servidor local e configurar `NOKAU_SYNC_TOKEN` (quando houver impressoras).
 - Reduzir o custo do "tempo real" do painel (consulta a base de dados a cada 1,5 s por cada painel aberto).
 - Apagar o ficheiro antigo `nokau-site.zip` e os ramos antigos do GitHub já integrados.
-- Renomear a página "Personalização de Ingressos" para "Personalização de Recibos".
+- ~~Renomear a página "Personalização de Ingressos" para "Personalização de Recibos"~~ ✅ feito.
 - Atualizações pequenas de bibliotecas (React 19.3.1, Tailwind 4.3.5) — com testes.
 - Comprar e ligar o `nokau.gw` (através da ARN / nic.gw — a Vercel não vende `.gw`).
 
