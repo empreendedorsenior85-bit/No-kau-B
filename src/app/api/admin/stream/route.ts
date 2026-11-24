@@ -1,6 +1,6 @@
 import { errInfo, log } from "@/lib/log";
 import { getManager } from "@/lib/auth";
-import { changedSince, currentRev } from "@/lib/orders";
+import { changedSince, currentRev, revSequence } from "@/lib/orders";
 import { callsChangedSince } from "@/lib/calls";
 import { reservationsChangedSince } from "@/lib/reservations";
 import { paymentsChangedSince } from "@/lib/payments";
@@ -10,6 +10,10 @@ import { stockChangedSince } from "@/lib/stock";
 export const maxDuration = 300;
 
 const POLL_MS = 1500;
+/** Depois de o contador mudar, as consultas completas repetem-se nestes ciclos (dados ainda a ser gravados). */
+const HOT_POLLS = 3;
+/** Consultas completas, por segurança, mesmo sem mudanças no contador (a cada ~30 s). */
+const FULL_EVERY_MS = 30_000;
 const MAX_MS = 270_000; // reabre antes do limite da plataforma; o navegador reconecta sozinho
 
 /**
@@ -44,7 +48,18 @@ export async function GET(req: Request) {
         let lastBeat = Date.now();
         send(`retry: 3000\n\n: ligado\n\n`);
 
+        // Custo: em vez de 5 consultas a cada 1,5 s por painel aberto, 1 leitura minúscula do contador de versões;
+        // as consultas completas só correm quando o contador muda (e alguns ciclos depois), ou a cada 30 s.
+        let lastSeq = -1, hot = HOT_POLLS, lastFull = 0;
         while (!closed && Date.now() - started < MAX_MS) {
+          const seq = await revSequence();
+          if (seq !== lastSeq) { lastSeq = seq; hot = HOT_POLLS; }
+          if (hot <= 0 && Date.now() - lastFull < FULL_EVERY_MS) {
+            if (Date.now() - lastBeat > 10_000) { send(`: ping\n\n`); lastBeat = Date.now(); }
+            await new Promise((r) => setTimeout(r, POLL_MS));
+            continue;
+          }
+          hot--; lastFull = Date.now();
           const rows = await changedSince(cursor);
           const calls = await callsChangedSince(cursor); // mesma sequência de rev: o mesmo cursor serve os dois
           const reservations = seesReservations ? await reservationsChangedSince(cursor) : [];

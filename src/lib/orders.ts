@@ -159,6 +159,16 @@ export async function changedSince(cursor: number): Promise<Order[]> {
   return [...fresh.rows, ...late.rows].map(toOrder);
 }
 
+/**
+ * Valor atual do contador de versões (sequência partilhada por pedidos, chamadas, reservas, pagamentos e estoque).
+ * Consulta minúscula: o canal em tempo real usa-a para saber SE algo mudou antes de fazer as consultas completas.
+ * (Uma sequência avança também em transações ainda não confirmadas — quem a usa repete a consulta durante alguns ciclos.)
+ */
+export async function revSequence(): Promise<number> {
+  const r = await query<{ v: string }>("select last_value v from orders_rev_seq");
+  return Number(r.rows[0].v);
+}
+
 export async function currentRev(): Promise<number> {
   await ensureMigrated();
   const r = await query<{ r: string }>("select greatest((select coalesce(max(rev),0) from orders), (select coalesce(max(rev),0) from service_calls), (select coalesce(max(rev),0) from reservations)) r");
