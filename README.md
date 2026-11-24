@@ -61,7 +61,7 @@ Lista completa das variáveis (incluindo as do servidor local): **[HANDOVER.md �
 | `npm run build` | Prepara a versão final (precisa de `DATABASE_URL`) |
 | `npm run start` | Corre a versão final |
 | `npm run lint` | Verifica o código |
-| `npm run test:e2e` | Testes automáticos completos (≈ 1 820 verificações, ≈ 1 hora) — ver [tests/e2e/README.md](tests/e2e/README.md) |
+| `npm run test:e2e` | Testes automáticos completos (≈ 1 750 verificações, ≈ 1 hora) — ver [tests/e2e/README.md](tests/e2e/README.md) |
 
 ## Publicar
 

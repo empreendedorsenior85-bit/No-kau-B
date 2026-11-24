@@ -2,7 +2,7 @@
 
 Estes testes abrem o site num **navegador real** (Chromium), fazem o que uma pessoa faria — pedir à mesa, confirmar pagamentos, reservar, gerir o estoque, imprimir — e confirmam o resultado no ecrã **e** na base de dados.
 
-São cerca de **1 820 verificações** em 30 conjuntos. Antes de cada publicação devem passar todas (resultado em `final.out`).
+São cerca de **1 750 verificações** em 29 conjuntos. Antes de cada publicação devem passar todas (resultado em `final.out`).
 
 > ⚠️ Usam **bases de dados de TESTE** num PostgreSQL local. **Nunca** apontar para a base de dados de produção (Neon): os testes criam e apagam dados.
 
