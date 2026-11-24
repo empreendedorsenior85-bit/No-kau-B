@@ -60,8 +60,12 @@ const check = (c, msg) => (c ? ok : errs).push(msg);
   console.log('links internos verificados:', [...hrefs].join(' '));
   check((await p.request.get(B + '/xyz')).status() === 404, '404 page');
   // /design-system é interno: sem sessão da equipa vai para o login
+  // (o redirecionamento chega no streaming da página, por isso espera-se pela navegação)
   await p.goto(B + '/design-system', { waitUntil: 'load' });
+  await p.waitForURL((u) => u.pathname === '/admin/login', { timeout: 8000 }).catch(() => {});
   check(new URL(p.url()).pathname === '/admin/login', `/design-system sem sessão → login (${p.url()})`);
+  const dsHtml = await (await p.request.get(B + '/design-system')).text();
+  check(!/A voz <em|Botões e estados|Motivos do salão/.test(dsHtml.replace(/<head>[\s\S]*?<\/head>/, '')), '/design-system sem sessão não envia o conteúdo interno');
 
   // Reserva: vazio
   await p.goto(B + '/reservas', { waitUntil: 'networkidle' });
