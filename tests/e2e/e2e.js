@@ -280,7 +280,7 @@ async function addToCart(p, names) {
   await li.getByLabel('Disponível').uncheck(); await sleep(700);
   check(sql("select available from menu_items where name='Demonstração · Bebida B'") === 'f', '10.4 gerente marcou produto indisponível');
   await c1.goto(decoded[1], { waitUntil: 'networkidle' });
-  check(await c1.locator('li:has-text("Demonstração · Bebida B") >> text=Indisponível').isVisible(), '10.5 cliente vê "Indisponível" e não pode pedir');
+  check(await c1.locator('li:has-text("Demonstração · Bebida B") >> text=Indisponível >> visible=true').isVisible(), '10.5 cliente vê "Indisponível" e não pode pedir');
   check(await c1.getByRole('button', { name: 'Adicionar Demonstração · Bebida B' }).count() === 0, '10.6 botão de adicionar não existe para indisponível');
   // 10d. token inválido e rotação
   await c1.goto(B + '/m/AAAAAAAAAAAAAAAAAAAAAA', { waitUntil: 'networkidle' });

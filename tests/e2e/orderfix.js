@@ -210,7 +210,7 @@ async function orderAs(label, ctxOpts, tableNo, lines, panel, notes = {}) {
     await c.getByRole('button', { name: /Ver pedido/ }).click(); await c.getByRole('button', { name: /Confirmar e enviar pedido/ }).click();
     await c.waitForSelector('text=já não estão disponíveis'); const b7 = tableOrders(7);
     check(await c.locator('text=Retirámos esses produtos').isVisible() && (await c.getByRole('dialog').locator('li', { hasText: 'Heineken' }).count()) === 0 && (await c.getByRole('dialog').locator('li', { hasText: 'Tacos' }).count()) === 1, '8.1 produto indisponível: aviso claro, retirado do carrinho, restantes mantidos');
-    check(await c.locator('li:has(h3:text-is("Heineken")) >> text=Indisponível').isVisible(), '8.1b o menu passa a mostrar o produto como "Indisponível" sem recarregar');
+    check(await c.locator('li:has(h3:text-is("Heineken")) >> text=Indisponível >> visible=true').isVisible(), '8.1b o menu passa a mostrar o produto como "Indisponível" sem recarregar');
     sql("update menu_items set available = true where name = 'Heineken'");
     sql("update menu_items set price = 3000 where name = 'Tacos'");
     await c.getByRole('button', { name: /Confirmar e enviar pedido/ }).click(); await c.waitForURL(/\/pedido\//, { timeout: 20000 });
