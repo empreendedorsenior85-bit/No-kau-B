@@ -173,7 +173,8 @@ Os testes estão em **`tests/e2e/`** e correm-se com **`npm run test:e2e`** (≈
 - ✅ Logótipo mais leve (364 KB → 53 KB, mesmo aspeto).
 - ✅ Ficheiro antigo `nokau-site.zip` removido.
 - ✅ "Personalização de Ingressos" → "Personalização de Recibos".
-- ✅ Atualizações pequenas de bibliotecas (React 19.3.1, Tailwind 4.3.5) e correção das vulnerabilidades das ferramentas de desenvolvimento — com todos os testes a passar.
+- ✅ Links do Facebook e TikTok no rodapé, na página Contacto e nos dados para o Google.
+- ✅ Atualizações pequenas de bibliotecas (React 19.3.1, Tailwind 4.3.5) e correção das vulnerabilidades das ferramentas de desenvolvimento — testado na versão publicada `f4e37d5`: 29 conjuntos, ≈ 1 790 verificações, 0 falhas.
 
 ---
 
