@@ -35,7 +35,7 @@ async function Gate() {
   if (await hasAdmin()) redirect("/admin/login");
   if (isLocalServer()) redirect("/admin/login");
   return (
-    <AuthShell title="Primeiro acesso" intro="Cria a base de dados, as 10 mesas e a conta do gerente. Só funciona uma vez.">
+    <AuthShell title="Primeiro acesso" intro="Cria a base de dados, as 10 mesas e a primeira conta, com perfil de administrador. Só funciona uma vez.">
       <SetupForm />
     </AuthShell>
   );

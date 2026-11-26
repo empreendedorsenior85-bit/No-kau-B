@@ -1,11 +1,12 @@
 "use client";
-import { startTransition, useActionState, useRef, useState, type FormEvent } from "react";
+import { startTransition, useActionState, useEffect, useRef, useState, type FormEvent } from "react";
 import { newKey } from "@/lib/cart";
 import { submitReservation, type FormState } from "@/app/actions";
 import { Honeypot, Input, Textarea } from "./Field";
 import { FormResult } from "./FormResult";
 import { Button } from "@/components/ui/Button";
 import { todayISO, useClientValue } from "@/lib/use-client-value";
+import { hasClientHint } from "@/lib/client-hint";
 
 const initial: FormState = { status: "idle" };
 
@@ -19,6 +20,23 @@ function Inner({ onReset }: { onReset: () => void }) {
   const today = useClientValue(todayISO) ?? undefined;
   // chave do pedido (criada no primeiro envio e reutilizada): dois toques ou reenvio não criam duas reservas
   const keyRef = useRef<string | null>(null);
+  // com sessão de cliente: preenche nome, telefone e email da conta (só campos vazios; sem sessão não faz nada)
+  const formRef = useRef<HTMLFormElement>(null);
+  useEffect(() => {
+    if (!hasClientHint()) return;
+    const ctrl = new AbortController();
+    fetch("/api/cliente/eu", { cache: "no-store", signal: ctrl.signal })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((me: { name?: string; phone?: string; email?: string } | null) => {
+        const f = formRef.current; if (!me || !f) return;
+        for (const k of ["name", "phone", "email"] as const) {
+          const el = f.elements.namedItem(k) as HTMLInputElement | null;
+          if (el && !el.value && me[k]) el.value = me[k]!;
+        }
+      })
+      .catch(() => {});
+    return () => ctrl.abort();
+  }, []);
 
   if (state.status === "delivered" || state.status === "manual") {
     return <FormResult state={state} onReset={onReset} kind="reserva" />;
@@ -39,7 +57,7 @@ function Inner({ onReset }: { onReset: () => void }) {
   const v = state.status === "error" ? state.values ?? {} : {};
 
   return (
-    <form action={action} onSubmit={onSubmit} noValidate className="relative grid gap-5 sm:grid-cols-2">
+    <form ref={formRef} action={action} onSubmit={onSubmit} noValidate className="relative grid gap-5 sm:grid-cols-2">
       <Honeypot />
       {state.status === "error" && (
         <p role="alert" className="rounded-xl border border-danger/50 bg-danger/10 px-4 py-3 text-sm text-[#f0b2a8] sm:col-span-2">

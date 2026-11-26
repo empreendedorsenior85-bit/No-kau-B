@@ -15,6 +15,8 @@ import { isLocalServer } from "./node-role";
  * as criadas no restaurante seguem para o central (ver sync/customers-sync.ts).
  */
 const COOKIE = "nk_client";
+/** Indicação para a interface (não é a sessão nem dá acesso a nada): o site mostra "A minha conta" em vez de "Entrar". */
+export const HINT_COOKIE = "nk_has_client";
 const DAYS = 30;
 
 export type Customer = { id: string; name: string; email: string; phone: string };
@@ -75,6 +77,9 @@ export async function startCustomerSession(id: string) {
   (await cookies()).set(COOKIE, value, {
     httpOnly: true, secure: process.env.NODE_ENV === "production" && !isLocalServer(), sameSite: "lax", path: "/", maxAge: DAYS * 86_400,
   });
+  (await cookies()).set(HINT_COOKIE, "1", {
+    httpOnly: false, secure: process.env.NODE_ENV === "production" && !isLocalServer(), sameSite: "lax", path: "/", maxAge: DAYS * 86_400,
+  });
 }
 
 /** Termina ESTA sessão no servidor (um cookie copiado deixa de servir). */
@@ -82,6 +87,7 @@ export async function endCustomerSession() {
   const jar = await cookies();
   await revokeSession("client", jar.get(COOKIE)?.value);
   jar.delete(COOKIE);
+  jar.delete(HINT_COOKIE);
 }
 
 /** Cliente com sessão iniciada (ou null). Valida a assinatura, a sessão no servidor e se a conta continua ativa. */

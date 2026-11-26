@@ -5,9 +5,15 @@ import { useCallback, useEffect, useState } from "react";
 import { Logo } from "@/components/brand/Logo";
 import { nav } from "@/lib/site";
 import { SideDrawer } from "@/components/nav/SideDrawer";
+import { useClientValue } from "@/lib/use-client-value";
+import { hasClientHint } from "@/lib/client-hint";
 
 export function Header() {
   const pathname = usePathname();
+  // com sessão de cliente: "A minha conta" (vai direto à área do cliente) em vez de "Entrar"
+  const account = useClientValue(hasClientHint) === 1;
+  const loginHref = account ? "/cliente" : "/entrar";
+  const loginLabel = account ? "A minha conta" : "Entrar";
   const [scrolled, setScrolled] = useState(false);
   // O menu fica associado à rota em que foi aberto: ao navegar, fecha automaticamente.
   const [openPath, setOpenPath] = useState<string | null>(null);
@@ -59,9 +65,9 @@ export function Header() {
               </Link>
             );
           })}
-          <Link href="/entrar" data-testid="header-login"
+          <Link href={loginHref} data-testid="header-login"
             className={`rounded-full border border-gold/60 px-5 py-2.5 text-sm transition-colors hover:bg-gold/10 ${pathname.startsWith("/entrar") ? "text-gold-300" : "text-white"}`}>
-            Entrar
+            {loginLabel}
           </Link>
           <Link
             href="/reservas"
@@ -72,9 +78,9 @@ export function Header() {
         </nav>
 
         <div className="flex items-center gap-2 lg:hidden">
-        <Link href="/entrar" data-testid="mobile-top-login" onClick={() => setOpen(false)}
+        <Link href={loginHref} data-testid="mobile-top-login" onClick={() => setOpen(false)}
           className="rounded-full border border-gold/60 px-4 py-2 text-sm text-white">
-          Entrar
+          {loginLabel}
         </Link>
         <button
           type="button"
@@ -119,10 +125,10 @@ export function Header() {
         <Link href="/reservas" onClick={close} className="flex h-13 items-center justify-center rounded-full bg-gold font-medium text-kau-950">
           Reservar mesa
         </Link>
-        <Link href="/entrar" onClick={close} data-testid="mobile-login"
+        <Link href={loginHref} onClick={close} data-testid="mobile-login"
           className="flex min-h-13 flex-col items-center justify-center rounded-full border border-gold/60 px-4 py-2 text-center font-medium leading-tight text-white">
-          Entrar
-          <span className="text-xs font-normal text-mist">Conta · reservas · equipa</span>
+          {loginLabel}
+          <span className="text-xs font-normal text-mist">{account ? "Pedidos · reservas · recibos" : "Conta · reservas · equipa"}</span>
         </Link>
       </div>
     </SideDrawer>

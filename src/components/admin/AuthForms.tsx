@@ -30,10 +30,10 @@ export function SetupForm() {
   return (
     <form action={action} onSubmit={submitWith(action)} className="space-y-5">
       <Input label="Código de configuração" name="token" type="password" autoComplete="off" required hint="O código SETUP_TOKEN definido no servidor." />
-      <Input label="Email do gerente" name="email" type="email" autoComplete="username" required />
+      <Input label="Email do administrador" name="email" type="email" autoComplete="username" required />
       <Input label="Palavra-passe (mín. 10 caracteres)" name="password" type="password" autoComplete="new-password" minLength={10} required />
       {s.error && <p role="alert" className="text-sm text-[#e48a7d]">{s.error}</p>}
-      <Button type="submit" size="lg" className="w-full" disabled={pending}>{pending ? "A configurar…" : "Criar conta do gerente"}</Button>
+      <Button type="submit" size="lg" className="w-full" disabled={pending}>{pending ? "A configurar…" : "Criar conta de administrador"}</Button>
     </form>
   );
 }

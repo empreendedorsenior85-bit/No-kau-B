@@ -36,7 +36,7 @@ async function Gate() {
   if (!(await hasAdmin())) redirect("/admin/setup");
   if (await getManager()) redirect("/admin/dashboard");
   return (
-    <AuthShell title="Painel do restaurante" intro="Acesso reservado ao gerente.">
+    <AuthShell title="Painel do restaurante" intro="Acesso reservado à equipa do restaurante: administração, gerência e garçons.">
       <LoginForm />
     </AuthShell>
   );
