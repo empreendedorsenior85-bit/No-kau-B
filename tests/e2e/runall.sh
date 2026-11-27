@@ -43,4 +43,5 @@ reset_throttle; timeout 900 node sociais.js > $S/f-sociais.out 2>&1; echo "socia
 reset_throttle; timeout 900 node flipcards.js > $S/f-flipcards.out 2>&1; echo "flipcards: $(grep -E '^(OK|FALHAS|ERROS DE CONSOLA|FATAL)' $S/f-flipcards.out | tr '\n' ' ')" >> $S/final.out
 reset_throttle; timeout 900 node correcoes.js > $S/f-correcoes.out 2>&1; echo "correcoes: $(grep -E '^(OK|FALHAS|ERROS DE CONSOLA|FATAL)' $S/f-correcoes.out | tr '\n' ' ')" >> $S/final.out
 reset_throttle; timeout 900 node catalogo-imagens.js > $S/f-catalogo-imagens.out 2>&1; echo "catalogo-imagens: $(grep -E '^(OK|FALHAS|ERROS DE CONSOLA|FATAL)' $S/f-catalogo-imagens.out | tr '\n' ' ')" >> $S/final.out
+reset_throttle; timeout 900 node imagens.js > $S/f-imagens.out 2>&1; echo "imagens: $(grep -E '^(OK|FALHAS|ERROS DE CONSOLA|FATAL)' $S/f-imagens.out | tr '\n' ' ')" >> $S/final.out
 echo FIM >> $S/final.out

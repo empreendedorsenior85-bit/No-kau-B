@@ -1,4 +1,5 @@
 "use client";
+import { MenuImg } from "@/components/menu/MenuImg";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { newKey, isValidKey, useCart } from "@/lib/cart";
 import { sendOrder } from "@/lib/send-order";
@@ -399,8 +400,7 @@ function ItemCard({ it, qty, available, imagesOn, hover, onAdd, onQty }: { it: M
       {it.imageUrl && (
         <figure className="relative">
           {imagesOn ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={it.imageUrl} alt={it.name} loading="lazy" decoding="async" fetchPriority="low" className="aspect-[16/10] w-full object-cover" />
+            <MenuImg itemId={it.id} src={it.imageUrl} alt={it.name} loading="lazy" decoding="async" fetchPriority="low" className="aspect-[16/10] w-full object-cover" />
           ) : (
             <div aria-hidden className="aspect-[16/10] w-full bg-kau-800/40" />
           )}
@@ -442,8 +442,7 @@ function ItemCard({ it, qty, available, imagesOn, hover, onAdd, onQty }: { it: M
           <div className="mt-3 flex items-start gap-4">
             {it.imageUrl && imagesOn && (
               // a mesma fotografia da frente (já em cache), em miniatura "a flutuar" sobre o cartão
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={it.imageUrl} alt="" loading="lazy" decoding="async" className="h-20 w-20 shrink-0 rounded-2xl object-cover shadow-[0_14px_28px_-12px_rgba(0,0,0,0.7)] ring-1 ring-gold/30" />
+              <MenuImg itemId={it.id} src={it.imageUrl} alt="" loading="lazy" decoding="async" className="h-20 w-20 shrink-0 rounded-2xl object-cover shadow-[0_14px_28px_-12px_rgba(0,0,0,0.7)] ring-1 ring-gold/30" />
             )}
             <p className="min-w-0 text-sm leading-relaxed text-mist">{it.description}</p>
           </div>

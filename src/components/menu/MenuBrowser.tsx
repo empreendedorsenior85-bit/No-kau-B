@@ -1,4 +1,5 @@
 "use client";
+import { MenuImg } from "./MenuImg";
 import { useMemo, useState, type ReactNode } from "react";
 import { useClientValue } from "@/lib/use-client-value";
 import { Reveal } from "@/components/motion/Reveal";
@@ -159,8 +160,7 @@ function MenuCard({ item, index }: { item: MenuItem; index: number }) {
     <>
       {item.image && (
         <figure className="relative -mx-6 -mt-6 mb-5">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={item.image} alt={item.name} loading="lazy" decoding="async" fetchPriority="low" className="aspect-[16/9] w-full object-cover" />
+          <MenuImg itemId={item.id} src={item.image} alt={item.name} loading="lazy" decoding="async" fetchPriority="low" className="aspect-[16/9] w-full object-cover" />
           {isIllustrative(item.image) && (
             <figcaption className="absolute bottom-2 left-2 rounded-full bg-kau-950/75 px-2.5 py-1 text-[0.65rem] uppercase tracking-[0.12em] text-white/90 backdrop-blur-sm">Imagem ilustrativa</figcaption>
           )}
@@ -205,8 +205,7 @@ function MenuCard({ item, index }: { item: MenuItem; index: number }) {
               <div className="relative mt-4 flex items-start gap-5">
                 {item.image && (
                   // a mesma fotografia da frente (já em cache), em miniatura "a flutuar" sobre o cartão
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={item.image} alt="" loading="lazy" decoding="async" className="h-24 w-24 shrink-0 rounded-2xl object-cover shadow-[0_18px_32px_-16px_rgba(95,73,35,0.6)] ring-1 ring-gold-100" />
+                  <MenuImg itemId={item.id} src={item.image} alt="" loading="lazy" decoding="async" className="h-24 w-24 shrink-0 rounded-2xl object-cover shadow-[0_18px_32px_-16px_rgba(95,73,35,0.6)] ring-1 ring-gold-100" />
                 )}
                 {item.description && <p className="min-w-0 text-sm leading-relaxed text-stone">{item.description}</p>}
               </div>

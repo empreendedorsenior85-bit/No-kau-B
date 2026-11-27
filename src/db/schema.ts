@@ -724,3 +724,62 @@ export const MIGRATE_PERF_SQL = /* sql */ `
 select pg_advisory_xact_lock(727015);
 create index if not exists orders_created_idx on orders(created_at);
 `;
+
+/**
+ * Gestão de imagens dos produtos (histórico + originais + falhas). Aditivo: o menu, o POS, a rota
+ * /api/menu-image e a sincronização continuam a ler menu_items.image / image_path, como antes.
+ *  - menu_item_images: cada versão de imagem de cada produto. O ORIGINAL é guardado tal como foi carregado
+ *    (nunca é alterado) e a versão OTIMIZADA (WebP) ao lado. Substituir ou remover NÃO apaga: a versão
+ *    anterior fica "replaced"/"removed" e pode ser restaurada. Sem FK com cascata: o histórico sobrevive.
+ *  - image_failures: monitorização — imagens que não carregaram no telemóvel do cliente ou na verificação.
+ */
+export const MIGRATE_IMAGES_SQL = /* sql */ `
+select pg_advisory_xact_lock(727016);
+create table if not exists menu_item_images (
+  id uuid primary key default gen_random_uuid(),
+  item_id int not null,
+  version int not null,
+  source text not null check (source in ('upload','static','legacy','restore')),
+  path text,
+  original bytea,
+  original_type text,
+  original_bytes int,
+  original_sha256 text,
+  optimized bytea,
+  optimized_type text,
+  optimized_bytes int,
+  width int,
+  height int,
+  sha256 text,
+  status text not null default 'current' check (status in ('current','replaced','removed')),
+  restored_from uuid,
+  note text,
+  created_by text,
+  created_at timestamptz not null default now(),
+  retired_at timestamptz,
+  retired_by text,
+  check (path is not null or optimized is not null)
+);
+create index if not exists menu_item_images_item_idx on menu_item_images(item_id, created_at desc);
+create unique index if not exists menu_item_images_current_uq on menu_item_images(item_id) where status = 'current';
+create table if not exists image_failures (
+  id bigserial primary key,
+  item_id int,
+  src text not null,
+  kind text not null check (kind in ('client_load','server_check')),
+  detail text,
+  created_at timestamptz not null default now()
+);
+create index if not exists image_failures_created_idx on image_failures(created_at desc);
+create index if not exists image_failures_item_idx on image_failures(item_id, created_at desc);
+-- registo inicial: a imagem ATUAL de cada produto entra no histórico (uma vez)
+insert into menu_item_images (item_id, version, source, optimized, optimized_type, optimized_bytes, sha256, note, created_by)
+select i.id, i.image_version, 'legacy', i.image, i.image_type, length(i.image), encode(sha256(i.image), 'hex'),
+       'Imagem existente antes do histórico: o ficheiro original não foi guardado na altura.', 'sistema'
+from menu_items i
+where i.image is not null and not exists (select 1 from menu_item_images h where h.item_id = i.id and h.status = 'current');
+insert into menu_item_images (item_id, version, source, path, note, created_by)
+select i.id, i.image_version, 'static', i.image_path, 'Imagem ilustrativa (ficheiro do site).', 'sistema'
+from menu_items i
+where i.image is null and i.image_path is not null and not exists (select 1 from menu_item_images h where h.item_id = i.id and h.status = 'current');
+`;

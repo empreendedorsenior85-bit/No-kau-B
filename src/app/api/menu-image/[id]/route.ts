@@ -1,6 +1,7 @@
 import { query } from "@/lib/db";
 import { needsNormalize, normalizeMenuImage } from "@/lib/images";
 import { log } from "@/lib/log";
+import { archiveBeforeNormalize } from "@/lib/menu-images";
 
 /** Foto de um produto (guardada na base de dados). `?v=` muda quando a foto é substituída. */
 export async function GET(_: Request, ctx: { params: Promise<{ id: string }> }) {
@@ -15,6 +16,7 @@ export async function GET(_: Request, ctx: { params: Promise<{ id: string }> }) 
   if (needsNormalize(type, image.length)) {
     const n = await normalizeMenuImage(image);
     if (n && n.buf.length < image.length) {
+      await archiveBeforeNormalize(id, image, type); // o original fica no histórico antes de ser reescrito
       await query("update menu_items set image = $2, image_type = $3 where id = $1 and image = $4", [id, n.buf, n.type, image])
         .catch((e) => log.warn("menu_image.normalize_save_failed", { id, error: (e as Error).message }));
       image = n.buf; type = n.type;

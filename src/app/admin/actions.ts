@@ -1,6 +1,7 @@
 "use server";
 
 import { MENU_IMAGE_MAX_UPLOAD, normalizeMenuImage } from "@/lib/images";
+import { checkAllImages, recordStaticImage, removeImage, restoreImage, saveUploadedImage, type ImageCheck } from "@/lib/menu-images";
 import { getReceiptSettings, removeLogo, saveLogo, saveReceiptSettings } from "@/lib/receipt/store";
 import { clearFailures, isThrottled, loginKeys, recordFailure, revokeAllSessions } from "@/lib/sessions";
 import { headers } from "next/headers";
@@ -200,28 +201,35 @@ export async function saveItemAction(_: AdminFormState, fd: FormData): Promise<A
   const cat = await query("select 1 from menu_categories where id = $1", [d.categoryId]);
   if (!cat.rows[0]) return { error: "Categoria inválida." };
 
-  let img: { buf: Buffer; type: string } | null = null;
+  // foto: o ORIGINAL é guardado intacto no histórico; o menu usa a versão otimizada (src/lib/menu-images.ts)
+  let original: { buf: Buffer; type: string } | null = null;
   const file = fd.get("image");
   if (file instanceof File && file.size > 0) {
     if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) return { error: "A foto deve ser JPG, PNG ou WebP." };
     if (file.size > MENU_IMAGE_MAX_UPLOAD) return { error: "A foto é demasiado grande (máx. 900 KB)." };
-    // reduzida, sem metadados (GPS) e confirmada como imagem verdadeira
-    img = await normalizeMenuImage(Buffer.from(await file.arrayBuffer()));
-    if (!img) return { error: "Não foi possível ler a foto. Experimente outra imagem (JPG, PNG ou WebP)." };
+    original = { buf: Buffer.from(await file.arrayBuffer()), type: file.type };
+    // confirma já que é uma imagem verdadeira (antes de mexer no produto)
+    if (!(await normalizeMenuImage(original.buf))) return { error: "Não foi possível ler a foto. Experimente outra imagem (JPG, PNG ou WebP)." };
   }
 
   if (d.id) {
-    await query(
-      `update menu_items set name=$2, description=$3, price=$4, category_id=$5, updated_at=now(),
-         is_demo = false, review_note = null where id=$1`, [d.id, d.name, d.description, d.price, d.categoryId]);
-    if (img) await query("update menu_items set image=$2, image_type=$3, image_path=null, image_version=image_version+1 where id=$1", [d.id, img.buf, img.type]);
-    await audit(m.email, "menu.update", "menu_item", d.id, { price: d.price });
+    await tx(async (c) => {
+      await c.query(
+        `update menu_items set name=$2, description=$3, price=$4, category_id=$5, updated_at=now(),
+           is_demo = false, review_note = null where id=$1`, [d.id, d.name, d.description, d.price, d.categoryId]);
+      if (original) { const s2 = await saveUploadedImage(Number(d.id), original.buf, original.type, m.email, c); if (!s2.ok) throw new Error(s2.error); }
+    });
+    await audit(m.email, "menu.update", "menu_item", d.id, { price: d.price, image: !!original });
   } else {
-    const r = await query<{ id: number }>(
-      `insert into menu_items (category_id, name, description, price, image, image_type, position)
-       values ($1,$2,$3,$4,$5,$6,(select coalesce(max(position),0)+1 from menu_items)) returning id`,
-      [d.categoryId, d.name, d.description, d.price, img?.buf ?? null, img?.type ?? null]);
-    await audit(m.email, "menu.create", "menu_item", r.rows[0].id, { price: d.price });
+    const id = await tx(async (c) => {
+      const r = await c.query<{ id: number }>(
+        `insert into menu_items (category_id, name, description, price, position)
+         values ($1,$2,$3,$4,(select coalesce(max(position),0)+1 from menu_items)) returning id`,
+        [d.categoryId, d.name, d.description, d.price]);
+      if (original) { const s2 = await saveUploadedImage(r.rows[0].id, original.buf, original.type, m.email, c); if (!s2.ok) throw new Error(s2.error); }
+      return r.rows[0].id;
+    });
+    await audit(m.email, "menu.create", "menu_item", id, { price: d.price, image: !!original });
   }
   return { ok: "Guardado." };
 }
@@ -403,9 +411,9 @@ export async function deleteCategoryAction(id: string): Promise<AdminFormState> 
 export async function removeItemImageAction(id: number): Promise<AdminFormState> {
   assertEditableHere();
   const m = await manager();
-  await query("update menu_items set image = null, image_type = null, image_path = null, image_version = image_version + 1, updated_at = now() where id = $1", [id]);
+  await removeImage(id, m.email); // fica no histórico de imagens: pode ser restaurada
   await audit(m.email, "menu.image_remove", "menu_item", id);
-  return { ok: "Fotografia removida." };
+  return { ok: "Fotografia removida (fica no histórico de imagens e pode ser restaurada)." };
 }
 
 // ---------- importar a ementa original do Nô Kau ----------
@@ -431,13 +439,17 @@ export async function importCatalogAction(): Promise<AdminFormState> {
       if (ex.rows[0]) {
         kept++;
         // só liga a fotografia se o produto ainda não tiver nenhuma
-        if (it.image && !ex.rows[0].image_path) { await c.query("update menu_items set image_path = $2 where id = $1 and image is null", [ex.rows[0].id, it.image]); images++; }
+        if (it.image && !ex.rows[0].image_path) {
+          const u = await c.query("update menu_items set image_path = $2 where id = $1 and image is null", [ex.rows[0].id, it.image]);
+          if (u.rowCount) { await recordStaticImage(c, ex.rows[0].id, it.image, m.email); images++; }
+        }
         continue;
       }
-      await c.query(
+      const ins = await c.query<{ id: number }>(
         `insert into menu_items (category_id, name, description, price, image_path, review_note, position)
-         values ($1,$2,$3,$4,$5,$6,(select coalesce(max(position),0)+1 from menu_items))`,
+         values ($1,$2,$3,$4,$5,$6,(select coalesce(max(position),0)+1 from menu_items)) returning id`,
         [it.cat, it.name, it.desc ?? "", it.price, it.image ?? null, it.review ?? null]);
+      if (it.image) await recordStaticImage(c, ins.rows[0].id, it.image, m.email);
       created++;
     }
     const ids = CATALOG_CATEGORIES.map((x) => x.id);
@@ -700,4 +712,26 @@ export async function removeReceiptLogoAction(): Promise<{ ok: true; message: st
   await removeLogo();
   await audit(m.email, "receipt.logo_remove", "receipt_settings", 1);
   return { ok: true, message: "Logótipo removido." };
+}
+
+// ---------- gestão de imagens (Admin e Gerente) ----------
+/** Restaura uma versão do histórico de imagens (a atual fica guardada; nada se perde). */
+export async function restoreImageAction(historyId: string): Promise<AdminFormState> {
+  assertEditableHere();
+  const m = await manager();
+  if (!/^[0-9a-f-]{36}$/.test(historyId)) return { error: "Versão inválida." };
+  const r = await restoreImage(historyId, m.email);
+  if (!r.ok) return { error: r.error };
+  await audit(m.email, "menu.image_restore", "menu_item", r.itemId, { from: historyId });
+  return { ok: "Imagem restaurada. A anterior ficou guardada no histórico." };
+}
+
+/** Verifica todas as imagens dos produtos ativos (dados válidos / ficheiro existe no site). */
+export async function checkImagesAction(): Promise<{ checked: number; failed: ImageCheck[]; at: string }> {
+  await manager();
+  const h = await headers();
+  const host = h.get("x-forwarded-host") ?? h.get("host") ?? "localhost:3000";
+  const proto = h.get("x-forwarded-proto") ?? (host.startsWith("localhost") || host.startsWith("127.") ? "http" : "https");
+  const res = await checkAllImages(`${proto}://${host}`);
+  return { checked: res.length, failed: res.filter((x) => !x.ok), at: new Date().toISOString() };
 }
