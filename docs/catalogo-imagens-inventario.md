@@ -6,7 +6,7 @@ Gerado a 27/11/2026.
 
 ## 1. Origem das imagens
 
-A pasta `pratos/` **não existia** no projeto (nem no repositório no GitHub, em nenhum ramo). As únicas fotografias recebidas foram **5**, enviadas na conversa a 27/11/2026. Foram guardadas **sem alterações** em `pratos/recebidas-2026-11-27/` (foto-1 … foto-5, pela ordem em que chegaram; o SHA-256 confere com o ficheiro recebido). As 5 são de **vinho tinto**. Nenhuma é de comida.
+A pasta `pratos/` **não existia** no projeto (nem no repositório no GitHub, em nenhum ramo). O primeiro envio teve **5** fotografias, enviadas na conversa a 27/11/2026. Foram guardadas **sem alterações** em `pratos/recebidas-2026-11-27/` (foto-1 … foto-5, pela ordem em que chegaram; o SHA-256 confere com o ficheiro recebido). As 5 são de **vinho tinto**. O segundo lote (abaixo) inclui duas saladas.
 
 **As 5 fotografias aparentam ser geradas por IA:** o texto pequeno dos rótulos é ilegível ou deformado e há gralhas («PORTURAL», «TINTD»). Os rótulos **não são os rótulos verdadeiros** das marcas, por isso só podem ser usadas como **imagem ilustrativa**. O menu mostra automaticamente a etiqueta «Imagem ilustrativa» em tudo o que está em `public/menu/ilustrativas/`.
 
@@ -20,21 +20,21 @@ A pasta `pratos/` **não existia** no projeto (nem no repositório no GitHub, em
 | IMG-004 | `pratos/recebidas-2026-11-27/foto-4.jpg` | JPEG · 1024×1024 | cf6d08936077cfb0 | Rótulo «QUINTA CABRIZ · DÃO DOC · Tintd [sic] **RESERVA** · **375 ml** · 13,5% vol»; presunto, azeitonas, pão | — | ❌ **Sem correspondência**: a ementa só tem «Quinta Cabriz Tinto» (sem «Reserva») e «Quinta Cabriz Branco». Um Reserva é outro vinho. Não foi publicada. |
 | IMG-005 | `pratos/recebidas-2026-11-27/foto-5.jpg` | JPEG · 1024×1024 | fce1280cd6d3795e | Rótulo «QUINTA CABRIZ · DÃO · 750 ml», sem «Reserva»; **vinho tinto no copo** (o rótulo não diz «Tinto»). Pão, azeitonas, manteiga | **Quinta Cabriz Tinto** · 12 000 FCFA | ✅ Associada (ilustrativa): é o único Cabriz tinto da ementa; o branco fica excluído pela cor do vinho |
 
-### Segundo lote (recebido na conversa a 27/11/2026, sem ficheiro)
+### Segundo lote (ficheiros recebidos a 27/11/2026)
 
-Estas 5 fotografias chegaram **só como imagem na conversa**, sem ficheiro anexado. Foram analisadas, mas **não podem ser guardadas nem publicadas** até serem enviadas como ficheiros, por exemplo para \`pratos/\` no repositório. Também aparentam ser geradas por IA (texto pequeno deformado nos rótulos).
+Estas 5 fotografias chegaram primeiro só como imagem na conversa e depois **como ficheiros**. Estão guardadas **sem alterações** em `pratos/recebidas-2026-11-27/` (foto-6 … foto-10; o SHA-256 confere com o ficheiro recebido). Também aparentam ser geradas por IA (texto pequeno deformado nos rótulos, ex.: «ESPOMARTE»), por isso são **ilustrativas**.
 
-| ID | O que se vê | Correspondência na ementa | Estado |
-|---|---|---|---|
-| IMG-006 | Garrafa «Casa Ferreirinha · **Papa Figos** · Douro», **vinho tinto** no copo; pão, manteiga | **Papa Figos** · 10 000 FCFA · «Vinho tinto» | ✅ Correspondência confirmada · **aguarda o ficheiro** |
-| IMG-007 | Garrafa azul «**Gato Azul** · Vinho Verde · Portugal», vinho claro no copo | Gato Azul · 10 000 FCFA · «Vinho **branco**» | ⏳ **Pendente**: o rótulo diz «Vinho Verde», mas a ementa classifica-o como branco (VB) |
-| IMG-008 | Garrafa «**Cacho Fresco** · Vinho Verde · Espumante», flûte com espumante | **Cacho Fresco (Espumante)** · 15 000 FCFA | ✅ Correspondência confirmada · **aguarda o ficheiro** |
-| IMG-009 | Salada niçoise: atum, ovo cozido, feijão-verde, batata, tomate-cereja, azeitonas pretas, anchovas, alcaparras, cebola roxa; **sem milho** | Salada Noçoise · 5 000 FCFA · «Salada de atum, ovo e **milho**» | ⏳ **Pendente**: a foto não tem milho e tem ingredientes que a ementa não indica. O produto já tem uma imagem ilustrativa, que não foi substituída |
-| IMG-010 | Salada de frango grelhado: alface, rúcula, tomate-cereja, pepino, milho, pimento vermelho, queijo, croutons, molho branco | **Salada de Frango** · 4 000 FCFA · (a ementa não tem descrição) | ✅ Correspondência pelo nome e pelo prato · **o gerente deve confirmar os ingredientes** · **aguarda o ficheiro** |
+| ID | Ficheiro original · SHA-256 (início) | O que se vê | Correspondência na ementa | Estado |
+|---|---|---|---|---|
+| IMG-006 | `foto-6.jpg` · e467e49a3d99a5af | Garrafa «Casa Ferreirinha · **Papa Figos** · Douro», **vinho tinto** no copo; pão, manteiga | **Papa Figos** · 10 000 FCFA · «Vinho tinto» | ✅ Associada (ilustrativa) |
+| IMG-007 | `foto-7.jpg` · 36e53440d981e176 | Garrafa azul «**Gato Azul** · Vinho Verde · Portugal», vinho claro no copo | Gato Azul · 10 000 FCFA · «Vinho **branco**» | ⏳ **Pendente**: o rótulo diz «Vinho Verde», mas a ementa classifica-o como branco (VB). Ficheiro guardado, não publicado |
+| IMG-008 | `foto-8.jpg` · fd4a3d9e7ba11130 | Garrafa «**Cacho Fresco** · Vinho Verde · Espumante», flûte com espumante | **Cacho Fresco (Espumante)** · 15 000 FCFA | ✅ Associada (ilustrativa) |
+| IMG-009 | `foto-9.jpg` · 9b240230a1e2fe89 | Salada niçoise: atum, ovo cozido, feijão-verde, batata, tomate-cereja, azeitonas pretas, anchovas, alcaparras, cebola roxa; **sem milho** | Salada Noçoise · 5 000 FCFA · «Salada de atum, ovo e **milho**» | ⏳ **Pendente**: a foto não tem milho e tem ingredientes que a ementa não indica. O produto já tem uma imagem ilustrativa, que não foi substituída. Ficheiro guardado, não publicado |
+| IMG-010 | `foto-10.jpg` · 4c8672087e8b13ec | Salada de frango grelhado: alface, rúcula, tomate-cereja, pepino, milho, pimento vermelho, queijo, croutons, molho branco | **Salada de Frango** · 4 000 FCFA · (a ementa não tem descrição) | ✅ Associada (ilustrativa) · o gerente deve confirmar se os ingredientes correspondem ao prato servido |
 
 ### Terceiro lote (recebido na conversa a 27/11/2026, sem ficheiro)
 
-Tal como o segundo lote, estas 11 fotografias chegaram **só como imagem na conversa** e precisam de ser reenviadas como ficheiros. A comparação foi feita com a descrição **oficial** de cada produto. Quando a fotografia mostra acompanhamentos diferentes dos da ementa, fica pendente: o cliente veria um prato diferente do que vai receber.
+Estas 11 fotografias chegaram **só como imagem na conversa** e precisam de ser reenviadas como ficheiros (anexadas a uma mensagem). A comparação foi feita com a descrição **oficial** de cada produto. Quando a fotografia mostra acompanhamentos diferentes dos da ementa, fica pendente: o cliente veria um prato diferente do que vai receber.
 
 | ID | O que se vê | Produto candidato (ementa) | Estado |
 |---|---|---|---|
@@ -59,6 +59,9 @@ Tal como o segundo lote, estas 11 fotografias chegaram **só como imagem na conv
 | Casa de Santar (750 ml) | `public/menu/ilustrativas/vinhos-champagne/casa-de-santar-750ml.webp` | WebP 800×537 (o mesmo formato das ilustrativas existentes) |
 | Casa de Santar Reserva | `public/menu/ilustrativas/vinhos-champagne/casa-de-santar-reserva.webp` | WebP 800×537 |
 | Quinta Cabriz Tinto | `public/menu/ilustrativas/vinhos-champagne/quinta-cabriz-tinto.webp` | WebP 800×537 |
+| Papa Figos | `public/menu/ilustrativas/vinhos-champagne/papa-figos.webp` | WebP 800×537 |
+| Cacho Fresco (Espumante) | `public/menu/ilustrativas/vinhos-champagne/cacho-fresco.webp` | WebP 800×537 |
+| Salada de Frango | `public/menu/ilustrativas/salada-de-frango.webp` | WebP 800×537 (recorte central; o prato fica inteiro) |
 
 A fotografia quadrada fica **inteira e sem deformação** ao centro, sobre um fundo desfocado da própria imagem, para que o enquadramento horizontal do menu não corte a garrafa.
 
@@ -66,16 +69,16 @@ A fotografia quadrada fica **inteira e sem deformação** ao centro, sobre um fu
 
 | | Número |
 |---|---|
-| Fotografias recebidas | **21** (5 com ficheiro + 16 só na conversa) |
+| Fotografias recebidas | **21** (10 com ficheiro + 11 só na conversa) |
 | Fotografias identificadas | **21** |
-| Associadas e implementadas (confirmadas, com ficheiro) | **3** |
-| Correspondência confirmada, à espera do ficheiro | **10** (IMG-006, 008, 010, 011, 012, 014, 015, 016, 017, 018) |
+| Associadas e implementadas (confirmadas, com ficheiro) | **6** (IMG-001, 003, 005, 006, 008, 010) |
+| Correspondência confirmada, à espera do ficheiro | **7** (IMG-011, 012, 014, 015, 016, 017, 018) |
 | Pendentes de confirmação | **7** (IMG-002, 007, 009, 013, 019, 020, 021) |
 | Sem correspondência na ementa | **1** (IMG-004) |
 | Ficheiros duplicados | **0** (2 fotos do mesmo produto: IMG-002 e IMG-003) |
 | Produtos da ementa | **171** |
-| Produtos com imagem (todas ilustrativas) | **10** (7 anteriores + 3 novas) |
-| Produtos sem fotografia | **161** |
+| Produtos com imagem (todas ilustrativas) | **13** (7 anteriores + 6 novas) |
+| Produtos sem fotografia | **158** |
 
 **Para rever:** uma mesma imagem ilustrativa anterior (`peixe-grelhado.webp`) aparece em «Bica (500 g)» e «Bica (1 kg)». É o mesmo prato em dois tamanhos, mas, pela regra «uma foto não representa outro produto», o gerente deve decidir se fica assim. Não foi alterado.
 
@@ -83,7 +86,7 @@ A fotografia quadrada fica **inteira e sem deformação** ao centro, sobre um fu
 
 | Categoria | Produtos | Com imagem | Sem imagem |
 |---|---|---|---|
-| Entradas | 9 | 1 | 8 |
+| Entradas | 9 | 2 | 7 |
 | Peixes & Mariscos Grelhados | 6 | 3 | 3 |
 | Peixes & Mariscos (Outros) | 3 | 1 | 2 |
 | Carnes Grelhadas | 7 | 1 | 6 |
@@ -101,9 +104,9 @@ A fotografia quadrada fica **inteira e sem deformação** ao centro, sobre um fu
 | Gins | 8 | 0 | 8 |
 | Vermute | 10 | 0 | 10 |
 | Runs, Licores & Frizantes | 10 | 0 | 10 |
-| Vinhos & Champagne | 22 | 3 | 19 |
+| Vinhos & Champagne | 22 | 5 | 17 |
 
-**Nenhuma categoria está completa.** Para completar o catálogo faltam fotografias **reais** dos 161 produtos indicados na tabela abaixo.
+**Nenhuma categoria está completa.** Para completar o catálogo faltam fotografias **reais** dos 158 produtos indicados na tabela abaixo.
 
 ## 5. Todos os produtos
 
@@ -115,7 +118,7 @@ A fotografia quadrada fica **inteira e sem deformação** ao centro, sobre um fu
 | `entradas/camarao-salteado` | Camarão Salteado | Entradas | 4 000 FCFA | — | — | Sem fotografia |
 | `entradas/sopa-do-dia` | Sopa do Dia | Entradas | 1 500 FCFA | — | — | Sem fotografia |
 | `entradas/salada-nocoise` | Salada Noçoise | Entradas | 5 000 FCFA | (anterior · Higgsfield) | `ilustrativas/salada-nicoise.webp` | Já tinha imagem ilustrativa (anterior) |
-| `entradas/salada-de-frango` | Salada de Frango | Entradas | 4 000 FCFA | — | — | Sem fotografia |
+| `entradas/salada-de-frango` | Salada de Frango | Entradas | 4 000 FCFA | IMG-010 (`foto-10.jpg`) | `ilustrativas/salada-de-frango.webp` | ✅ Associada (ilustrativa) |
 | `entradas/salada-de-tomate` | Salada de Tomate | Entradas | 1 500 FCFA | — | — | Sem fotografia |
 | `entradas/tabua-de-queijo-enchidos-e-azeitonas` | Tábua de Queijo, Enchidos e Azeitonas | Entradas | 10 000 FCFA | — | — | Sem fotografia |
 | `peixes-mariscos-grelhados/chocos` | Chocos | Peixes & Mariscos Grelhados | 9 000 FCFA | — | — | Sem fotografia |
@@ -274,9 +277,9 @@ A fotografia quadrada fica **inteira e sem deformação** ao centro, sobre um fu
 | `vinhos-champagne/casa-de-santar-750-ml` | Casa de Santar (750 ml) | Vinhos & Champagne | 12 000 FCFA | IMG-001 · foto-1.jpg | `ilustrativas/vinhos-champagne/casa-de-santar-750ml.webp` | ✅ Associada (27/11/2026) · ilustrativa |
 | `vinhos-champagne/casa-de-santar-375-ml` | Casa de Santar (375 ml) | Vinhos & Champagne | 7 000 FCFA | — | — | Sem fotografia |
 | `vinhos-champagne/casa-de-santar-reserva` | Casa de Santar Reserva | Vinhos & Champagne | 22 000 FCFA | IMG-003 · foto-3.jpg | `ilustrativas/vinhos-champagne/casa-de-santar-reserva.webp` | ✅ Associada (27/11/2026) · ilustrativa · alternativa pendente: IMG-002 (foto-2.jpg, 375 ml) — tamanho por confirmar |
-| `vinhos-champagne/papa-figos` | Papa Figos | Vinhos & Champagne | 10 000 FCFA | — | — | Sem fotografia |
+| `vinhos-champagne/papa-figos` | Papa Figos | Vinhos & Champagne | 10 000 FCFA | IMG-006 (`foto-6.jpg`) | `ilustrativas/vinhos-champagne/papa-figos.webp` | ✅ Associada (ilustrativa) |
 | `vinhos-champagne/quinta-cabriz-branco-750-ml` | Quinta Cabriz Branco (750 ml) | Vinhos & Champagne | 12 000 FCFA | — | — | Sem fotografia |
 | `vinhos-champagne/quinta-cabriz-branco-375-ml` | Quinta Cabriz Branco (375 ml) | Vinhos & Champagne | 7 000 FCFA | — | — | Sem fotografia |
-| `vinhos-champagne/gato-azul` | Gato Azul | Vinhos & Champagne | 10 000 FCFA | — | — | Sem fotografia |
-| `vinhos-champagne/cacho-fresco-espumante` | Cacho Fresco (Espumante) | Vinhos & Champagne | 15 000 FCFA | — | — | Sem fotografia |
+| `vinhos-champagne/gato-azul` | Gato Azul | Vinhos & Champagne | 10 000 FCFA | IMG-007 (`foto-7.jpg`) | — | ⏳ Pendente (Vinho Verde vs. branco) |
+| `vinhos-champagne/cacho-fresco-espumante` | Cacho Fresco (Espumante) | Vinhos & Champagne | 15 000 FCFA | IMG-008 (`foto-8.jpg`) | `ilustrativas/vinhos-champagne/cacho-fresco.webp` | ✅ Associada (ilustrativa) |
 | `vinhos-champagne/bar-royal` | Bar Royal | Vinhos & Champagne | 10 000 FCFA | — | — | Sem fotografia |

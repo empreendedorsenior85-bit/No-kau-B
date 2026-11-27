@@ -163,6 +163,10 @@ const ILUSTRATIVAS: Record<string, string> = {
   "Casa de Santar (750 ml)": "vinhos-champagne/casa-de-santar-750ml",
   "Casa de Santar Reserva": "vinhos-champagne/casa-de-santar-reserva",
   "Quinta Cabriz Tinto": "vinhos-champagne/quinta-cabriz-tinto",
+  // 2.º envio (27/11/2026, foto-6/8/10): associações confirmadas no inventário (IMG-006, IMG-008, IMG-010).
+  "Papa Figos": "vinhos-champagne/papa-figos",
+  "Cacho Fresco (Espumante)": "vinhos-champagne/cacho-fresco",
+  "Salada de Frango": "salada-de-frango",
 };
 for (const it of CATALOG_ITEMS) {
   const f = ILUSTRATIVAS[it.name];

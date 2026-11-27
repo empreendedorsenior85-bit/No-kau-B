@@ -12,8 +12,11 @@ const EXP = {
   'Casa de Santar (750 ml)': '/menu/ilustrativas/vinhos-champagne/casa-de-santar-750ml.webp',
   'Casa de Santar Reserva': '/menu/ilustrativas/vinhos-champagne/casa-de-santar-reserva.webp',
   'Quinta Cabriz Tinto': '/menu/ilustrativas/vinhos-champagne/quinta-cabriz-tinto.webp',
+  'Papa Figos': '/menu/ilustrativas/vinhos-champagne/papa-figos.webp',
+  'Cacho Fresco (Espumante)': '/menu/ilustrativas/vinhos-champagne/cacho-fresco.webp',
+  'Salada de Frango': '/menu/ilustrativas/salada-de-frango.webp',
 };
-const NONE = ['Casa de Santar (375 ml)', 'Quinta Cabriz Branco (750 ml)', 'Quinta Cabriz Branco (375 ml)', 'Papa Figos', 'Gato Azul'];
+const NONE = ['Casa de Santar (375 ml)', 'Quinta Cabriz Branco (750 ml)', 'Quinta Cabriz Branco (375 ml)', 'Gato Azul'];
 const q = (s) => s.replace(/'/g, "''");
 
 (async () => {
