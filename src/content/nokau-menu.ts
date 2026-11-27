@@ -167,6 +167,11 @@ const ILUSTRATIVAS: Record<string, string> = {
   "Papa Figos": "vinhos-champagne/papa-figos",
   "Cacho Fresco (Espumante)": "vinhos-champagne/cacho-fresco",
   "Salada de Frango": "salada-de-frango",
+  // 3.º envio (27/11/2026, foto-11/12/14/15): IMG-011, IMG-012 e IMG-014/015 (acompanhamentos diferentes aprovados pelo dono).
+  "Salada de Tomate": "salada-de-tomate",
+  "Tábua de Queijo, Enchidos e Azeitonas": "tabua-queijo-enchidos",
+  "Filete Marinheiro": "filete-marinheiro",
+  "Espetada de Frango": "espetada-de-frango",
 };
 for (const it of CATALOG_ITEMS) {
   const f = ILUSTRATIVAS[it.name];

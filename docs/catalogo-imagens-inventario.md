@@ -34,17 +34,17 @@ Estas 5 fotografias chegaram primeiro só como imagem na conversa e depois **com
 | IMG-009 | `foto-9.jpg` · 9b240230a1e2fe89 | Salada niçoise: atum, ovo cozido, feijão-verde, batata, tomate-cereja, azeitonas pretas, anchovas, alcaparras, cebola roxa; **sem milho** | Salada Noçoise · 5 000 FCFA · «Salada de atum, ovo e **milho**» | ⏳ **Pendente**: a foto não tem milho e tem ingredientes que a ementa não indica. O produto já tem uma imagem ilustrativa, que não foi substituída. Ficheiro guardado, não publicado |
 | IMG-010 | `foto-10.jpg` · 4c8672087e8b13ec | Salada de frango grelhado: alface, rúcula, tomate-cereja, pepino, milho, pimento vermelho, queijo, croutons, molho branco | **Salada de Frango** · 4 000 FCFA · (a ementa não tem descrição) | ✅ Associada (ilustrativa) · o gerente deve confirmar se os ingredientes correspondem ao prato servido |
 
-### Terceiro lote (recebido na conversa a 27/11/2026, sem ficheiro)
+### Terceiro lote (27/11/2026)
 
-Estas 11 fotografias chegaram **só como imagem na conversa** e precisam de ser reenviadas como ficheiros (anexadas a uma mensagem). A comparação foi feita com a descrição **oficial** de cada produto. Quando a fotografia mostra acompanhamentos diferentes dos da ementa, fica pendente: o cliente veria um prato diferente do que vai receber.
+5 destas 11 fotografias já chegaram como ficheiros e estão guardadas sem alterações em `pratos/recebidas-2026-11-27/`: foto-11 = IMG-011, foto-12 = IMG-012, foto-13 = IMG-013, foto-14 = IMG-014 e foto-15 = IMG-015. As restantes 6 (IMG-016 … 021) chegaram **só como imagem na conversa** e precisam de ser reenviadas como ficheiros, anexadas a uma mensagem. A comparação foi feita com a descrição **oficial** de cada produto. Quando a fotografia mostra acompanhamentos diferentes dos da ementa, fica pendente: o cliente veria um prato diferente do que vai receber.
 
 | ID | O que se vê | Produto candidato (ementa) | Estado |
 |---|---|---|---|
-| IMG-011 | Salada de tomate às rodelas, cebola roxa, azeitonas pretas, manjericão, azeite | **Salada de Tomate** · 1 500 FCFA (sem descrição) | ✅ Confirmada · aguarda o ficheiro |
-| IMG-012 | Tábua de queijos, salame, chouriço, presunto, azeitonas, frutos secos, uvas, pão | **Tábua de Queijo, Enchidos e Azeitonas** · 10 000 FCFA | ✅ Confirmada · aguarda o ficheiro |
-| IMG-013 | Peixe inteiro grelhado com batatinhas, espargos, tomate-cereja e limão; **sem arroz** | Bica (500 g / 1 kg) ou Simpote: «com arroz, molho acebolado e salada» | ⏳ Pendente: a espécie não é identificável e os acompanhamentos não coincidem |
-| IMG-014 | Filete de peixe com camarão em molho de tomate, batata cozida, espargos | Filete Marinheiro · 9 000 FCFA: «com camarão, **arroz, batata frita e salada**» | ✅ Aprovada pelo dono (27/11/2026): pode mostrar outros acompanhamentos · aguarda o ficheiro |
-| IMG-015 | Espetada de frango com pimentos e cebola, batata assada, salada, limão; **sem arroz** | Espetada de Frango · 8 000 FCFA: «com **arroz**, batata frita e salada» | ✅ Aprovada pelo dono (27/11/2026): pode mostrar outros acompanhamentos · aguarda o ficheiro |
+| IMG-011 | Salada de tomate às rodelas, cebola roxa, azeitonas pretas, manjericão, azeite | **Salada de Tomate** · 1 500 FCFA (sem descrição) | ✅ Associada (ilustrativa) · `foto-11.jpg` |
+| IMG-012 | Tábua de queijos, salame, chouriço, presunto, azeitonas, frutos secos, uvas, pão | **Tábua de Queijo, Enchidos e Azeitonas** · 10 000 FCFA | ✅ Associada (ilustrativa) · `foto-12.jpg` |
+| IMG-013 | Peixe inteiro grelhado com batatinhas, espargos, tomate-cereja e limão; **sem arroz** | Bica (500 g / 1 kg) ou Simpote: «com arroz, molho acebolado e salada» | ⏳ Pendente: a espécie não é identificável e os acompanhamentos não coincidem · ficheiro guardado (`foto-13.jpg`), não publicado |
+| IMG-014 | Filete de peixe com camarão em molho de tomate, batata cozida, espargos | Filete Marinheiro · 9 000 FCFA: «com camarão, **arroz, batata frita e salada**» | ✅ Associada (ilustrativa; acompanhamentos diferentes aprovados pelo dono) · `foto-14.jpg` |
+| IMG-015 | Espetada de frango com pimentos e cebola, batata assada, salada, limão; **sem arroz** | Espetada de Frango · 8 000 FCFA: «com **arroz**, batata frita e salada» | ✅ Associada (ilustrativa; acompanhamentos diferentes aprovados pelo dono) · `foto-15.jpg` |
 | IMG-016 | Cordon bleu panado, recheado com fiambre e queijo; **puré**, espargos, salada | Cordon Bleu · 10 000 FCFA: «…acompanhado de **arroz, batata frita** e salada» | ✅ Aprovada pelo dono (27/11/2026): pode mostrar outros acompanhamentos · aguarda o ficheiro |
 | IMG-017 | Omelete simples dobrada, cebolinho, salada, pão (no prato) | **Omelete Simples no Prato** · 2 000 FCFA (sem descrição) | ✅ Confirmada · aguarda o ficheiro |
 | IMG-018 | Omelete recheada com atum, batatinhas, salada, pão | **Omelete de Atum** · 3 000 FCFA (sem descrição) | ✅ Confirmada · aguarda o ficheiro |
@@ -63,6 +63,7 @@ Estas 11 fotografias chegaram **só como imagem na conversa** e precisam de ser 
 | Quinta Cabriz Tinto | `public/menu/ilustrativas/vinhos-champagne/quinta-cabriz-tinto.webp` | WebP 800×537 |
 | Papa Figos | `public/menu/ilustrativas/vinhos-champagne/papa-figos.webp` | WebP 800×537 |
 | Cacho Fresco (Espumante) | `public/menu/ilustrativas/vinhos-champagne/cacho-fresco.webp` | WebP 800×537 |
+| Salada de Tomate · Tábua de Queijo, Enchidos e Azeitonas · Filete Marinheiro · Espetada de Frango | `public/menu/ilustrativas/{salada-de-tomate,tabua-queijo-enchidos,filete-marinheiro,espetada-de-frango}.webp` | WebP 800×537, 47–57 kB (recorte central) |
 | Salada de Frango | `public/menu/ilustrativas/salada-de-frango.webp` | WebP 800×537, 54 kB (recorte central; o prato fica inteiro; qualidade 65 para ficar ao nível das outras fotos, ≤ 65 kB cada) |
 
 A fotografia quadrada fica **inteira e sem deformação** ao centro, sobre um fundo desfocado da própria imagem, para que o enquadramento horizontal do menu não corte a garrafa.
@@ -71,16 +72,16 @@ A fotografia quadrada fica **inteira e sem deformação** ao centro, sobre um fu
 
 | | Número |
 |---|---|
-| Fotografias recebidas | **21** (10 com ficheiro + 11 só na conversa) |
+| Fotografias recebidas | **21** (15 com ficheiro + 6 só na conversa) |
 | Fotografias identificadas | **21** |
-| Associadas e implementadas (confirmadas, com ficheiro) | **6** (IMG-001, 003, 005, 006, 008, 010) |
-| Correspondência confirmada, à espera do ficheiro | **7** (IMG-011, 012, 014, 015, 016, 017, 018) |
+| Associadas e implementadas (confirmadas, com ficheiro) | **10** (IMG-001, 003, 005, 006, 008, 010, 011, 012, 014, 015) |
+| Correspondência confirmada, à espera do ficheiro | **3** (IMG-016, 017, 018) |
 | Pendentes de confirmação | **7** (IMG-002, 007, 009, 013, 019, 020, 021) |
 | Sem correspondência na ementa | **1** (IMG-004) |
 | Ficheiros duplicados | **0** (2 fotos do mesmo produto: IMG-002 e IMG-003) |
 | Produtos da ementa | **171** |
-| Produtos com imagem (todas ilustrativas) | **13** (7 anteriores + 6 novas) |
-| Produtos sem fotografia | **158** |
+| Produtos com imagem (todas ilustrativas) | **17** (7 anteriores + 10 novas) |
+| Produtos sem fotografia | **154** |
 
 **Para rever:** uma mesma imagem ilustrativa anterior (`peixe-grelhado.webp`) aparece em «Bica (500 g)» e «Bica (1 kg)». É o mesmo prato em dois tamanhos, mas, pela regra «uma foto não representa outro produto», o gerente deve decidir se fica assim. Não foi alterado.
 
@@ -88,10 +89,10 @@ A fotografia quadrada fica **inteira e sem deformação** ao centro, sobre um fu
 
 | Categoria | Produtos | Com imagem | Sem imagem |
 |---|---|---|---|
-| Entradas | 9 | 2 | 7 |
+| Entradas | 9 | 4 | 5 |
 | Peixes & Mariscos Grelhados | 6 | 3 | 3 |
-| Peixes & Mariscos (Outros) | 3 | 1 | 2 |
-| Carnes Grelhadas | 7 | 1 | 6 |
+| Peixes & Mariscos (Outros) | 3 | 2 | 1 |
+| Carnes Grelhadas | 7 | 2 | 5 |
 | Carnes (Outros) | 8 | 1 | 7 |
 | Sandes | 7 | 0 | 7 |
 | Fast Food | 7 | 0 | 7 |
@@ -108,7 +109,7 @@ A fotografia quadrada fica **inteira e sem deformação** ao centro, sobre um fu
 | Runs, Licores & Frizantes | 10 | 0 | 10 |
 | Vinhos & Champagne | 22 | 5 | 17 |
 
-**Nenhuma categoria está completa.** Para completar o catálogo faltam fotografias **reais** dos 158 produtos indicados na tabela abaixo.
+**Nenhuma categoria está completa.** Para completar o catálogo faltam fotografias **reais** dos 154 produtos indicados na tabela abaixo.
 
 ## 5. Todos os produtos
 
@@ -121,15 +122,15 @@ A fotografia quadrada fica **inteira e sem deformação** ao centro, sobre um fu
 | `entradas/sopa-do-dia` | Sopa do Dia | Entradas | 1 500 FCFA | — | — | Sem fotografia |
 | `entradas/salada-nocoise` | Salada Noçoise | Entradas | 5 000 FCFA | (anterior · Higgsfield) | `ilustrativas/salada-nicoise.webp` | Já tinha imagem ilustrativa (anterior) |
 | `entradas/salada-de-frango` | Salada de Frango | Entradas | 4 000 FCFA | IMG-010 (`foto-10.jpg`) | `ilustrativas/salada-de-frango.webp` | ✅ Associada (ilustrativa) |
-| `entradas/salada-de-tomate` | Salada de Tomate | Entradas | 1 500 FCFA | — | — | Sem fotografia |
-| `entradas/tabua-de-queijo-enchidos-e-azeitonas` | Tábua de Queijo, Enchidos e Azeitonas | Entradas | 10 000 FCFA | — | — | Sem fotografia |
+| `entradas/salada-de-tomate` | Salada de Tomate | Entradas | 1 500 FCFA | IMG-011 (`foto-11.jpg`) | `ilustrativas/salada-de-tomate.webp` | ✅ Associada (ilustrativa) |
+| `entradas/tabua-de-queijo-enchidos-e-azeitonas` | Tábua de Queijo, Enchidos e Azeitonas | Entradas | 10 000 FCFA | IMG-012 (`foto-12.jpg`) | `ilustrativas/tabua-queijo-enchidos.webp` | ✅ Associada (ilustrativa) |
 | `peixes-mariscos-grelhados/chocos` | Chocos | Peixes & Mariscos Grelhados | 9 000 FCFA | — | — | Sem fotografia |
 | `peixes-mariscos-grelhados/bica-500-g` | Bica (500 g) | Peixes & Mariscos Grelhados | 10 000 FCFA | (anterior · Higgsfield) | `ilustrativas/peixe-grelhado.webp` | Já tinha imagem ilustrativa (anterior) |
 | `peixes-mariscos-grelhados/bica-1-kg` | Bica (1 kg) | Peixes & Mariscos Grelhados | 20 000 FCFA | (anterior · Higgsfield) | `ilustrativas/peixe-grelhado.webp` | Já tinha imagem ilustrativa (anterior) |
 | `peixes-mariscos-grelhados/simpote` | Simpote | Peixes & Mariscos Grelhados | 6 000 FCFA | — | — | Sem fotografia |
 | `peixes-mariscos-grelhados/salmao` | Salmão | Peixes & Mariscos Grelhados | 12 000 FCFA | — | — | Sem fotografia |
 | `peixes-mariscos-grelhados/camarao-tigre-gambas` | Camarão Tigre / Gambas | Peixes & Mariscos Grelhados | 17 500 FCFA | (anterior · Higgsfield) | `ilustrativas/camarao-tigre.webp` | Já tinha imagem ilustrativa (anterior) |
-| `peixes-mariscos-outros/filete-marinheiro` | Filete Marinheiro | Peixes & Mariscos (Outros) | 9 000 FCFA | — | — | Sem fotografia |
+| `peixes-mariscos-outros/filete-marinheiro` | Filete Marinheiro | Peixes & Mariscos (Outros) | 9 000 FCFA | IMG-014 (`foto-14.jpg`) | `ilustrativas/filete-marinheiro.webp` | ✅ Associada (ilustrativa) |
 | `peixes-mariscos-outros/espetada-bijagos` | Espetada Bijagós | Peixes & Mariscos (Outros) | 9 000 FCFA | (anterior · Higgsfield) | `ilustrativas/espetada-bijagos.webp` | Já tinha imagem ilustrativa (anterior) |
 | `peixes-mariscos-outros/espetada-do-chef` | Espetada do Chef | Peixes & Mariscos (Outros) | 9 000 FCFA | — | — | Sem fotografia |
 | `carnes-grelhadas/frango-churrasco` | Frango Churrasco | Carnes Grelhadas | 6 000 FCFA | (anterior · Higgsfield) | `ilustrativas/frango-churrasco.webp` | Já tinha imagem ilustrativa (anterior) |
@@ -138,7 +139,7 @@ A fotografia quadrada fica **inteira e sem deformação** ao centro, sobre um fu
 | `carnes-grelhadas/grelhado-misto-de-carne` | Grelhado Misto de Carne | Carnes Grelhadas | 25 000 FCFA | — | — | Sem fotografia |
 | `carnes-grelhadas/espetada-de-vaca` | Espetada de Vaca | Carnes Grelhadas | 9 000 FCFA | — | — | Sem fotografia |
 | `carnes-grelhadas/espetada-de-vaca-e-frango` | Espetada de Vaca e Frango | Carnes Grelhadas | 10 000 FCFA | — | — | Sem fotografia |
-| `carnes-grelhadas/espetada-de-frango` | Espetada de Frango | Carnes Grelhadas | 8 000 FCFA | — | — | Sem fotografia |
+| `carnes-grelhadas/espetada-de-frango` | Espetada de Frango | Carnes Grelhadas | 8 000 FCFA | IMG-015 (`foto-15.jpg`) | `ilustrativas/espetada-de-frango.webp` | ✅ Associada (ilustrativa) |
 | `carnes-outros/bife-no-kau` | Bife Nô Kau | Carnes (Outros) | 9 000 FCFA | (anterior · Higgsfield) | `ilustrativas/bife-nokau.webp` | Já tinha imagem ilustrativa (anterior) |
 | `carnes-outros/cordon-bleu` | Cordon Bleu | Carnes (Outros) | 10 000 FCFA | — | — | Sem fotografia |
 | `carnes-outros/bife-acebolado` | Bife Acebolado | Carnes (Outros) | 8 000 FCFA | — | — | Sem fotografia |
