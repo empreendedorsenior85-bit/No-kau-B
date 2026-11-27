@@ -2,7 +2,7 @@
 
 Estes testes abrem o site num **navegador real** (Chromium), fazem o que uma pessoa faria — pedir à mesa, confirmar pagamentos, reservar, gerir o estoque, imprimir — e confirmam o resultado no ecrã **e** na base de dados.
 
-São cerca de **1 780 verificações** em 30 conjuntos. Antes de cada publicação devem passar todas (resultado em `final.out`).
+São cerca de **1 810 verificações** em 31 conjuntos. Antes de cada publicação devem passar todas (resultado em `final.out`).
 
 > ⚠️ Usam **bases de dados de TESTE** num PostgreSQL local. **Nunca** apontar para a base de dados de produção (Neon): os testes criam e apagam dados.
 
@@ -70,6 +70,7 @@ node tests/e2e/metodos.js          # por exemplo
 | `metodos.js` | Métodos de pagamento: só Orange Money, Telecel e pagamento à mão |
 | `flipcards.js` | Cartões dos pratos com frente e verso: rato, toque, teclado, reduzir movimento, adicionar nos dois lados |
 | `correcoes.js` | Textos do painel, "A minha conta" no cabeçalho, reserva pré-preenchida com os dados da conta |
+| `catalogo-imagens.js` | Fotografias do catálogo: cada uma só no produto certo, preços intactos, menu público, menu da mesa e carrinho |
 | `sociais.js` | Instagram, Facebook e TikTok no rodapé, no Contacto e nos dados para o Google |
 
 Ficheiros de apoio: `auth-helper.js` (sessão de cliente de teste), `fake-printer.js` / `fake-bt.py` (impressoras virtuais), `servers.sh` (arranca os servidores de teste), `catalog.json` (menu de referência), `runall.sh` (corre tudo).

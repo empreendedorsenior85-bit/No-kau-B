@@ -157,6 +157,12 @@ const ILUSTRATIVAS: Record<string, string> = {
   "Bica (1 kg)": "peixe-grelhado",
   "Bife Nô Kau": "bife-nokau",
   "Salada Noçoise": "salada-nicoise",
+  // Vinhos — fotografias recebidas a 27/11/2026 (originais em pratos/recebidas-2026-11-27/, inventário em
+  // docs/catalogo-imagens-inventario.md). Os rótulos têm texto deformado típico de imagem gerada: são ILUSTRATIVAS.
+  // Só associações confirmadas (marca, linha, tamanho e cor do vinho iguais ao produto da ementa).
+  "Casa de Santar (750 ml)": "vinhos-champagne/casa-de-santar-750ml",
+  "Casa de Santar Reserva": "vinhos-champagne/casa-de-santar-reserva",
+  "Quinta Cabriz Tinto": "vinhos-champagne/quinta-cabriz-tinto",
 };
 for (const it of CATALOG_ITEMS) {
   const f = ILUSTRATIVAS[it.name];
