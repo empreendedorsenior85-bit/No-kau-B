@@ -2,6 +2,8 @@
 const ROOT = require('node:path').resolve(__dirname, '../..'); // raiz do projeto
 const OUTDIR = require('node:path').join(__dirname, 'out'); // capturas e ficheiros gerados (fora do Git)
 require('node:fs').mkdirSync(OUTDIR, { recursive: true });
+// fotos ilustrativas da ementa: 7 pratos (Higgsfield) + 3 vinhos (27/11/2026)
+const ILUS = 10;
 const { chromium, devices } = require('playwright');
 const { execSync } = require('node:child_process');
 const S = __dirname;
@@ -22,7 +24,7 @@ const check = (c, m) => (c ? ok : bad).push(m);
   c.on('console', (m) => { if (m.type() === 'error') errs.push(m.text().slice(0, 150)); });
   await c.goto(`${B}/m/${tok}`, { waitUntil: 'networkidle' });
   const labels = await c.locator('[data-testid="illustrative"]').count();
-  check(labels === 7, `1.1 7 produtos com etiqueta "Imagem ilustrativa" (${labels})`);
+  check(labels === ILUS, `1.1 ${ILUS} produtos com etiqueta "Imagem ilustrativa" (${labels})`);
   const img = c.locator('img[alt="Frango Churrasco"]');
   check(await img.count() === 1, '1.2 foto do Frango Churrasco presente');
   await img.scrollIntoViewIfNeeded(); await c.waitForTimeout(500);
@@ -49,7 +51,7 @@ const check = (c, m) => (c ? ok : bad).push(m);
   await a.waitForURL('**/admin/dashboard');
   await a.goto(B + '/admin/menu', { waitUntil: 'networkidle' });
   const notes = await a.locator('text=Foto ilustrativa (IA)').count();
-  check(notes === 7, `2.1 admin assinala 7 fotos ilustrativas (${notes})`);
+  check(notes === ILUS, `2.1 admin assinala ${ILUS} fotos ilustrativas (${notes})`);
 
   // 3. reimportação liga foto a produto existente sem foto; não mexe noutros
   check(await a.locator('[data-testid="import-panel"]').count() === 0, '3.0 ementa completa e fotos ligadas: painel de importação escondido');
@@ -63,7 +65,7 @@ const check = (c, m) => (c ? ok : bad).push(m);
   const msg = await a.locator('text=Ementa importada').first().innerText();
   check(/1 fotografias ligadas/.test(msg), `3.1 reimportação liga 1 fotografia (${msg})`);
   check(sql("select image_path from menu_items where name='Bife Nô Kau'") === '/menu/ilustrativas/bife-nokau.webp', '3.2 Bife Nô Kau voltou a ter a foto');
-  check(sql("select count(*) from menu_items where image_path is not null") === '7', '3.3 continuam 7 fotos ligadas (sem duplicar)');
+  check(sql("select count(*) from menu_items where image_path is not null") === String(ILUS), `3.3 continuam ${ILUS} fotos ligadas (sem duplicar)`);
 
   // 4. foto real enviada pelo admin substitui a ilustrativa
   await a.reload({ waitUntil: 'networkidle' });
