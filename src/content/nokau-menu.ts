@@ -176,6 +176,11 @@ const ILUSTRATIVAS: Record<string, string> = {
   "Cordon Bleu": "cordon-bleu",
   "Omelete Simples no Prato": "omelete-simples-prato",
   "Omelete de Atum": "omelete-de-atum",
+  // Decisões delegadas pelo dono (27/11/2026): uma foto por produto, nunca a mesma em dois produtos.
+  "Gato Azul": "vinhos-champagne/gato-azul",
+  "Simpote": "simpote",
+  "Shawarma Simples": "shawarma-simples",
+  "Fataya Completo": "fataya-completo",
 };
 for (const it of CATALOG_ITEMS) {
   const f = ILUSTRATIVAS[it.name];

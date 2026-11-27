@@ -54,6 +54,21 @@ Estas 5 fotografias chegaram primeiro só como imagem na conversa e depois **com
 
 **Duplicadas:** nenhum ficheiro repetido (os 5 SHA-256 são diferentes). IMG-002 e IMG-003 mostram o **mesmo produto** (Casa de Santar Reserva). Ficou a IMG-003, porque não mostra um tamanho que possa contradizer a ementa.
 
+## 2-A. Decisões (27/11/2026, delegadas pelo dono)
+
+O dono autorizou que eu decidisse os casos pendentes. Critério: **uma fotografia por produto e nunca a mesma fotografia em dois produtos**; na dúvida entre variantes, fica a que a foto mostra melhor. Todas são ilustrativas (com a etiqueta).
+
+| ID | Decisão | Motivo |
+|---|---|---|
+| IMG-007 Gato Azul | ✅ Ligada ao **Gato Azul** | O Vinho Verde do rótulo é branco, como diz a ementa («Vinho branco»), e o copo mostra vinho branco |
+| IMG-013 peixe inteiro | ✅ Ligada ao **Simpote** | A Bica (500 g / 1 kg) já tem imagem ilustrativa; o Simpote não tinha. Acompanhamentos diferentes, como nos outros pratos que o dono aprovou |
+| IMG-019 wrap de frango | ✅ Ligada ao **Shawarma Simples** | Mostra um shawarma básico (frango, alface, tomate, molho). O Shawarma Nô Kau fica sem foto, para não repetir a mesma |
+| IMG-020 pastéis fritos | ✅ Ligada à **Fataya Completo** | O prato tem salada e molhos, o que corresponde melhor à versão completa. A Fataya Simples fica sem foto |
+| IMG-009 salada niçoise | ⏸ **Mantida a foto atual** | A ementa diz «atum, ovo e milho» e a foto nova não tem milho. O ficheiro fica guardado (`foto-9.jpg`) |
+| IMG-016 Cordon Bleu | ✅ **Mantida** | Cordon bleu panado com fiambre e queijo. A carne parece frango e a ementa diz «bife». Se no restaurante for de vaca, retira-se |
+| IMG-002 Casa de Santar Reserva 375 ml | ⏸ Não publicada | O produto já tem a IMG-003 |
+| IMG-004 Quinta Cabriz Reserva | ❌ Não publicada | Não existe na ementa |
+
 ## 3. Versões otimizadas (cópias; os originais ficam intactos)
 
 | Produto | Ficheiro publicado | Formato |
@@ -75,14 +90,14 @@ A fotografia quadrada fica **inteira e sem deformação** ao centro, sobre um fu
 |---|---|
 | Fotografias recebidas | **21** (20 com ficheiro + 1 só na conversa) |
 | Fotografias identificadas | **21** |
-| Associadas e implementadas (confirmadas, com ficheiro) | **13** (IMG-001, 003, 005, 006, 008, 010, 011, 012, 014, 015, 016, 017, 018) |
+| Associadas e implementadas (confirmadas, com ficheiro) | **17** (IMG-001, 003, 005, 006, 007, 008, 010, 011, 012, 013, 014, 015, 016, 017, 018, 019, 020) |
 | Correspondência confirmada, à espera do ficheiro | **0** |
-| Pendentes de confirmação | **7** (IMG-002, 007, 009, 013, 019, 020, 021) |
+| Não publicadas por decisão | **2** (IMG-002: o produto já tem foto; IMG-009: falta o milho) · por receber como ficheiro: IMG-021 (pizza) |
 | Sem correspondência na ementa | **1** (IMG-004) |
 | Ficheiros duplicados | **0** (2 fotos do mesmo produto: IMG-002 e IMG-003) |
 | Produtos da ementa | **171** |
-| Produtos com imagem (todas ilustrativas) | **20** (7 anteriores + 13 novas) |
-| Produtos sem fotografia | **151** |
+| Produtos com imagem (todas ilustrativas) | **24** (7 anteriores + 17 novas) |
+| Produtos sem fotografia | **147** |
 
 **Para rever:** uma mesma imagem ilustrativa anterior (`peixe-grelhado.webp`) aparece em «Bica (500 g)» e «Bica (1 kg)». É o mesmo prato em dois tamanhos, mas, pela regra «uma foto não representa outro produto», o gerente deve decidir se fica assim. Não foi alterado.
 
@@ -91,12 +106,12 @@ A fotografia quadrada fica **inteira e sem deformação** ao centro, sobre um fu
 | Categoria | Produtos | Com imagem | Sem imagem |
 |---|---|---|---|
 | Entradas | 9 | 4 | 5 |
-| Peixes & Mariscos Grelhados | 6 | 3 | 3 |
+| Peixes & Mariscos Grelhados | 6 | 4 | 2 |
 | Peixes & Mariscos (Outros) | 3 | 2 | 1 |
 | Carnes Grelhadas | 7 | 2 | 5 |
 | Carnes (Outros) | 8 | 2 | 6 |
 | Sandes | 7 | 0 | 7 |
-| Fast Food | 7 | 0 | 7 |
+| Fast Food | 7 | 2 | 5 |
 | Pizzas | 12 | 0 | 12 |
 | Outros | 7 | 2 | 5 |
 | Refrigerantes & Sumos | 8 | 0 | 8 |
@@ -108,9 +123,9 @@ A fotografia quadrada fica **inteira e sem deformação** ao centro, sobre um fu
 | Gins | 8 | 0 | 8 |
 | Vermute | 10 | 0 | 10 |
 | Runs, Licores & Frizantes | 10 | 0 | 10 |
-| Vinhos & Champagne | 22 | 5 | 17 |
+| Vinhos & Champagne | 22 | 6 | 16 |
 
-**Nenhuma categoria está completa.** Para completar o catálogo faltam fotografias **reais** dos 151 produtos indicados na tabela abaixo.
+**Nenhuma categoria está completa.** Para completar o catálogo faltam fotografias **reais** dos 147 produtos indicados na tabela abaixo.
 
 ## 5. Todos os produtos
 
@@ -128,7 +143,7 @@ A fotografia quadrada fica **inteira e sem deformação** ao centro, sobre um fu
 | `peixes-mariscos-grelhados/chocos` | Chocos | Peixes & Mariscos Grelhados | 9 000 FCFA | — | — | Sem fotografia |
 | `peixes-mariscos-grelhados/bica-500-g` | Bica (500 g) | Peixes & Mariscos Grelhados | 10 000 FCFA | (anterior · Higgsfield) | `ilustrativas/peixe-grelhado.webp` | Já tinha imagem ilustrativa (anterior) |
 | `peixes-mariscos-grelhados/bica-1-kg` | Bica (1 kg) | Peixes & Mariscos Grelhados | 20 000 FCFA | (anterior · Higgsfield) | `ilustrativas/peixe-grelhado.webp` | Já tinha imagem ilustrativa (anterior) |
-| `peixes-mariscos-grelhados/simpote` | Simpote | Peixes & Mariscos Grelhados | 6 000 FCFA | — | — | Sem fotografia |
+| `peixes-mariscos-grelhados/simpote` | Simpote | Peixes & Mariscos Grelhados | 6 000 FCFA | IMG-013 (`foto-13.jpg`) | `ilustrativas/simpote.webp` | ✅ Associada (ilustrativa) |
 | `peixes-mariscos-grelhados/salmao` | Salmão | Peixes & Mariscos Grelhados | 12 000 FCFA | — | — | Sem fotografia |
 | `peixes-mariscos-grelhados/camarao-tigre-gambas` | Camarão Tigre / Gambas | Peixes & Mariscos Grelhados | 17 500 FCFA | (anterior · Higgsfield) | `ilustrativas/camarao-tigre.webp` | Já tinha imagem ilustrativa (anterior) |
 | `peixes-mariscos-outros/filete-marinheiro` | Filete Marinheiro | Peixes & Mariscos (Outros) | 9 000 FCFA | IMG-014 (`foto-14.jpg`) | `ilustrativas/filete-marinheiro.webp` | ✅ Associada (ilustrativa) |
@@ -158,10 +173,10 @@ A fotografia quadrada fica **inteira e sem deformação** ao centro, sobre um fu
 | `sandes/omelete-mista-sande` | Omelete Mista (Sande) | Sandes | 3 000 FCFA | — | — | Sem fotografia |
 | `fast-food/hamburguer-simples` | Hamburguer Simples | Fast Food | 2 000 FCFA | — | — | Sem fotografia |
 | `fast-food/hamburguer-no-kau` | Hamburguer Nô Kau | Fast Food | 3 000 FCFA | — | — | Sem fotografia |
-| `fast-food/shawarma-simples` | Shawarma Simples | Fast Food | 1 500 FCFA | — | — | Sem fotografia |
+| `fast-food/shawarma-simples` | Shawarma Simples | Fast Food | 1 500 FCFA | IMG-019 (`foto-19.jpg`) | `ilustrativas/shawarma-simples.webp` | ✅ Associada (ilustrativa) |
 | `fast-food/shawarma-no-kau` | Shawarma Nô Kau | Fast Food | 2 000 FCFA | — | — | Sem fotografia |
 | `fast-food/fataya-simples` | Fataya Simples | Fast Food | 1 000 FCFA | — | — | Sem fotografia |
-| `fast-food/fataya-completo` | Fataya Completo | Fast Food | 1 500 FCFA | — | — | Sem fotografia |
+| `fast-food/fataya-completo` | Fataya Completo | Fast Food | 1 500 FCFA | IMG-020 (`foto-20.jpg`) | `ilustrativas/fataya-completo.webp` | ✅ Associada (ilustrativa) |
 | `fast-food/tacos` | Tacos | Fast Food | 2 500 FCFA | — | — | Sem fotografia |
 | `pizzas/pizza-de-frango-media` | Pizza de Frango (Média) | Pizzas | 5 000 FCFA | — | — | Sem fotografia |
 | `pizzas/pizza-de-frango-grande` | Pizza de Frango (Grande) | Pizzas | 7 500 FCFA | — | — | Sem fotografia |
@@ -284,6 +299,6 @@ A fotografia quadrada fica **inteira e sem deformação** ao centro, sobre um fu
 | `vinhos-champagne/papa-figos` | Papa Figos | Vinhos & Champagne | 10 000 FCFA | IMG-006 (`foto-6.jpg`) | `ilustrativas/vinhos-champagne/papa-figos.webp` | ✅ Associada (ilustrativa) |
 | `vinhos-champagne/quinta-cabriz-branco-750-ml` | Quinta Cabriz Branco (750 ml) | Vinhos & Champagne | 12 000 FCFA | — | — | Sem fotografia |
 | `vinhos-champagne/quinta-cabriz-branco-375-ml` | Quinta Cabriz Branco (375 ml) | Vinhos & Champagne | 7 000 FCFA | — | — | Sem fotografia |
-| `vinhos-champagne/gato-azul` | Gato Azul | Vinhos & Champagne | 10 000 FCFA | IMG-007 (`foto-7.jpg`) | — | ⏳ Pendente (Vinho Verde vs. branco) |
+| `vinhos-champagne/gato-azul` | Gato Azul | Vinhos & Champagne | 10 000 FCFA | IMG-007 (`foto-7.jpg`) | `ilustrativas/vinhos-champagne/gato-azul.webp` | ✅ Associada (ilustrativa) |
 | `vinhos-champagne/cacho-fresco-espumante` | Cacho Fresco (Espumante) | Vinhos & Champagne | 15 000 FCFA | IMG-008 (`foto-8.jpg`) | `ilustrativas/vinhos-champagne/cacho-fresco.webp` | ✅ Associada (ilustrativa) |
 | `vinhos-champagne/bar-royal` | Bar Royal | Vinhos & Champagne | 10 000 FCFA | — | — | Sem fotografia |

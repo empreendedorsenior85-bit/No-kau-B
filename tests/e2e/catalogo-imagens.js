@@ -22,8 +22,12 @@ const EXP = {
   'Cordon Bleu': '/menu/ilustrativas/cordon-bleu.webp',
   'Omelete Simples no Prato': '/menu/ilustrativas/omelete-simples-prato.webp',
   'Omelete de Atum': '/menu/ilustrativas/omelete-de-atum.webp',
+  'Gato Azul': '/menu/ilustrativas/vinhos-champagne/gato-azul.webp',
+  'Simpote': '/menu/ilustrativas/simpote.webp',
+  'Shawarma Simples': '/menu/ilustrativas/shawarma-simples.webp',
+  'Fataya Completo': '/menu/ilustrativas/fataya-completo.webp',
 };
-const NONE = ['Casa de Santar (375 ml)', 'Quinta Cabriz Branco (750 ml)', 'Quinta Cabriz Branco (375 ml)', 'Gato Azul'];
+const NONE = ['Casa de Santar (375 ml)', 'Quinta Cabriz Branco (750 ml)', 'Quinta Cabriz Branco (375 ml)'];
 const q = (s) => s.replace(/'/g, "''");
 
 (async () => {
@@ -77,7 +81,7 @@ const q = (s) => s.replace(/'/g, "''");
       check(src === u && loaded, `4.1 mesa: ${n} mostra a sua foto (carregada)`);
       check(await card.getByTestId('illustrative').first().isVisible(), `4.2 mesa: ${n} com a etiqueta «Imagem ilustrativa»`);
     }
-    for (const n of ['Casa de Santar (375 ml)', 'Gato Azul', 'Simpote', 'Shawarma Simples', 'Fataya Completo', 'Omelete Mista no Prato']) {
+    for (const n of ['Casa de Santar (375 ml)', 'Shawarma Nô Kau', 'Fataya Simples', 'Omelete Mista no Prato']) {
       const card = p.locator('li').filter({ has: p.locator(`h3:text-is("${n}")`) }).first();
       check(await card.locator('img').count() === 0, `4.3 mesa: ${n} sem fotografia`);
     }
