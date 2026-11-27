@@ -75,6 +75,8 @@
 | 10.0–10.3 | Gerente acede; Garçom não acede ao painel nem ao histórico (403) | ✅ |
 | 11.1 | Nomes e preços de todos os produtos iguais antes e depois | ✅ |
 
+**Regressão completa** (`npm run test:e2e`, 27/11/2026): **32 de 32 conjuntos sem falhas**, 1 821 verificações. Verificação de tipos, lint e compilação sem erros. Inclui a navegação (387 verificações, com a entrada nova «Imagens» no menu lateral), os pedidos pelo QR Code e pelo POS, a sincronização com o servidor local e as fotos do catálogo.
+
 Capturas: `tests/e2e/out/shots/imagens-painel.png`, `imagens-painel-restaurado.png`, `imagens-menu-frente.png`, `imagens-menu-detalhes.png` e `imagens-pos.png`.
 
 ## 4. Limitações e decisões (com honestidade)
