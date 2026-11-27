@@ -172,6 +172,10 @@ const ILUSTRATIVAS: Record<string, string> = {
   "Tábua de Queijo, Enchidos e Azeitonas": "tabua-queijo-enchidos",
   "Filete Marinheiro": "filete-marinheiro",
   "Espetada de Frango": "espetada-de-frango",
+  // 4.º envio (27/11/2026, foto-16/17/18): IMG-016 (acompanhamentos diferentes aprovados pelo dono), IMG-017, IMG-018.
+  "Cordon Bleu": "cordon-bleu",
+  "Omelete Simples no Prato": "omelete-simples-prato",
+  "Omelete de Atum": "omelete-de-atum",
 };
 for (const it of CATALOG_ITEMS) {
   const f = ILUSTRATIVAS[it.name];

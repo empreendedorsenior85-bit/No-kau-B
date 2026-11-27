@@ -36,7 +36,7 @@ Estas 5 fotografias chegaram primeiro só como imagem na conversa e depois **com
 
 ### Terceiro lote (27/11/2026)
 
-5 destas 11 fotografias já chegaram como ficheiros e estão guardadas sem alterações em `pratos/recebidas-2026-11-27/`: foto-11 = IMG-011, foto-12 = IMG-012, foto-13 = IMG-013, foto-14 = IMG-014 e foto-15 = IMG-015. As restantes 6 (IMG-016 … 021) chegaram **só como imagem na conversa** e precisam de ser reenviadas como ficheiros, anexadas a uma mensagem. A comparação foi feita com a descrição **oficial** de cada produto. Quando a fotografia mostra acompanhamentos diferentes dos da ementa, fica pendente: o cliente veria um prato diferente do que vai receber.
+10 destas 11 fotografias já chegaram como ficheiros e estão guardadas sem alterações em `pratos/recebidas-2026-11-27/`: foto-11 … foto-20 correspondem a IMG-011 … IMG-020, pela mesma ordem. Só falta a IMG-021 (pizza), que chegou apenas como imagem na conversa. A comparação foi feita com a descrição **oficial** de cada produto. Quando a fotografia mostra acompanhamentos diferentes dos da ementa, fica pendente: o cliente veria um prato diferente do que vai receber.
 
 | ID | O que se vê | Produto candidato (ementa) | Estado |
 |---|---|---|---|
@@ -45,11 +45,11 @@ Estas 5 fotografias chegaram primeiro só como imagem na conversa e depois **com
 | IMG-013 | Peixe inteiro grelhado com batatinhas, espargos, tomate-cereja e limão; **sem arroz** | Bica (500 g / 1 kg) ou Simpote: «com arroz, molho acebolado e salada» | ⏳ Pendente: a espécie não é identificável e os acompanhamentos não coincidem · ficheiro guardado (`foto-13.jpg`), não publicado |
 | IMG-014 | Filete de peixe com camarão em molho de tomate, batata cozida, espargos | Filete Marinheiro · 9 000 FCFA: «com camarão, **arroz, batata frita e salada**» | ✅ Associada (ilustrativa; acompanhamentos diferentes aprovados pelo dono) · `foto-14.jpg` |
 | IMG-015 | Espetada de frango com pimentos e cebola, batata assada, salada, limão; **sem arroz** | Espetada de Frango · 8 000 FCFA: «com **arroz**, batata frita e salada» | ✅ Associada (ilustrativa; acompanhamentos diferentes aprovados pelo dono) · `foto-15.jpg` |
-| IMG-016 | Cordon bleu panado, recheado com fiambre e queijo; **puré**, espargos, salada | Cordon Bleu · 10 000 FCFA: «…acompanhado de **arroz, batata frita** e salada» | ✅ Aprovada pelo dono (27/11/2026): pode mostrar outros acompanhamentos · aguarda o ficheiro |
-| IMG-017 | Omelete simples dobrada, cebolinho, salada, pão (no prato) | **Omelete Simples no Prato** · 2 000 FCFA (sem descrição) | ✅ Confirmada · aguarda o ficheiro |
-| IMG-018 | Omelete recheada com atum, batatinhas, salada, pão | **Omelete de Atum** · 3 000 FCFA (sem descrição) | ✅ Confirmada · aguarda o ficheiro |
-| IMG-019 | Wrap de frango (shawarma) com alface, tomate, pepino, cebola, molho branco | Shawarma Simples (1 500) **ou** Shawarma Nô Kau (2 000) | ⏳ Pendente: não se distingue qual das duas variantes é |
-| IMG-020 | Pastéis fritos em meia-lua (tipo fataya) com salada e molhos | Fataya Simples (1 000) **ou** Fataya Completo (1 500) | ⏳ Pendente: o prato não está confirmado e a variante não se distingue |
+| IMG-016 | Cordon bleu panado, recheado com fiambre e queijo; **puré**, espargos, salada | Cordon Bleu · 10 000 FCFA: «…acompanhado de **arroz, batata frita** e salada» | ✅ Associada (ilustrativa; acompanhamentos diferentes aprovados pelo dono) · `foto-16.jpg` · nota: a carne da foto parece frango e a ementa diz «bife empanado»; o dono deve confirmar |
+| IMG-017 | Omelete simples dobrada, cebolinho, salada, pão (no prato) | **Omelete Simples no Prato** · 2 000 FCFA (sem descrição) | ✅ Associada (ilustrativa) · `foto-17.jpg` |
+| IMG-018 | Omelete recheada com atum, batatinhas, salada, pão | **Omelete de Atum** · 3 000 FCFA (sem descrição) | ✅ Associada (ilustrativa) · `foto-18.jpg` |
+| IMG-019 | Wrap de frango (shawarma) com alface, tomate, pepino, cebola, molho branco | Shawarma Simples (1 500) **ou** Shawarma Nô Kau (2 000) | ⏳ Pendente: não se distingue qual das duas variantes é · ficheiro guardado (`foto-19.jpg`), não publicado |
+| IMG-020 | Pastéis fritos em meia-lua (tipo fataya) com salada e molhos | Fataya Simples (1 000) **ou** Fataya Completo (1 500) | ⏳ Pendente: o prato não está confirmado e a variante não se distingue · ficheiro guardado (`foto-20.jpg`), não publicado |
 | IMG-021 | Pizza de frango desfiado, milho, cebola roxa, mozzarella, manjericão | Pizza de Frango (Média 5 000 / Grande 7 500) | ⏳ Pendente: o tamanho não se vê; o gerente decide se a mesma foto serve para os dois tamanhos |
 
 **Duplicadas:** nenhum ficheiro repetido (os 5 SHA-256 são diferentes). IMG-002 e IMG-003 mostram o **mesmo produto** (Casa de Santar Reserva). Ficou a IMG-003, porque não mostra um tamanho que possa contradizer a ementa.
@@ -63,6 +63,7 @@ Estas 5 fotografias chegaram primeiro só como imagem na conversa e depois **com
 | Quinta Cabriz Tinto | `public/menu/ilustrativas/vinhos-champagne/quinta-cabriz-tinto.webp` | WebP 800×537 |
 | Papa Figos | `public/menu/ilustrativas/vinhos-champagne/papa-figos.webp` | WebP 800×537 |
 | Cacho Fresco (Espumante) | `public/menu/ilustrativas/vinhos-champagne/cacho-fresco.webp` | WebP 800×537 |
+| Cordon Bleu · Omelete Simples no Prato · Omelete de Atum | `public/menu/ilustrativas/{cordon-bleu,omelete-simples-prato,omelete-de-atum}.webp` | WebP 800×537, 36–59 kB (recorte central) |
 | Salada de Tomate · Tábua de Queijo, Enchidos e Azeitonas · Filete Marinheiro · Espetada de Frango | `public/menu/ilustrativas/{salada-de-tomate,tabua-queijo-enchidos,filete-marinheiro,espetada-de-frango}.webp` | WebP 800×537, 47–57 kB (recorte central) |
 | Salada de Frango | `public/menu/ilustrativas/salada-de-frango.webp` | WebP 800×537, 54 kB (recorte central; o prato fica inteiro; qualidade 65 para ficar ao nível das outras fotos, ≤ 65 kB cada) |
 
@@ -72,16 +73,16 @@ A fotografia quadrada fica **inteira e sem deformação** ao centro, sobre um fu
 
 | | Número |
 |---|---|
-| Fotografias recebidas | **21** (15 com ficheiro + 6 só na conversa) |
+| Fotografias recebidas | **21** (20 com ficheiro + 1 só na conversa) |
 | Fotografias identificadas | **21** |
-| Associadas e implementadas (confirmadas, com ficheiro) | **10** (IMG-001, 003, 005, 006, 008, 010, 011, 012, 014, 015) |
-| Correspondência confirmada, à espera do ficheiro | **3** (IMG-016, 017, 018) |
+| Associadas e implementadas (confirmadas, com ficheiro) | **13** (IMG-001, 003, 005, 006, 008, 010, 011, 012, 014, 015, 016, 017, 018) |
+| Correspondência confirmada, à espera do ficheiro | **0** |
 | Pendentes de confirmação | **7** (IMG-002, 007, 009, 013, 019, 020, 021) |
 | Sem correspondência na ementa | **1** (IMG-004) |
 | Ficheiros duplicados | **0** (2 fotos do mesmo produto: IMG-002 e IMG-003) |
 | Produtos da ementa | **171** |
-| Produtos com imagem (todas ilustrativas) | **17** (7 anteriores + 10 novas) |
-| Produtos sem fotografia | **154** |
+| Produtos com imagem (todas ilustrativas) | **20** (7 anteriores + 13 novas) |
+| Produtos sem fotografia | **151** |
 
 **Para rever:** uma mesma imagem ilustrativa anterior (`peixe-grelhado.webp`) aparece em «Bica (500 g)» e «Bica (1 kg)». É o mesmo prato em dois tamanhos, mas, pela regra «uma foto não representa outro produto», o gerente deve decidir se fica assim. Não foi alterado.
 
@@ -93,11 +94,11 @@ A fotografia quadrada fica **inteira e sem deformação** ao centro, sobre um fu
 | Peixes & Mariscos Grelhados | 6 | 3 | 3 |
 | Peixes & Mariscos (Outros) | 3 | 2 | 1 |
 | Carnes Grelhadas | 7 | 2 | 5 |
-| Carnes (Outros) | 8 | 1 | 7 |
+| Carnes (Outros) | 8 | 2 | 6 |
 | Sandes | 7 | 0 | 7 |
 | Fast Food | 7 | 0 | 7 |
 | Pizzas | 12 | 0 | 12 |
-| Outros | 7 | 0 | 7 |
+| Outros | 7 | 2 | 5 |
 | Refrigerantes & Sumos | 8 | 0 | 8 |
 | Águas | 5 | 0 | 5 |
 | Café & Chá | 2 | 0 | 2 |
@@ -109,7 +110,7 @@ A fotografia quadrada fica **inteira e sem deformação** ao centro, sobre um fu
 | Runs, Licores & Frizantes | 10 | 0 | 10 |
 | Vinhos & Champagne | 22 | 5 | 17 |
 
-**Nenhuma categoria está completa.** Para completar o catálogo faltam fotografias **reais** dos 154 produtos indicados na tabela abaixo.
+**Nenhuma categoria está completa.** Para completar o catálogo faltam fotografias **reais** dos 151 produtos indicados na tabela abaixo.
 
 ## 5. Todos os produtos
 
@@ -141,7 +142,7 @@ A fotografia quadrada fica **inteira e sem deformação** ao centro, sobre um fu
 | `carnes-grelhadas/espetada-de-vaca-e-frango` | Espetada de Vaca e Frango | Carnes Grelhadas | 10 000 FCFA | — | — | Sem fotografia |
 | `carnes-grelhadas/espetada-de-frango` | Espetada de Frango | Carnes Grelhadas | 8 000 FCFA | IMG-015 (`foto-15.jpg`) | `ilustrativas/espetada-de-frango.webp` | ✅ Associada (ilustrativa) |
 | `carnes-outros/bife-no-kau` | Bife Nô Kau | Carnes (Outros) | 9 000 FCFA | (anterior · Higgsfield) | `ilustrativas/bife-nokau.webp` | Já tinha imagem ilustrativa (anterior) |
-| `carnes-outros/cordon-bleu` | Cordon Bleu | Carnes (Outros) | 10 000 FCFA | — | — | Sem fotografia |
+| `carnes-outros/cordon-bleu` | Cordon Bleu | Carnes (Outros) | 10 000 FCFA | IMG-016 (`foto-16.jpg`) | `ilustrativas/cordon-bleu.webp` | ✅ Associada (ilustrativa) |
 | `carnes-outros/bife-acebolado` | Bife Acebolado | Carnes (Outros) | 8 000 FCFA | — | — | Sem fotografia |
 | `carnes-outros/bife-pimenta-perta` | Bife - Pimenta Perta | Carnes (Outros) | 8 000 FCFA | — | — | Sem fotografia |
 | `carnes-outros/bife-recheado-com-ovo` | Bife Recheado com Ovo | Carnes (Outros) | 10 000 FCFA | — | — | Sem fotografia |
@@ -174,10 +175,10 @@ A fotografia quadrada fica **inteira e sem deformação** ao centro, sobre um fu
 | `pizzas/pizza-margarita-grande` | Pizza Margarita (Grande) | Pizzas | 7 500 FCFA | — | — | Sem fotografia |
 | `pizzas/pizza-4-estacoes-media` | Pizza 4 Estações (Média) | Pizzas | 6 500 FCFA | — | — | Sem fotografia |
 | `pizzas/pizza-4-estacoes-grande` | Pizza 4 Estações (Grande) | Pizzas | 9 000 FCFA | — | — | Sem fotografia |
-| `outros/omelete-simples-no-prato` | Omelete Simples no Prato | Outros | 2 000 FCFA | — | — | Sem fotografia |
+| `outros/omelete-simples-no-prato` | Omelete Simples no Prato | Outros | 2 000 FCFA | IMG-017 (`foto-17.jpg`) | `ilustrativas/omelete-simples-prato.webp` | ✅ Associada (ilustrativa) |
 | `outros/omelete-mista-no-prato` | Omelete Mista no Prato | Outros | 3 000 FCFA | — | — | Sem fotografia |
 | `outros/omelete-de-frango` | Omelete de Frango | Outros | 3 000 FCFA | — | — | Sem fotografia |
-| `outros/omelete-de-atum` | Omelete de Atum | Outros | 3 000 FCFA | — | — | Sem fotografia |
+| `outros/omelete-de-atum` | Omelete de Atum | Outros | 3 000 FCFA | IMG-018 (`foto-18.jpg`) | `ilustrativas/omelete-de-atum.webp` | ✅ Associada (ilustrativa) |
 | `outros/omelete-de-linguica` | Omelete de Linguiça | Outros | 3 000 FCFA | — | — | Sem fotografia |
 | `outros/ovo-extra` | Ovo Extra | Outros | 500 FCFA | — | — | Sem fotografia |
 | `outros/batata-frita` | Batata Frita | Outros | 1 000 FCFA | — | — | Sem fotografia |

@@ -19,6 +19,9 @@ const EXP = {
   'Tábua de Queijo, Enchidos e Azeitonas': '/menu/ilustrativas/tabua-queijo-enchidos.webp',
   'Filete Marinheiro': '/menu/ilustrativas/filete-marinheiro.webp',
   'Espetada de Frango': '/menu/ilustrativas/espetada-de-frango.webp',
+  'Cordon Bleu': '/menu/ilustrativas/cordon-bleu.webp',
+  'Omelete Simples no Prato': '/menu/ilustrativas/omelete-simples-prato.webp',
+  'Omelete de Atum': '/menu/ilustrativas/omelete-de-atum.webp',
 };
 const NONE = ['Casa de Santar (375 ml)', 'Quinta Cabriz Branco (750 ml)', 'Quinta Cabriz Branco (375 ml)', 'Gato Azul'];
 const q = (s) => s.replace(/'/g, "''");
@@ -74,7 +77,7 @@ const q = (s) => s.replace(/'/g, "''");
       check(src === u && loaded, `4.1 mesa: ${n} mostra a sua foto (carregada)`);
       check(await card.getByTestId('illustrative').first().isVisible(), `4.2 mesa: ${n} com a etiqueta «Imagem ilustrativa»`);
     }
-    for (const n of ['Casa de Santar (375 ml)', 'Gato Azul', 'Simpote']) {
+    for (const n of ['Casa de Santar (375 ml)', 'Gato Azul', 'Simpote', 'Shawarma Simples', 'Fataya Completo', 'Omelete Mista no Prato']) {
       const card = p.locator('li').filter({ has: p.locator(`h3:text-is("${n}")`) }).first();
       check(await card.locator('img').count() === 0, `4.3 mesa: ${n} sem fotografia`);
     }

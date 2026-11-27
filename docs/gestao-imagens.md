@@ -84,4 +84,4 @@ Capturas: `tests/e2e/out/shots/imagens-painel.png`, `imagens-painel-restaurado.p
 - **Fotos anteriores a este sistema:** entram como `legacy` sem original, porque o original já tinha sido descartado antes.
 - **Servidor local:** recebe as imagens pela sincronização, como antes; o histórico existe só no site central, que é onde se editam.
 - **Verificação:** corre quando se carrega no botão do painel, não de forma agendada (não há tarefas agendadas configuradas no alojamento). As falhas no telemóvel dos clientes são registadas automaticamente.
-- **Fotografias por publicar:** 6 fotografias recebidas só na conversa continuam por enviar como ficheiro (ver `docs/catalogo-imagens-inventario.md`).
+- **Fotografias por publicar:** 1 fotografia recebida só na conversa (pizza) continua por enviar como ficheiro (ver `docs/catalogo-imagens-inventario.md`).
