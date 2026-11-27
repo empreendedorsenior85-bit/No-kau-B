@@ -23,10 +23,10 @@ const q = (s) => s.replace(/'/g, "''");
   execSync(`${__dirname}/servers.sh central`, { stdio: 'pipe' });
   sql('delete from auth_throttle');
   // estado inicial idempotente: os 3 produtos sem fotografia
-  sql(`update menu_items set image_path = null where category_id = 'vinhos-champagne' and name in (${Object.keys(EXP).map((n) => `'${q(n)}'`).join(',')}) and image is null`);
+  sql(`update menu_items set image_path = null where name in (${Object.keys(EXP).map((n) => `'${q(n)}'`).join(',')}) and image is null`);
   const snap = () => sql("select id||'|'||category_id||'|'||name||'|'||price||'|'||description||'|'||available||'|'||active from menu_items order by id");
   const before = snap();
-  const otherImgs = () => sql("select id||'|'||coalesce(image_path,'') from menu_items where category_id <> 'vinhos-champagne' or name not in (" + Object.keys(EXP).map((n) => `'${q(n)}'`).join(',') + ") order by id");
+  const otherImgs = () => sql("select id||'|'||coalesce(image_path,'') from menu_items where name not in (" + Object.keys(EXP).map((n) => `'${q(n)}'`).join(',') + ") order by id");
   const othersBefore = otherImgs();
 
   // 1. ficheiros otimizados acessíveis
@@ -50,7 +50,7 @@ const q = (s) => s.replace(/'/g, "''");
     await p.context().close(); }
 
   // 3. base de dados: cada foto só no seu produto; nada mais mudou
-  for (const [n, u] of Object.entries(EXP)) check(sql(`select image_path from menu_items where category_id='vinhos-champagne' and name='${q(n)}'`) === u, `3.1 ${n} → ${u.split('/').pop()}`);
+  for (const [n, u] of Object.entries(EXP)) check(sql(`select image_path from menu_items where name='${q(n)}'`) === u, `3.1 ${n} → ${u.split('/').pop()}`);
   for (const u of Object.values(EXP)) check(sql(`select count(*) from menu_items where image_path='${u}'`) === '1', `3.2 ${u.split('/').pop()} está num único produto`);
   for (const n of NONE) check(sql(`select coalesce(image_path,'') from menu_items where category_id='vinhos-champagne' and name='${q(n)}'`) === '', `3.3 ${n}: continua sem fotografia (não confirmada)`);
   check(snap() === before, '3.4 nomes, preços, descrições, categorias e disponibilidade de TODOS os produtos ficaram iguais');
@@ -70,7 +70,7 @@ const q = (s) => s.replace(/'/g, "''");
       check(src === u && loaded, `4.1 mesa: ${n} mostra a sua foto (carregada)`);
       check(await card.getByTestId('illustrative').first().isVisible(), `4.2 mesa: ${n} com a etiqueta «Imagem ilustrativa»`);
     }
-    for (const n of ['Casa de Santar (375 ml)', 'Papa Figos']) {
+    for (const n of ['Casa de Santar (375 ml)', 'Gato Azul']) {
       const card = p.locator('li').filter({ has: p.locator(`h3:text-is("${n}")`) }).first();
       check(await card.locator('img').count() === 0, `4.3 mesa: ${n} sem fotografia`);
     }
@@ -89,7 +89,7 @@ const q = (s) => s.replace(/'/g, "''");
       if (Object.values(EXP).every((u) => srcs.includes(u))) break;
       await sleep(12000);
     }
-    check(Object.values(EXP).every((u) => srcs.includes(u)), '5.1 menu público: as 3 fotos aparecem');
+    check(Object.values(EXP).every((u) => srcs.includes(u)), `5.1 menu público: as ${Object.keys(EXP).length} fotos aparecem`);
     for (const [n, u] of Object.entries(EXP)) {
       const card = p.locator('[data-testid^="menu-card-"], li').filter({ has: p.locator(`h3:text-is("${n}")`) }).first();
       check((await card.locator('img').first().getAttribute('src')) === u, `5.2 menu público: ${n} tem a sua foto`);

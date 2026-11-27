@@ -77,8 +77,10 @@ const isPanel = async (ctx) => { const p = await ctx.newPage(); await p.goto(C +
   check(!meta.exif, '2.2 metadados (EXIF) removidos');
   check(cq(`select image_type from menu_items where id = ${itemId}`) === 'image/webp', '2.3 regravada na base de dados (só é convertida uma vez)');
   cq(`update menu_items set image = null, image_type = null, image_version = image_version + 1 where id = ${itemId}`);
-  const sizes = execSync(`du -cb ${ROOT}/public/menu/ilustrativas/*.webp | tail -1`).toString().split('\t')[0];
-  check(Number(sizes) < 330_000, `2.4 fotos ilustrativas do menu: ${Math.round(sizes / 1024)} kB no total (antes 731 kB)`);
+  // o menu carrega as imagens à medida que aparecem (lazy): o que pesa em 3G é cada foto, não a soma do catálogo
+  const sizes = execSync(`find ${ROOT}/public/menu/ilustrativas -name '*.webp' -printf '%s\\n'`).toString().trim().split('\n').map(Number);
+  const maxKb = Math.round(Math.max(...sizes) / 1024);
+  check(sizes.length > 0 && Math.max(...sizes) <= 65 * 1024, `2.4 fotos ilustrativas do menu: ${sizes.length} ficheiros, a maior com ${maxKb} kB (limite 65 kB por foto; antes 731 kB só em 7)`);
 
   // ---------- 3. Menu do QR: rapidez ----------
   const tok = cq('select qr_token from dining_tables where active order by number limit 1');

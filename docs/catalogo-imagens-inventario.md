@@ -2,7 +2,9 @@
 
 Fonte oficial dos produtos, preços, descrições e categorias: `src/content/nokau-menu.ts` (ementa original transcrita, 171 produtos em 19 categorias). Nada foi alterado nos nomes, preços, descrições ou categorias.
 
-Gerado a 27/11/2026.
+Gerado a 27/11/2026. Atualizado a 27/11/2026 com o 2.º envio de ficheiros (foto-6 … foto-10).
+
+**Testes (27/11/2026):** regressão completa — 32 conjuntos; as 3 falhas encontradas eram do próprio teste (o teste do catálogo só procurava em «Vinhos» e ainda esperava o Papa Figos sem foto) e do limite de peso, que somava o catálogo inteiro (330 kB para 7 fotos). Esse limite passou a ser **por foto (≤ 65 kB)**: o menu carrega as imagens à medida que aparecem, por isso, numa rede 3G, o que pesa é cada foto, não a soma. A medição em 3G lento continua no limite: «Adicionar» funciona em 8,0 s (limite 9 s). Depois da correção, os 4 conjuntos afetados passaram sem falhas: etapaA 46, catálogo 50, fotos 17, imagens 31 (POS: 14 produtos com imagem, nenhuma partida).
 
 ## 1. Origem das imagens
 
@@ -61,7 +63,7 @@ Estas 11 fotografias chegaram **só como imagem na conversa** e precisam de ser 
 | Quinta Cabriz Tinto | `public/menu/ilustrativas/vinhos-champagne/quinta-cabriz-tinto.webp` | WebP 800×537 |
 | Papa Figos | `public/menu/ilustrativas/vinhos-champagne/papa-figos.webp` | WebP 800×537 |
 | Cacho Fresco (Espumante) | `public/menu/ilustrativas/vinhos-champagne/cacho-fresco.webp` | WebP 800×537 |
-| Salada de Frango | `public/menu/ilustrativas/salada-de-frango.webp` | WebP 800×537 (recorte central; o prato fica inteiro) |
+| Salada de Frango | `public/menu/ilustrativas/salada-de-frango.webp` | WebP 800×537, 54 kB (recorte central; o prato fica inteiro; qualidade 65 para ficar ao nível das outras fotos, ≤ 65 kB cada) |
 
 A fotografia quadrada fica **inteira e sem deformação** ao centro, sobre um fundo desfocado da própria imagem, para que o enquadramento horizontal do menu não corte a garrafa.
 
