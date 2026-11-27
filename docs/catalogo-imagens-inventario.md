@@ -41,9 +41,9 @@ Tal como o segundo lote, estas 11 fotografias chegaram **só como imagem na conv
 | IMG-011 | Salada de tomate às rodelas, cebola roxa, azeitonas pretas, manjericão, azeite | **Salada de Tomate** · 1 500 FCFA (sem descrição) | ✅ Confirmada · aguarda o ficheiro |
 | IMG-012 | Tábua de queijos, salame, chouriço, presunto, azeitonas, frutos secos, uvas, pão | **Tábua de Queijo, Enchidos e Azeitonas** · 10 000 FCFA | ✅ Confirmada · aguarda o ficheiro |
 | IMG-013 | Peixe inteiro grelhado com batatinhas, espargos, tomate-cereja e limão; **sem arroz** | Bica (500 g / 1 kg) ou Simpote: «com arroz, molho acebolado e salada» | ⏳ Pendente: a espécie não é identificável e os acompanhamentos não coincidem |
-| IMG-014 | Filete de peixe com camarão em molho de tomate, batata cozida, espargos | Filete Marinheiro · 9 000 FCFA: «com camarão, **arroz, batata frita e salada**» | ⏳ Pendente: sem arroz e sem batata frita |
-| IMG-015 | Espetada de frango com pimentos e cebola, batata assada, salada, limão; **sem arroz** | Espetada de Frango · 8 000 FCFA: «com **arroz**, batata frita e salada» | ⏳ Pendente: sem arroz e batata assada em vez de frita |
-| IMG-016 | Cordon bleu panado, recheado com fiambre e queijo; **puré**, espargos, salada | Cordon Bleu · 10 000 FCFA: «…acompanhado de **arroz, batata frita** e salada» | ⏳ Pendente: puré e espargos em vez de arroz e batata frita |
+| IMG-014 | Filete de peixe com camarão em molho de tomate, batata cozida, espargos | Filete Marinheiro · 9 000 FCFA: «com camarão, **arroz, batata frita e salada**» | ✅ Aprovada pelo dono (27/11/2026): pode mostrar outros acompanhamentos · aguarda o ficheiro |
+| IMG-015 | Espetada de frango com pimentos e cebola, batata assada, salada, limão; **sem arroz** | Espetada de Frango · 8 000 FCFA: «com **arroz**, batata frita e salada» | ✅ Aprovada pelo dono (27/11/2026): pode mostrar outros acompanhamentos · aguarda o ficheiro |
+| IMG-016 | Cordon bleu panado, recheado com fiambre e queijo; **puré**, espargos, salada | Cordon Bleu · 10 000 FCFA: «…acompanhado de **arroz, batata frita** e salada» | ✅ Aprovada pelo dono (27/11/2026): pode mostrar outros acompanhamentos · aguarda o ficheiro |
 | IMG-017 | Omelete simples dobrada, cebolinho, salada, pão (no prato) | **Omelete Simples no Prato** · 2 000 FCFA (sem descrição) | ✅ Confirmada · aguarda o ficheiro |
 | IMG-018 | Omelete recheada com atum, batatinhas, salada, pão | **Omelete de Atum** · 3 000 FCFA (sem descrição) | ✅ Confirmada · aguarda o ficheiro |
 | IMG-019 | Wrap de frango (shawarma) com alface, tomate, pepino, cebola, molho branco | Shawarma Simples (1 500) **ou** Shawarma Nô Kau (2 000) | ⏳ Pendente: não se distingue qual das duas variantes é |
@@ -69,8 +69,8 @@ A fotografia quadrada fica **inteira e sem deformação** ao centro, sobre um fu
 | Fotografias recebidas | **21** (5 com ficheiro + 16 só na conversa) |
 | Fotografias identificadas | **21** |
 | Associadas e implementadas (confirmadas, com ficheiro) | **3** |
-| Correspondência confirmada, à espera do ficheiro | **7** (IMG-006, 008, 010, 011, 012, 017, 018) |
-| Pendentes de confirmação | **10** (IMG-002, 007, 009, 013, 014, 015, 016, 019, 020, 021) |
+| Correspondência confirmada, à espera do ficheiro | **10** (IMG-006, 008, 010, 011, 012, 014, 015, 016, 017, 018) |
+| Pendentes de confirmação | **7** (IMG-002, 007, 009, 013, 019, 020, 021) |
 | Sem correspondência na ementa | **1** (IMG-004) |
 | Ficheiros duplicados | **0** (2 fotos do mesmo produto: IMG-002 e IMG-003) |
 | Produtos da ementa | **171** |
