@@ -313,3 +313,14 @@ Critério: uma fotografia por produto e nunca a mesma em dois produtos. Só se p
 2. No painel: **Menu → «Importar ementa original»**. A importação só liga imagens a produtos que **ainda não têm** imagem (não substitui nada) e regista cada uma no histórico (`menu_item_images`, origem `static`).
 3. Confirmar em **Imagens → «Verificar todas as imagens agora»**.
 
+
+## 6. Imagens recebidas na conversa a 28/11/2026 (pré-visualizações iStock)
+
+Analisadas, **não publicadas**: são pré-visualizações (*comps*) do iStock, sem licença para uso público. Os ficheiros não foram copiados para o repositório. O número iStock aparece no canto da imagem e serve para comprar a licença; com a versão licenciada, a ligação ao produto é imediata.
+
+| Imagem | O que se vê | Produto correspondente | Foto atual do produto | Nº iStock (autor) |
+|---|---|---|---|---|
+| 23 | Pastel triangular folhado com sésamo e uma samosa | Fataya? (não é fataya: é um *sambusa*/folhado) | Fataya Completo já tem foto | 473219112 (FrauTsygler) |
+| 24 | Frango aberto grelhado (*piri-piri*/espalmado) com batatas | **Frango Churrasco** | Já tem foto ilustrativa | 512622560 (Roxiller) |
+| 25 | Chouriço às rodelas, em tábua, com palitos | **Chouriço** (Entradas, 2 000 FCFA) | Sem foto | 876611828 (Studioimagen73) |
+| 26 | Pizza em quartos: salame, fiambre, cogumelos, tomate | **Pizza 4 Estações** (Média/Grande) | Sem foto | 1063730568 (Dovapi) |
