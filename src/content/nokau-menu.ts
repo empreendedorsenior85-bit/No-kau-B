@@ -181,6 +181,43 @@ const ILUSTRATIVAS: Record<string, string> = {
   "Simpote": "simpote",
   "Shawarma Simples": "shawarma-simples",
   "Fataya Completo": "fataya-completo",
+  // 5.º envio (28/11/2026, pasta «prato 2», 111 ficheiros): fotografias de embalagem das marcas, enviadas pelo dono.
+  // Só associações confirmadas (marca e produto iguais à ementa); inventário completo em docs/catalogo-imagens-prato2.md.
+  // Bolha/Garrafa: só a Garrafa recebe a foto (regra do dono: nunca a mesma fotografia em dois produtos).
+  "The Famous Grouse (Garrafa)": "whiskies/the-famous-grouse", // P001
+  "Marques de Borba": "vinhos-champagne/marques-de-borba", // P003
+  "Carolans (Garrafa)": "runs-licores-frizantes/carolans", // P010
+  "Gazela": "vinhos-champagne/gazela", // P011
+  "Água Tónica": "aguas/agua-tonica", // P014
+  "Lagosta": "vinhos-champagne/lagosta", // P017
+  "Guinness": "cervejas-cidras/guinness", // P019
+  "Super Bock Preta Mini": "cervejas-cidras/super-bock-preta-mini", // P020
+  "Água das Pedras": "aguas/agua-das-pedras", // P021
+  "Jameson (Garrafa)": "whiskies/jameson", // P022
+  "Grants (Garrafa)": "whiskies/grants", // P024
+  "Adega de Borba Alforge": "vinhos-champagne/alforge", // P025
+  "Casal Garcia Sweet": "vinhos-champagne/casal-garcia-sweet", // P027
+  "Somersby Mini": "cervejas-cidras/somersby-mini", // P029
+  "Roberto Cavalli Vodka (Garrafa)": "vodkas-tequila/roberto-cavalli", // P031
+  "Compal": "refrigerantes-sumos/compal", // P032
+  "Cristal Lata": "cervejas-cidras/cristal-lata", // P034
+  "Gin Gordon Branco (Garrafa)": "gins/gordon-branco", // P035
+  "John Walker White (Garrafa)": "whiskies/john-walker-white", // P036
+  "Tanqueray (Garrafa)": "gins/tanqueray", // P037
+  "Bar Royal": "vinhos-champagne/bar-royal", // P042
+  "Martini Rose (Garrafa)": "vermute/martini-rose", // P043
+  "Castelo": "aguas/castelo", // P044
+  "Jim Beam (Garrafa)": "whiskies/jim-beam", // P045
+  "Ciroc Azul (Garrafa)": "vodkas-tequila/ciroc-azul", // P046
+  "Casal Garcia": "vinhos-champagne/casal-garcia", // P047
+  "Mundus": "vinhos-champagne/mundus", // P049
+  "Martini Bianco (Garrafa)": "vermute/martini-bianco", // P051
+  "Gin Gordon Rose (Garrafa)": "gins/gordon-rose", // P052
+  "Ballantines (Garrafa)": "whiskies/ballantines", // P053
+  "JB (Garrafa)": "whiskies/jb", // P101
+  "Super Bock Mini": "cervejas-cidras/super-bock-mini", // P108
+  "Martini Fiero (Garrafa)": "vermute/martini-fiero", // P110
+  "John Walker Red (Garrafa)": "whiskies/john-walker-red", // P111
 };
 for (const it of CATALOG_ITEMS) {
   const f = ILUSTRATIVAS[it.name];
