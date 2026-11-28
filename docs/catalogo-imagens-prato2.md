@@ -28,6 +28,27 @@ Pasta `pratos/prato 2` no computador do dono: **111 ficheiros** (não 122). Todo
 
 **Bolha/Garrafa:** só a **Garrafa** recebe a fotografia, pela regra do dono «nunca a mesma fotografia em dois produtos». O dono decide se a Bolha deve mostrar a mesma garrafa.
 
+
+## 2-A. Decisões sobre as 13 pendentes (28/11/2026, delegadas pelo dono)
+
+Critério: uma fotografia por produto e nunca a mesma em dois produtos. Só se publica quando a marca **e** o produto da foto são os da ementa. Na dúvida, não se publica: o produto fica sem foto, o que é melhor do que mostrar outro produto.
+
+| ID | Decisão | Motivo |
+|---|---|---|
+| P002 «La Gioiosa Hugo» | ✅ **Hugo (Garrafa)** | O rótulo diz «Hugo»; o produto «Hugo Graciosa» fica com a P038 |
+| P038 «Gracioso Hugo Blue» | ✅ **Hugo Graciosa (Garrafa)** | O nome «Gracioso/Graciosa» identifica-o; foto amadora, mas legível |
+| P004 Cîroc Summer Citrus | ✅ **Ciros Summer (Garrafa)** | É o Cîroc Summer; «Ciros» é gralha da ementa |
+| P016 Absolut 375 ml | ✅ **Absolut (Garrafa)** | A mesma garrafa e o mesmo rótulo; o tamanho não muda o produto que o cliente reconhece |
+| P102 JP Azeitão tinto | ✅ **JP (750 ml)** | Garrafa de formato normal (750 ml); o JP (375 ml) fica sem foto |
+| P012 Casa de Santar Dão | ⛔ Não publicar | O 750 ml já tem foto; o 375 ml não se confirma pela imagem |
+| P015 / P106 Minalba | ⛔ Não publicar | Marca brasileira: dificilmente é a água servida no restaurante |
+| P028 / P048 Sangria (Casal Garcia / Daniel Torres) | ⛔ Não publicar | A ementa não indica marca; uma garrafa de marca pode não ser a sangria servida |
+| P030 Chivas Regal 12 (Wikipédia) | ⛔ Não publicar | Não se distingue «Chivas» de «Chivas Regal»; a licença CC exige atribuição |
+| P033 Comenda Grande Touriga Nacional | ⛔ Não publicar | É uma linha específica; a ementa diz só «Comenda Grande» |
+| P109 JP Seleção do Enólogo | ⛔ Não publicar | Linha diferente do JP comum |
+
+**Para implementar as 5 aprovadas é preciso o ficheiro original.** A pasta «prato 2» ficou no computador do dono e não está no repositório. Ficheiros a anexar numa mensagem: P002 `0d284081-6b95-4245-9061-8733a2948e36_cropped.png_720.jpg`, P038 `front_de.5.full.jpg`, P004 `103510_ciroc-summer-citrus-vodka-075l-35-vol.jpg`, P016 `265199-1_1652993437.webp`, P102 `jp-red-2018.jpg`.
+
 ## 3. Todas as imagens
 
 | ID | Ficheiro | Dimensões | SHA-256 (início) | O que se vê | Produto candidato | Estado | Ficheiro publicado / motivo |
