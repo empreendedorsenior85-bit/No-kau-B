@@ -3,7 +3,7 @@ const ROOT = require('node:path').resolve(__dirname, '../..'); // raiz do projet
 const OUTDIR = require('node:path').join(__dirname, 'out'); // capturas e ficheiros gerados (fora do Git)
 require('node:fs').mkdirSync(OUTDIR, { recursive: true });
 // fotos ilustrativas da ementa: 7 pratos (Higgsfield) + 3 vinhos (27/11/2026)
-const ILUS = 24;
+const ILUS = 58;
 const { chromium, devices } = require('playwright');
 const { execSync } = require('node:child_process');
 const S = __dirname;
